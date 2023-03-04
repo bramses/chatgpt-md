@@ -210,9 +210,16 @@ export default class ChatGPT_MD extends Plugin {
 				this.callOpenAIAPI(editor, messagesWithRoleAndMessage).then((response) => {
 					if (response === "streaming") {
 						// append \n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n
-						const lineBeforeCursor = editor.getLine(editor.getCursor().line);
-						const newLine = `${lineBeforeCursor}\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
+						const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
 						editor.replaceRange(newLine, editor.getCursor());
+
+						// move cursor to end of file
+						const cursor = editor.getCursor();
+						const newCursor = {
+							line: cursor.line,
+							ch: cursor.ch + newLine.length
+						}
+						editor.setCursor(newCursor);
 					} else {
 						this.appendMessage(editor, "assistant", response);
 					}
