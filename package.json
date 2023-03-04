@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "chatgpt-md",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Use ChatGPT in MD",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
