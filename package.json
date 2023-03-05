@@ -1,7 +1,7 @@
 {
 	"name": "chatgpt-md",
 	"version": "1.0.0",
-	"description": "Use ChatGPT in MD",
+	"description": "A (nearly) seamless integration of ChatGPT into Obsidian.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
@@ -22,7 +22,6 @@
 		"typescript": "4.7.4"
 	},
 	"dependencies": {
-		"gpt-3-encoder": "^1.1.4",
 		"gray-matter": "^4.0.3"
 	}
 }
