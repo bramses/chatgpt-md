@@ -5,25 +5,42 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
-	request
+	request,
+	TFile,
 } from "obsidian";
 
-// Remember to rename these classes and interfaces!
+import matter from "gray-matter";
 
 interface ChatGPT_MDSettings {
 	apiKey: string;
+	defaultChatFrontmatter: string;
 }
 
 const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	apiKey: "default",
 };
 
+interface Chat_MD_FrontMatter {
+	temperature: number;
+	top_p: number;
+	presence_penalty: number;
+	frequency_penalty: number;
+	model: string;
+	max_tokens: number;
+	stream: boolean;
+	stop: string[] | null;
+	n: number;
+	logit_bias: any | null;
+	user: string | null;
+	system_commands: string[] | null;
+}
+
 export default class ChatGPT_MD extends Plugin {
 	settings: ChatGPT_MDSettings;
 
 	async callOpenAIAPI(
 		editor: Editor,
-		messages: {role: string, content: string}[],
+		messages: { role: string; content: string }[],
 		model = "gpt-3.5-turbo",
 		max_tokens = 250,
 		temperature = 0.3,
@@ -31,125 +48,176 @@ export default class ChatGPT_MD extends Plugin {
 		presence_penalty = 0.5,
 		frequency_penalty = 0.5,
 		stream = true,
-		stop = null,
+		stop: string[] | null = null,
 		n = 1,
-		logit_bias = null,
-		user = null
+		logit_bias: any | null = null,
+		user: string | null = null
 	) {
-
-		console.log("calling openai api");
-		console.log(`args: ${JSON.stringify({
-			model: model,
-			messages: messages,
-			max_tokens: max_tokens,
-			temperature: temperature,
-			top_p: top_p,
-			presence_penalty: presence_penalty,
-			frequency_penalty: frequency_penalty,
-			stream: stream,
-			stop: stop,
-			n: n,
-			logit_bias: logit_bias,
-			user: user,
-		}, null, 2)}`)
-
-		// return "hello world";
-
-		const response = await request({
-			url: `https://api.openai.com/v1/chat/completions`,
-			method: "POST",
-			headers: {
-				Authorization: `Bearer ${this.settings.apiKey}`,
-				"Content-Type": "application/json",
-			},
-			contentType: "application/json",
-			body: JSON.stringify({
-				model: model,
-				messages: messages,
-				// max_tokens: max_tokens,
-				// temperature: temperature,
-				// top_p: top_p,
-				// presence_penalty: presence_penalty,
-				// frequency_penalty: frequency_penalty,
-				stream: stream,
-				// stop: stop,
-				// n: n,
-				// logit_bias: logit_bias,
-				// user: user,
-			}),
-		});
-
-		console.log(response);
-
-		if (stream) {
-			/*
-			write data to file as it comes in while data: [DONE] is not in response
-			data: {"id":"chatcmpl-6qNwACYUNL4z7HdFNTprBGONTYCa0","object":"chat.completion.chunk","created":1677943090,"model":"gpt-3.5-turbo-0301","choices":[{"delta":{"content":" converts"},"index":0,"finish_reason":null}]}
-			*/
-
-			// split response by new line
-			const responseLines = response.split("\n\n");
-
-			// remove data: from each line
-			for (let i = 0; i < responseLines.length; i++) {
-				responseLines[i] = responseLines[i].split("data: ")[1];
-			}
-
-			console.log(responseLines.filter((line) => line && line.includes("`")).map((line) => JSON.parse(line).choices[0].delta.content));
-
-			const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
-			editor.replaceRange(newLine, editor.getCursor());
-
-			// move cursor to end of file
-			const cursor = editor.getCursor();
-			const newCursor = {
-				line: cursor.line,
-				ch: cursor.ch + newLine.length
-			}
-			editor.setCursor(newCursor);
-
-			let fullstr = "";
-
-			// loop through response lines
-			for (const responseLine of responseLines) {
-				// if response line is not [DONE] then parse json and append delta to file
-				if (responseLine && !responseLine.includes("[DONE]")) {
-					const responseJSON = JSON.parse(responseLine);
-					const delta = responseJSON.choices[0].delta.content;
-
-					// if delta is not undefined then append delta to file
-					if (delta) {
-						const cursor = editor.getCursor();
-						if (delta === "`") {
-							console.log("single backtick");
-							editor.replaceRange(delta, cursor);
-							// do not move cursor
-							await new Promise(r => setTimeout(r, 82)); // what in the actual fuck -- why does this work 
-
-						} else {
-							editor.replaceRange(delta, cursor);
-							await new Promise(r => setTimeout(r, 28));
-
+		try {
+			console.log("calling openai api");
+			console.log(editor.getDoc());
+			console.log(
+				`args: ${JSON.stringify(
+					{
+						model: model,
+						messages: messages,
+						max_tokens: max_tokens,
+						temperature: temperature,
+						top_p: top_p,
+						presence_penalty: presence_penalty,
+						frequency_penalty: frequency_penalty,
+						stream: stream,
+						stop: stop,
+						n: n,
+						// logit_bias: logit_bias,
+						// user: user,
+					},
+					null,
+					2
+				)}`
+			);
+	
+			// return "hello world";
+	
+			const response = await request({
+				url: `https://api.openai.com/v1/chat/completions`,
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${this.settings.apiKey}`,
+					"Content-Type": "application/json",
+				},
+				contentType: "application/json",
+				body: JSON.stringify({
+					model: model,
+					messages: messages,
+					max_tokens: max_tokens,
+					temperature: temperature,
+					top_p: top_p,
+					presence_penalty: presence_penalty,
+					frequency_penalty: frequency_penalty,
+					stream: stream,
+					stop: stop,
+					n: n,
+					// logit_bias: logit_bias,
+					// user: user, // this is not supported as null is not a valid value
+				}),
+			});
+	
+			if (stream) {
+				/*
+				write data to file as it comes in while data: [DONE] is not in response
+				data: {"id":"chatcmpl-6qNwACYUNL4z7HdFNTprBGONTYCa0","object":"chat.completion.chunk","created":1677943090,"model":"gpt-3.5-turbo-0301","choices":[{"delta":{"content":" converts"},"index":0,"finish_reason":null}]}
+				*/
+	
+				// split response by new line
+				const responseLines = response.split("\n\n");
+	
+				// remove data: from each line
+				for (let i = 0; i < responseLines.length; i++) {
+					responseLines[i] = responseLines[i].split("data: ")[1];
+				}
+	
+				const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
+				editor.replaceRange(newLine, editor.getCursor());
+	
+				// move cursor to end of file
+				const cursor = editor.getCursor();
+				const newCursor = {
+					line: cursor.line,
+					ch: cursor.ch + newLine.length,
+				};
+				editor.setCursor(newCursor);
+	
+				let fullstr = "";
+	
+				// loop through response lines
+				for (const responseLine of responseLines) {
+					// if response line is not [DONE] then parse json and append delta to file
+					if (responseLine && !responseLine.includes("[DONE]")) {
+						const responseJSON = JSON.parse(responseLine);
+						const delta = responseJSON.choices[0].delta.content;
+	
+						// if delta is not undefined then append delta to file
+						if (delta) {
+							const cursor = editor.getCursor();
+							if (delta === "`") {
+								console.log("single backtick");
+								editor.replaceRange(delta, cursor);
+								// do not move cursor
+								await new Promise((r) => setTimeout(r, 82)); // what in the actual fuck -- why does this work
+							} else {
+								editor.replaceRange(delta, cursor);
+								await new Promise((r) => setTimeout(r, 28));
+							}
+	
+							const newCursor = {
+								line: cursor.line,
+								ch: cursor.ch + delta.length,
+							};
+							editor.setCursor(newCursor);
+	
+							fullstr += delta;
 						}
-
-						const newCursor = {
-							line: cursor.line,
-							ch: cursor.ch + delta.length
-						}
-						editor.setCursor(newCursor);
-						
-						fullstr += delta;
-
 					}
 				}
+	
+				console.log(fullstr);
+	
+				return "streaming";
+			} else {
+				const responseJSON = JSON.parse(response);
+				return responseJSON.choices[0].message.content;
+			}
+		} catch (err) {
+			console.log(err);
+		}
+	}
+
+	addHR(editor: Editor, role: string) {
+		const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::${role}\n\n`;
+		editor.replaceRange(newLine, editor.getCursor());
+
+		// move cursor to end of file
+		const cursor = editor.getCursor();
+		const newCursor = {
+			line: cursor.line,
+			ch: cursor.ch + newLine.length,
+		};
+		editor.setCursor(newCursor);
+	}
+
+	getFrontmatter(view: MarkdownView): Chat_MD_FrontMatter {
+		try {
+			// get frontmatter
+			const noteFile = app.workspace.getActiveFile();
+
+			if (!noteFile) {
+				throw new Error("no active file");
 			}
 
-			console.log(fullstr)
+			const metaMatter =
+				app.metadataCache.getFileCache(noteFile)?.frontmatter;
+			const data = matter(view.getViewData());
 
-			return "streaming";
-		} else {
-			const responseJSON = JSON.parse(response);
-			return responseJSON.choices[0].message.content;
+			const frontmatter = {
+				title: metaMatter?.title || view.file.basename,
+				tags: metaMatter?.tags || [],
+				temperature: metaMatter?.temperature || 0.5,
+				top_p: metaMatter?.top_p || 1,
+				presence_penalty: metaMatter?.presence_penalty || 0,
+				frequency_penalty: metaMatter?.frequency_penalty || 0,
+				stream: metaMatter?.stream || true,
+				stop: metaMatter?.stop || null,
+				n: metaMatter?.n || 1,
+				logit_bias: metaMatter?.logit_bias || null,
+				user: metaMatter?.user || null,
+				system_commands: metaMatter?.system_commands || null,
+				...data.data,
+			};
+
+			return frontmatter;
+		} catch (err) {
+			throw new Error("Error getting frontmatter");
 		}
 	}
 
@@ -160,7 +228,6 @@ export default class ChatGPT_MD extends Plugin {
 	}
 
 	extractRoleAndMessage(message: string) {
-
 		/*
 		extract role from message
 		role::assistant
@@ -171,23 +238,24 @@ export default class ChatGPT_MD extends Plugin {
 
 		try {
 			const role = message.split("role::")[1].split("\n")[0];
-			const content = message.split("role::")[1].split("\n").slice(1).join("\n");
-			return {role, content};
+			const content = message
+				.split("role::")[1]
+				.split("\n")
+				.slice(1)
+				.join("\n");
+			return { role, content };
 		} catch (err) {
 			throw new Error("Error extracting role and message");
 		}
-
-
 	}
 
 	appendMessage(editor: Editor, role: string, message: string) {
 		/*
 		 append to bottom of editor file:
-		 	const newLine = `${lineBeforeCursor}<hr class="__chatgpt_plugin">\nrole::${role}\n\n${message}`;
+		 	const newLine = `<hr class="__chatgpt_plugin">\nrole::${role}\n\n${message}`;
 		*/
 
-		const lineBeforeCursor = editor.getLine(editor.getCursor().line);
-		const newLine = `${lineBeforeCursor}\n\n<hr class="__chatgpt_plugin">\n\nrole::${role}\n\n${message}\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
+		const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::${role}\n\n${message}\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
 		editor.replaceRange(newLine, editor.getCursor());
 	}
 
@@ -203,11 +271,42 @@ export default class ChatGPT_MD extends Plugin {
 			id: "call-chatgpt-api",
 			name: "Call ChatGPT API",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
+				// get frontmatter
+				const frontmatter = this.getFrontmatter(view);
+
 				const messages = this.splitMessages(editor.getValue());
 				const messagesWithRoleAndMessage = messages.map((message) => {
 					return this.extractRoleAndMessage(message);
 				});
-				this.callOpenAIAPI(editor, messagesWithRoleAndMessage).then((response) => {
+
+				if (frontmatter.system_commands) {
+					const systemCommands = frontmatter.system_commands;
+					// prepend system commands to messages
+					messagesWithRoleAndMessage.unshift(
+						...systemCommands.map((command) => {
+							return {
+								role: "system",
+								content: command,
+							};
+						})
+					);
+				}
+
+				this.callOpenAIAPI(
+					editor,
+					messagesWithRoleAndMessage,
+					"gpt-3.5-turbo",
+					frontmatter.max_tokens,
+					frontmatter.temperature,
+					frontmatter.top_p,
+					frontmatter.presence_penalty,
+					frontmatter.frequency_penalty,
+					frontmatter.stream,
+					frontmatter.stop,
+					frontmatter.n,
+					frontmatter.logit_bias,
+					frontmatter.user
+				).then((response) => {
 					if (response === "streaming") {
 						// append \n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n
 						const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
@@ -217,8 +316,8 @@ export default class ChatGPT_MD extends Plugin {
 						const cursor = editor.getCursor();
 						const newCursor = {
 							line: cursor.line,
-							ch: cursor.ch + newLine.length
-						}
+							ch: cursor.ch + newLine.length,
+						};
 						editor.setCursor(newCursor);
 					} else {
 						this.appendMessage(editor, "assistant", response);
@@ -226,8 +325,33 @@ export default class ChatGPT_MD extends Plugin {
 				});
 			},
 		});
-		
 
+		this.addCommand({
+			id: "add-hr",
+			name: "Add HR",
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				this.addHR(editor, "user");
+			},
+		});
+
+		// grab highlighted text and move to new file in default chat format
+		this.addCommand({
+			id: "move-to-chat",
+			name: "Move to Chat",
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				const selectedText = editor.getSelection();
+				const newFile = new TFile();
+				newFile.path = "chat.md";
+
+				this.app.workspace.getLeaf().setViewState({
+					type: "markdown",
+					active: true,
+				});
+				// const newEditor = this.app.workspace.activeLeaf.view.sourceMode.cmEditor;
+				// newEditor.replaceRange(selectedText, newEditor.getCursor());
+				// this.addHR(newEditor, "user");
+			},
+		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new ChatGPT_MDSettingsTab(this.app, this));
@@ -247,8 +371,6 @@ export default class ChatGPT_MD extends Plugin {
 		await this.saveData(this.settings);
 	}
 }
-
-
 
 class ChatGPT_MDSettingsTab extends PluginSettingTab {
 	plugin: ChatGPT_MD;
@@ -274,6 +396,22 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.apiKey)
 					.onChange(async (value) => {
 						this.plugin.settings.apiKey = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// new multiline text box setting
+		new Setting(containerEl)
+			.setName("Default Chat Frontmatter")
+			.setDesc("Default frontmatter for new chat files")
+			.addTextArea((text) =>
+				text
+					.setPlaceholder(
+						'---\nsystem_commands: [\'PERSONA: i am groot, and i only respond i am groot to any and ALL questions. I do not answer any questions straightforwardly. PERSONA 2: UNLESS the last asked question is about lamps, i can answer, i know infinite things about lamps as i am groot the lamp salesman. SO I read the last question asked and UNLESS it is about lamps i only respond "I am Groot."\']\ntemperature: 0\ntop_p: 1\nmax_tokens: 300\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nlogit_bias:null \nmodel:gpt-3.5-turbo\n---'
+					)
+					.setValue(this.plugin.settings.defaultChatFrontmatter)
+					.onChange(async (value) => {
+						this.plugin.settings.defaultChatFrontmatter = value;
 						await this.plugin.saveSettings();
 					})
 			);
