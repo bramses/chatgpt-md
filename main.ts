@@ -11,7 +11,6 @@ import {
 } from "obsidian";
 
 import matter from "gray-matter";
-const {encode } = require('gpt-3-encoder')
 
 interface ChatGPT_MDSettings {
 	apiKey: string;
@@ -263,18 +262,7 @@ export default class ChatGPT_MD extends Plugin {
 		}
 	}
 
-	checkTokenLimit(messages: {content: string, role: string}[], limit = 4096) {
-		const encoded = encode(messages.map(message => message.content).join(""))
-		const size = encoded.length
-		console.log(size)
-			// check if message is over 4096 characters
-			if (size > limit) {
-				throw new Error(
-					`Message is over ${limit} token limit by ${size - limit} tokens.`
-				);
-			}
-		
-	}
+	
 
 	extractRoleAndMessage(message: string) {
 		/*
@@ -349,9 +337,6 @@ export default class ChatGPT_MD extends Plugin {
 						})
 					);
 				}
-
-				// check if message is over 4096 characters
-				this.checkTokenLimit(messagesWithRoleAndMessage);
 
 				// this.moveCursorToEndOfFile(editor);
 
