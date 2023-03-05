@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 import {
 	App,
 	Editor,
@@ -10,11 +11,13 @@ import {
 } from "obsidian";
 
 import matter from "gray-matter";
+const {encode } = require('gpt-3-encoder')
 
 interface ChatGPT_MDSettings {
 	apiKey: string;
 	defaultChatFrontmatter: string;
 }
+
 
 const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	apiKey: "default",
@@ -260,6 +263,19 @@ export default class ChatGPT_MD extends Plugin {
 		}
 	}
 
+	checkTokenLimit(messages: {content: string, role: string}[], limit = 4096) {
+		const encoded = encode(messages.map(message => message.content).join(""))
+		const size = encoded.length
+		console.log(size)
+			// check if message is over 4096 characters
+			if (size > limit) {
+				throw new Error(
+					`Message is over ${limit} token limit by ${size - limit} tokens.`
+				);
+			}
+		
+	}
+
 	extractRoleAndMessage(message: string) {
 		/*
 		extract role from message
@@ -313,7 +329,9 @@ export default class ChatGPT_MD extends Plugin {
 				const frontmatter = this.getFrontmatter(view);
 
 				// get messages
-				const bodyWithoutYML = this.removeYMLFromMessage(editor.getValue());
+				const bodyWithoutYML = this.removeYMLFromMessage(
+					editor.getValue()
+				);
 				const messages = this.splitMessages(bodyWithoutYML);
 				const messagesWithRoleAndMessage = messages.map((message) => {
 					return this.extractRoleAndMessage(message);
@@ -332,39 +350,42 @@ export default class ChatGPT_MD extends Plugin {
 					);
 				}
 
-				this.moveCursorToEndOfFile(editor);
+				// check if message is over 4096 characters
+				this.checkTokenLimit(messagesWithRoleAndMessage);
 
-				this.callOpenAIAPI(
-					editor,
-					messagesWithRoleAndMessage,
-					frontmatter.model,
-					frontmatter.max_tokens,
-					frontmatter.temperature,
-					frontmatter.top_p,
-					frontmatter.presence_penalty,
-					frontmatter.frequency_penalty,
-					frontmatter.stream,
-					frontmatter.stop,
-					frontmatter.n,
-					frontmatter.logit_bias,
-					frontmatter.user
-				).then((response) => {
-					if (response === "streaming") {
-						// append \n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n
-						const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
-						editor.replaceRange(newLine, editor.getCursor());
+				// this.moveCursorToEndOfFile(editor);
 
-						// move cursor to end of file
-						const cursor = editor.getCursor();
-						const newCursor = {
-							line: cursor.line,
-							ch: cursor.ch + newLine.length,
-						};
-						editor.setCursor(newCursor);
-					} else {
-						this.appendMessage(editor, "assistant", response);
-					}
-				});
+				// this.callOpenAIAPI(
+				// 	editor,
+				// 	messagesWithRoleAndMessage,
+				// 	frontmatter.model,
+				// 	frontmatter.max_tokens,
+				// 	frontmatter.temperature,
+				// 	frontmatter.top_p,
+				// 	frontmatter.presence_penalty,
+				// 	frontmatter.frequency_penalty,
+				// 	frontmatter.stream,
+				// 	frontmatter.stop,
+				// 	frontmatter.n,
+				// 	frontmatter.logit_bias,
+				// 	frontmatter.user
+				// ).then((response) => {
+				// 	if (response === "streaming") {
+				// 		// append \n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n
+				// 		const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
+				// 		editor.replaceRange(newLine, editor.getCursor());
+
+				// 		// move cursor to end of file
+				// 		const cursor = editor.getCursor();
+				// 		const newCursor = {
+				// 			line: cursor.line,
+				// 			ch: cursor.ch + newLine.length,
+				// 		};
+				// 		editor.setCursor(newCursor);
+				// 	} else {
+				// 		this.appendMessage(editor, "assistant", response);
+				// 	}
+				// });
 			},
 		});
 
@@ -427,7 +448,14 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "Settings for ChatGPT MD:" });
+		containerEl.createEl("h2", {
+			text: "Settings for ChatGPT MD: Keep tokens in mind! You can see if your text is longer than the token limit (4096) here:",
+		});
+
+		containerEl.createEl("a", {
+			text: "https://platform.openai.com/tokenizer",
+			href: "https://platform.openai.com/tokenizer",
+		});
 
 		new Setting(containerEl)
 			.setName("OpenAI API Key")
@@ -446,8 +474,7 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Default Chat Frontmatter")
 			.setDesc(
-				"Default frontmatter for new chat files. You can change/use all of the settings exposed by the OpenAI API here: https://platform.openai.com/docs/api-reference/chat/create."
-			)
+				"Default frontmatter for new chat files. You can change/use all of the settings exposed by the OpenAI API here: https://platform.openai.com/docs/api-reference/chat/create")
 			.addTextArea((text) =>
 				text
 					.setPlaceholder(

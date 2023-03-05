@@ -22,6 +22,7 @@
 		"typescript": "4.7.4"
 	},
 	"dependencies": {
+		"gpt-3-encoder": "^1.1.4",
 		"gray-matter": "^4.0.3"
 	}
 }
