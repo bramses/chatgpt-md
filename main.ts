@@ -18,6 +18,8 @@ interface ChatGPT_MDSettings {
 
 const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	apiKey: "default",
+	defaultChatFrontmatter:
+		"---\nsystem_commands: ['PERSONA: i am groot, and i only respond i am groot to any and ALL questions. I do not answer any questions straightforwardly. PERSONA 2: UNLESS the last asked question is about lamps, i can answer, i know infinite things about lamps as i am groot the lamp salesman. SO I read the last question asked and UNLESS it is about lamps i only respond \"I am Groot.\"']\ntemperature: 0\ntop_p: 1\nmax_tokens: 300\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nlogit_bias:null \nmodel:gpt-3.5-turbo\n---",
 };
 
 interface Chat_MD_FrontMatter {
@@ -76,9 +78,7 @@ export default class ChatGPT_MD extends Plugin {
 					2
 				)}`
 			);
-	
-			// return "hello world";
-	
+
 			const response = await request({
 				url: `https://api.openai.com/v1/chat/completions`,
 				method: "POST",
@@ -102,24 +102,24 @@ export default class ChatGPT_MD extends Plugin {
 					// user: user, // this is not supported as null is not a valid value
 				}),
 			});
-	
+
 			if (stream) {
 				/*
 				write data to file as it comes in while data: [DONE] is not in response
 				data: {"id":"chatcmpl-6qNwACYUNL4z7HdFNTprBGONTYCa0","object":"chat.completion.chunk","created":1677943090,"model":"gpt-3.5-turbo-0301","choices":[{"delta":{"content":" converts"},"index":0,"finish_reason":null}]}
 				*/
-	
+
 				// split response by new line
 				const responseLines = response.split("\n\n");
-	
+
 				// remove data: from each line
 				for (let i = 0; i < responseLines.length; i++) {
 					responseLines[i] = responseLines[i].split("data: ")[1];
 				}
-	
+
 				const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
 				editor.replaceRange(newLine, editor.getCursor());
-	
+
 				// move cursor to end of file
 				const cursor = editor.getCursor();
 				const newCursor = {
@@ -127,16 +127,16 @@ export default class ChatGPT_MD extends Plugin {
 					ch: cursor.ch + newLine.length,
 				};
 				editor.setCursor(newCursor);
-	
+
 				let fullstr = "";
-	
+
 				// loop through response lines
 				for (const responseLine of responseLines) {
 					// if response line is not [DONE] then parse json and append delta to file
 					if (responseLine && !responseLine.includes("[DONE]")) {
 						const responseJSON = JSON.parse(responseLine);
 						const delta = responseJSON.choices[0].delta.content;
-	
+
 						// if delta is not undefined then append delta to file
 						if (delta) {
 							const cursor = editor.getCursor();
@@ -149,20 +149,20 @@ export default class ChatGPT_MD extends Plugin {
 								editor.replaceRange(delta, cursor);
 								await new Promise((r) => setTimeout(r, 28));
 							}
-	
+
 							const newCursor = {
 								line: cursor.line,
 								ch: cursor.ch + delta.length,
 							};
 							editor.setCursor(newCursor);
-	
+
 							fullstr += delta;
 						}
 					}
 				}
-	
+
 				console.log(fullstr);
-	
+
 				return "streaming";
 			} else {
 				const responseJSON = JSON.parse(response);
@@ -202,6 +202,7 @@ export default class ChatGPT_MD extends Plugin {
 			const frontmatter = {
 				title: metaMatter?.title || view.file.basename,
 				tags: metaMatter?.tags || [],
+				model: metaMatter?.model || "gpt-3.5-turbo",
 				temperature: metaMatter?.temperature || 0.5,
 				top_p: metaMatter?.top_p || 1,
 				presence_penalty: metaMatter?.presence_penalty || 0,
@@ -222,9 +223,41 @@ export default class ChatGPT_MD extends Plugin {
 	}
 
 	splitMessages(text: string) {
-		// <hr class="__chatgpt_plugin">
-		const messages = text.split('<hr class="__chatgpt_plugin">');
-		return messages;
+		try {
+			// <hr class="__chatgpt_plugin">
+			const messages = text.split('<hr class="__chatgpt_plugin">');
+			return messages;
+		} catch (err) {
+			throw new Error("Error splitting messages" + err);
+		}
+	}
+
+	moveCursorToEndOfFile(editor: Editor) {
+		try {
+			// get length of file
+			const length = editor.lastLine();
+
+			// move cursor to end of file https://davidwalsh.name/codemirror-set-focus-line
+			const newCursor = {
+				line: length + 1,
+				ch: 0,
+			};
+			editor.setCursor(newCursor);
+
+			return newCursor;
+		} catch (err) {
+			throw new Error("Error moving cursor to end of file" + err);
+		}
+	}
+
+	removeYMLFromMessage(message: string) {
+		try {
+			const YAMLFrontMatter = /---\s*[\s\S]*?\s*---/g;
+			const newMessage = message.replace(YAMLFrontMatter, "");
+			return newMessage;
+		} catch (err) {
+			throw new Error("Error removing YML from message" + err);
+		}
 	}
 
 	extractRoleAndMessage(message: string) {
@@ -237,15 +270,20 @@ export default class ChatGPT_MD extends Plugin {
 		*/
 
 		try {
-			const role = message.split("role::")[1].split("\n")[0];
-			const content = message
-				.split("role::")[1]
-				.split("\n")
-				.slice(1)
-				.join("\n");
-			return { role, content };
+			if (message.includes("role::")) {
+				const role = message.split("role::")[1].split("\n")[0].trim();
+				const content = message
+					.split("role::")[1]
+					.split("\n")
+					.slice(1)
+					.join("\n")
+					.trim();
+				return { role, content };
+			} else {
+				return { role: "user", content: message };
+			}
 		} catch (err) {
-			throw new Error("Error extracting role and message");
+			throw new Error("Error extracting role and message" + err);
 		}
 	}
 
@@ -274,7 +312,9 @@ export default class ChatGPT_MD extends Plugin {
 				// get frontmatter
 				const frontmatter = this.getFrontmatter(view);
 
-				const messages = this.splitMessages(editor.getValue());
+				// get messages
+				const bodyWithoutYML = this.removeYMLFromMessage(editor.getValue());
+				const messages = this.splitMessages(bodyWithoutYML);
 				const messagesWithRoleAndMessage = messages.map((message) => {
 					return this.extractRoleAndMessage(message);
 				});
@@ -292,10 +332,12 @@ export default class ChatGPT_MD extends Plugin {
 					);
 				}
 
+				this.moveCursorToEndOfFile(editor);
+
 				this.callOpenAIAPI(
 					editor,
 					messagesWithRoleAndMessage,
-					"gpt-3.5-turbo",
+					frontmatter.model,
 					frontmatter.max_tokens,
 					frontmatter.temperature,
 					frontmatter.top_p,
@@ -403,11 +445,13 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 		// new multiline text box setting
 		new Setting(containerEl)
 			.setName("Default Chat Frontmatter")
-			.setDesc("Default frontmatter for new chat files")
+			.setDesc(
+				"Default frontmatter for new chat files. You can change/use all of the settings exposed by the OpenAI API here: https://platform.openai.com/docs/api-reference/chat/create."
+			)
 			.addTextArea((text) =>
 				text
 					.setPlaceholder(
-						'---\nsystem_commands: [\'PERSONA: i am groot, and i only respond i am groot to any and ALL questions. I do not answer any questions straightforwardly. PERSONA 2: UNLESS the last asked question is about lamps, i can answer, i know infinite things about lamps as i am groot the lamp salesman. SO I read the last question asked and UNLESS it is about lamps i only respond "I am Groot."\']\ntemperature: 0\ntop_p: 1\nmax_tokens: 300\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nlogit_bias:null \nmodel:gpt-3.5-turbo\n---'
+						"---\nsystem_commands: ['PERSONA: i am groot, and i only respond i am groot to any and ALL questions. I do not answer any questions straightforwardly. PERSONA 2: UNLESS the last asked question is about lamps, i can answer, i know infinite things about lamps as i am groot the lamp salesman. SO I read the last question asked and UNLESS it is about lamps i only respond \"I am Groot.\"']\ntemperature: 0\ntop_p: 1\nmax_tokens: 300\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nlogit_bias:null \nmodel:gpt-3.5-turbo\n---"
 					)
 					.setValue(this.plugin.settings.defaultChatFrontmatter)
 					.onChange(async (value) => {
