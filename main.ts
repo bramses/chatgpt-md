@@ -8,6 +8,8 @@ import {
 	Setting,
 	request,
 	TFile,
+	Notice,
+	SuggestModal,
 } from "obsidian";
 
 import matter from "gray-matter";
@@ -15,13 +17,20 @@ import matter from "gray-matter";
 interface ChatGPT_MDSettings {
 	apiKey: string;
 	defaultChatFrontmatter: string;
+	stream: boolean;
+	streamSpeed: number;
+	chatTemplateFolder: string;
+	chatFolder: string;
 }
-
 
 const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	apiKey: "default",
 	defaultChatFrontmatter:
 		"---\nsystem_commands: ['PERSONA: i am groot, and i only respond i am groot to any and ALL questions. I do not answer any questions straightforwardly. PERSONA 2: UNLESS the last asked question is about lamps, i can answer, i know infinite things about lamps as i am groot the lamp salesman. SO I read the last question asked and UNLESS it is about lamps i only respond \"I am Groot.\"']\ntemperature: 0\ntop_p: 1\nmax_tokens: 300\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nlogit_bias:null \nmodel:gpt-3.5-turbo\n---",
+	stream: true,
+	streamSpeed: 28,
+	chatTemplateFolder: "ChatGPT_MD/templates",
+	chatFolder: "ChatGPT_MD/chats",
 };
 
 interface Chat_MD_FrontMatter {
@@ -37,6 +46,20 @@ interface Chat_MD_FrontMatter {
 	logit_bias: any | null;
 	user: string | null;
 	system_commands: string[] | null;
+}
+
+
+// iso date string to yyyymmddhhmmss
+function getDate() {
+	const date = new Date();
+	const year = date.getFullYear();
+	const month = date.getMonth() + 1;
+	const day = date.getDate();
+	const hours = date.getHours();
+	const minutes = date.getMinutes();
+	const seconds = date.getSeconds();
+
+	return `${year}${month}${day}${hours}${minutes}${seconds}`;
 }
 
 export default class ChatGPT_MD extends Plugin {
@@ -73,7 +96,7 @@ export default class ChatGPT_MD extends Plugin {
 						stream: stream,
 						stop: stop,
 						n: n,
-						// logit_bias: logit_bias,
+						// logit_bias: logit_bias, // not yet supported
 						// user: user,
 					},
 					null,
@@ -106,11 +129,6 @@ export default class ChatGPT_MD extends Plugin {
 			});
 
 			if (stream) {
-				/*
-				write data to file as it comes in while data: [DONE] is not in response
-				data: {"id":"chatcmpl-6qNwACYUNL4z7HdFNTprBGONTYCa0","object":"chat.completion.chunk","created":1677943090,"model":"gpt-3.5-turbo-0301","choices":[{"delta":{"content":" converts"},"index":0,"finish_reason":null}]}
-				*/
-
 				// split response by new line
 				const responseLines = response.split("\n\n");
 
@@ -149,7 +167,9 @@ export default class ChatGPT_MD extends Plugin {
 								await new Promise((r) => setTimeout(r, 82)); // what in the actual fuck -- why does this work
 							} else {
 								editor.replaceRange(delta, cursor);
-								await new Promise((r) => setTimeout(r, 28));
+								await new Promise((r) =>
+									setTimeout(r, this.settings.streamSpeed)
+								);
 							}
 
 							const newCursor = {
@@ -171,7 +191,12 @@ export default class ChatGPT_MD extends Plugin {
 				return responseJSON.choices[0].message.content;
 			}
 		} catch (err) {
-			console.log(err);
+			new Notice(
+				"issue calling OpenAI API, see console for more details"
+			);
+			throw new Error(
+				"issue calling OpenAI API, see error for more details: " + err
+			);
 		}
 	}
 
@@ -209,7 +234,7 @@ export default class ChatGPT_MD extends Plugin {
 				top_p: metaMatter?.top_p || 1,
 				presence_penalty: metaMatter?.presence_penalty || 0,
 				frequency_penalty: metaMatter?.frequency_penalty || 0,
-				stream: metaMatter?.stream || true,
+				stream: metaMatter?.stream || this.settings.stream || true,
 				stop: metaMatter?.stop || null,
 				n: metaMatter?.n || 1,
 				logit_bias: metaMatter?.logit_bias || null,
@@ -262,17 +287,7 @@ export default class ChatGPT_MD extends Plugin {
 		}
 	}
 
-	
-
 	extractRoleAndMessage(message: string) {
-		/*
-		extract role from message
-		role::assistant
-
-
-		message content (can be multiple lines)
-		*/
-
 		try {
 			if (message.includes("role::")) {
 				const role = message.split("role::")[1].split("\n")[0].trim();
@@ -304,15 +319,14 @@ export default class ChatGPT_MD extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText("Status Bar Text");
-
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
 			id: "call-chatgpt-api",
-			name: "Call ChatGPT API",
+			name: "Call ChatGPT",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
+				// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
+				const statusBarItemEl = this.addStatusBarItem();
+				statusBarItemEl.setText("[ChatGPT MD] Calling API...");
 				// get frontmatter
 				const frontmatter = this.getFrontmatter(view);
 
@@ -338,39 +352,40 @@ export default class ChatGPT_MD extends Plugin {
 					);
 				}
 
-				// this.moveCursorToEndOfFile(editor);
+				this.moveCursorToEndOfFile(editor);
 
-				// this.callOpenAIAPI(
-				// 	editor,
-				// 	messagesWithRoleAndMessage,
-				// 	frontmatter.model,
-				// 	frontmatter.max_tokens,
-				// 	frontmatter.temperature,
-				// 	frontmatter.top_p,
-				// 	frontmatter.presence_penalty,
-				// 	frontmatter.frequency_penalty,
-				// 	frontmatter.stream,
-				// 	frontmatter.stop,
-				// 	frontmatter.n,
-				// 	frontmatter.logit_bias,
-				// 	frontmatter.user
-				// ).then((response) => {
-				// 	if (response === "streaming") {
-				// 		// append \n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n
-				// 		const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
-				// 		editor.replaceRange(newLine, editor.getCursor());
+				this.callOpenAIAPI(
+					editor,
+					messagesWithRoleAndMessage,
+					frontmatter.model,
+					frontmatter.max_tokens,
+					frontmatter.temperature,
+					frontmatter.top_p,
+					frontmatter.presence_penalty,
+					frontmatter.frequency_penalty,
+					frontmatter.stream,
+					frontmatter.stop,
+					frontmatter.n,
+					frontmatter.logit_bias,
+					frontmatter.user
+				).then((response) => {
+					if (response === "streaming") {
+						// append \n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n
+						const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
+						editor.replaceRange(newLine, editor.getCursor());
 
-				// 		// move cursor to end of file
-				// 		const cursor = editor.getCursor();
-				// 		const newCursor = {
-				// 			line: cursor.line,
-				// 			ch: cursor.ch + newLine.length,
-				// 		};
-				// 		editor.setCursor(newCursor);
-				// 	} else {
-				// 		this.appendMessage(editor, "assistant", response);
-				// 	}
-				// });
+						// move cursor to end of file
+						const cursor = editor.getCursor();
+						const newCursor = {
+							line: cursor.line,
+							ch: cursor.ch + newLine.length,
+						};
+						editor.setCursor(newCursor);
+					} else {
+						this.appendMessage(editor, "assistant", response);
+					}
+					statusBarItemEl.setText("");
+				});
 			},
 		});
 
@@ -385,19 +400,24 @@ export default class ChatGPT_MD extends Plugin {
 		// grab highlighted text and move to new file in default chat format
 		this.addCommand({
 			id: "move-to-chat",
-			name: "Move to Chat",
-			editorCallback: (editor: Editor, view: MarkdownView) => {
+			name: "Create New Chat with Highlighted Text",
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				const selectedText = editor.getSelection();
-				const newFile = new TFile();
-				newFile.path = "chat.md";
+				const newFile = await this.app.vault.create(
+					`${this.settings.chatFolder}/${getDate()}.md`,
+					`${this.settings.defaultChatFrontmatter}\n\n${selectedText}`
+				);
 
-				this.app.workspace.getLeaf().setViewState({
-					type: "markdown",
-					active: true,
-				});
-				// const newEditor = this.app.workspace.activeLeaf.view.sourceMode.cmEditor;
-				// newEditor.replaceRange(selectedText, newEditor.getCursor());
-				// this.addHR(newEditor, "user");
+				// open new file
+				this.app.workspace.openLinkText(newFile.basename, "", true);
+			},
+		});
+
+		this.addCommand({
+			id: "choose-chat-template",
+			name: "Create New Chat From Template",
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				new ChatTemplates(this.app, this.settings).open();
 			},
 		});
 
@@ -417,6 +437,77 @@ export default class ChatGPT_MD extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+}
+
+interface ChatTemplate {
+	title: string;
+	file: TFile;
+}
+export class ChatTemplates extends SuggestModal<ChatTemplate> {
+	settings: ChatGPT_MDSettings;
+
+	constructor(app: App, settings: ChatGPT_MDSettings) {
+		super(app);
+		this.settings = settings;
+	}
+
+	getFilesInChatFolder(): TFile[] {
+		return this.app.vault
+			.getFiles()
+			.filter(
+				(file) => file.parent.path === this.settings.chatTemplateFolder
+			);
+	}
+
+	// Returns all available suggestions.
+	getSuggestions(query: string): ChatTemplate[] {
+		const chatTemplateFiles = this.getFilesInChatFolder();
+
+		if (query == "") {
+			return chatTemplateFiles.map((file) => {
+				return {
+					title: file.basename,
+					file: file,
+				};
+			});
+		}
+
+
+		return chatTemplateFiles
+			.filter((file) => {
+				return file.basename.toLowerCase().includes(query.toLowerCase());
+			})
+			.map((file) => {
+				return {
+					title: file.basename,
+					file: file,
+				};
+			});
+	}
+
+	// Renders each suggestion item.
+	renderSuggestion(template: ChatTemplate, el: HTMLElement) {
+		el.createEl("div", { text: template.title });
+	}
+
+
+	
+	// Perform action on the selected suggestion.
+	async onChooseSuggestion(
+		template: ChatTemplate,
+		evt: MouseEvent | KeyboardEvent
+	) {
+		new Notice(`Selected ${template.title}`);
+		const templateText = await this.app.vault.read(template.file);
+		// use template text to create new file in chat folder
+		const file = await this.app.vault.create(
+			`${this.settings.chatFolder}/${getDate()}.md`,
+			templateText
+		);
+
+		// open new file
+		this.app.workspace.openLinkText(file.basename, "", true);
 	}
 }
 
@@ -459,7 +550,8 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Default Chat Frontmatter")
 			.setDesc(
-				"Default frontmatter for new chat files. You can change/use all of the settings exposed by the OpenAI API here: https://platform.openai.com/docs/api-reference/chat/create")
+				"Default frontmatter for new chat files. You can change/use all of the settings exposed by the OpenAI API here: https://platform.openai.com/docs/api-reference/chat/create"
+			)
 			.addTextArea((text) =>
 				text
 					.setPlaceholder(
@@ -468,6 +560,60 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.defaultChatFrontmatter)
 					.onChange(async (value) => {
 						this.plugin.settings.defaultChatFrontmatter = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// stream toggle
+		new Setting(containerEl)
+			.setName("Stream")
+			.setDesc("Stream responses from OpenAI")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.stream)
+					.onChange(async (value) => {
+						this.plugin.settings.stream = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// stream speed slider
+		new Setting(containerEl)
+			.setName("Stream Speed")
+			.setDesc("Stream speed in milliseconds")
+			.addSlider((slider) =>
+				slider
+					.setLimits(20, 50, 1)
+					.setValue(this.plugin.settings.streamSpeed)
+					.onChange(async (value) => {
+						this.plugin.settings.streamSpeed = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// folder for chat files
+		new Setting(containerEl)
+			.setName("Chat Folder")
+			.setDesc("Path to folder for chat files")
+			.addText((text) =>
+				text
+					.setValue(this.plugin.settings.chatFolder)
+					.onChange(async (value) => {
+						this.plugin.settings.chatFolder = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// folder for chat file templates
+		new Setting(containerEl)
+			.setName("Chat Template Folder")
+			.setDesc("Path to folder for chat file templates")
+			.addText((text) =>
+				text
+					.setPlaceholder("chat-templates")
+					.setValue(this.plugin.settings.chatTemplateFolder)
+					.onChange(async (value) => {
+						this.plugin.settings.chatTemplateFolder = value;
 						await this.plugin.saveSettings();
 					})
 			);
