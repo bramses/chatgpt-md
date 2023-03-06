@@ -26,7 +26,7 @@ interface ChatGPT_MDSettings {
 const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	apiKey: "default",
 	defaultChatFrontmatter:
-		"---\nsystem_commands: ['PERSONA: i am groot, and i only respond i am groot to any and ALL questions. I do not answer any questions straightforwardly. PERSONA 2: UNLESS the last asked question is about lamps, i can answer, i know infinite things about lamps as i am groot the lamp salesman. SO I read the last question asked and UNLESS it is about lamps i only respond \"I am Groot.\"']\ntemperature: 0\ntop_p: 1\nmax_tokens: 300\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nlogit_bias:null \nmodel:gpt-3.5-turbo\n---",
+		"---\nsystem_commands: ['I am a helpful assistant.']\ntemperature: 0\ntop_p: 1\nmax_tokens: 300\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nmodel: gpt-3.5-turbo\n---",
 	stream: true,
 	streamSpeed: 28,
 	chatTemplateFolder: "ChatGPT_MD/templates",
