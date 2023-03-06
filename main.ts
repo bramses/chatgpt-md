@@ -235,6 +235,7 @@ export default class ChatGPT_MD extends Plugin {
 				presence_penalty: metaMatter?.presence_penalty || 0,
 				frequency_penalty: metaMatter?.frequency_penalty || 0,
 				stream: metaMatter?.stream || this.settings.stream || true,
+				max_tokens: metaMatter?.max_tokens || 256,
 				stop: metaMatter?.stop || null,
 				n: metaMatter?.n || 1,
 				logit_bias: metaMatter?.logit_bias || null,
