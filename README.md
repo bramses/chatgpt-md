@@ -1,10 +1,13 @@
+
+
+
 # ChatGPT-MD
 
 A (nearly) seamless integration of ChatGPT into Obsidian.
 
 ## Demo
 
-video soon...
+https://user-images.githubusercontent.com/3282661/223005882-6632c997-b9a6-445b-800c-77a4b76a6325.mov
 
 ## Features
 
