@@ -11,7 +11,7 @@ https://user-images.githubusercontent.com/3282661/223005882-6632c997-b9a6-445b-8
 
 ### (youtube mirror - for mobile users ⬇️)
 
-[![video thumbnail](video%20thumbnail.png)](https://youtu.be/CxDlol_DDI8)
+[![video thumbnail](video-thumbnail.png)](https://youtu.be/CxDlol_DDI8)
 
 ## Features
 
