@@ -1,25 +1,27 @@
 # ChatGPT-MD
 
-The ChatGPT-MD plugin for Obsidian allows you to use the OpenAI GPT API within your Markdown files to create conversational chatbots. 
+A (nearly) seamless integration of ChatGPT into Obsidian.
+
+## Demo
+
+video soon...
 
 ## Features
 
-- Call the OpenAI GPT API from within Obsidian
-- Specify the model, temperature, top_p, presence_penalty, frequency_penalty, stream, stop, n, logit_bias, and user in the frontmatter of your Markdown file
-- Split messages by <hr class="__chatgpt_plugin"> 
-- Append messages to the bottom of the editor file
-- Add HRs between messages for clarity
+- Chat from *any* MD note
+- Create Chat *Templates* for sharing and running similar scenarios
+- Use *frontmatter* to change variables for the ChatGPT API
+- *streaming* in characters to Obsidian
+- Uses *regular Markdown*. Meaning everything from *lists* to *code blocks* work.
+- Create chats from *highlighted text*.
 
-## Usage
 
-- Install the plugin
-- Open the Settings tab for the plugin and enter your OpenAI API key and the default frontmatter for new chat files
-- Use the "Call ChatGPT API" command to call the OpenAI GPT API from within your Markdown file
-- Use the "Add HR" command to add a horizontal rule between messages
-- Use the "Move to Chat" command to move selected text to a new file in the default chat format
+## About the Developer
 
-## Contributing
+This repository was written by Bram Adams, a writer and programmer based out of NYC. 
 
-- Fork the repository
-- Make your changes
-- Submit a pull request
+Bram publishes a Zettelkasten, with a twice/weekly newsletter (which you can subscribe to [here](https://www.bramadams.dev/#/portal/)), is a community developer ambassador for OpenAI and does freeleance contracts (for hire!) related to AI/web dev/AR+VR. 
+
+Bram is also the creator of [Stenography](https://stenography.dev), a API and [VSC Extension](https://marketplace.visualstudio.com/items?itemName=Stenography.stenography) that automatically documents code on save.
+
+You can learn more about him and his work on his [website](https://www.bramadams.dev/about/).
