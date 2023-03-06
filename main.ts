@@ -82,27 +82,7 @@ export default class ChatGPT_MD extends Plugin {
 	) {
 		try {
 			console.log("calling openai api");
-			console.log(editor.getDoc());
-			console.log(
-				`args: ${JSON.stringify(
-					{
-						model: model,
-						messages: messages,
-						max_tokens: max_tokens,
-						temperature: temperature,
-						top_p: top_p,
-						presence_penalty: presence_penalty,
-						frequency_penalty: frequency_penalty,
-						stream: stream,
-						stop: stop,
-						n: n,
-						// logit_bias: logit_bias, // not yet supported
-						// user: user,
-					},
-					null,
-					2
-				)}`
-			);
+			
 
 			const response = await request({
 				url: `https://api.openai.com/v1/chat/completions`,
@@ -123,8 +103,8 @@ export default class ChatGPT_MD extends Plugin {
 					stream: stream,
 					stop: stop,
 					n: n,
-					// logit_bias: logit_bias,
-					// user: user, // this is not supported as null is not a valid value
+					// logit_bias: logit_bias, // not yet supported
+					// user: user, // not yet supported
 				}),
 			});
 
@@ -140,7 +120,7 @@ export default class ChatGPT_MD extends Plugin {
 				const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
 				editor.replaceRange(newLine, editor.getCursor());
 
-				// move cursor to end of file
+				// move cursor to end of line
 				const cursor = editor.getCursor();
 				const newCursor = {
 					line: cursor.line,
@@ -161,9 +141,7 @@ export default class ChatGPT_MD extends Plugin {
 						if (delta) {
 							const cursor = editor.getCursor();
 							if (delta === "`") {
-								console.log("single backtick");
 								editor.replaceRange(delta, cursor);
-								// do not move cursor
 								await new Promise((r) => setTimeout(r, 82)); // what in the actual fuck -- why does this work
 							} else {
 								editor.replaceRange(delta, cursor);
@@ -375,7 +353,7 @@ export default class ChatGPT_MD extends Plugin {
 						const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
 						editor.replaceRange(newLine, editor.getCursor());
 
-						// move cursor to end of file
+						// move cursor to end of completion
 						const cursor = editor.getCursor();
 						const newCursor = {
 							line: cursor.line,
