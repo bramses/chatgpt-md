@@ -364,6 +364,9 @@ export default class ChatGPT_MD extends Plugin {
 						this.appendMessage(editor, "assistant", response);
 					}
 					statusBarItemEl.setText("");
+				}).catch((err) => {
+					statusBarItemEl.setText("");
+					console.log(err);
 				});
 			},
 		});
