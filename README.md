@@ -17,6 +17,7 @@ https://user-images.githubusercontent.com/3282661/223005882-6632c997-b9a6-445b-8
 
 - Chat from *any* MD note
 - Create Chat *Templates* for sharing and running similar scenarios. Check out the companion repo [chatgpt-md-templates](https://github.com/bramses/chatgpt-md-templates) for some templates!
+- As *minimal boilerplate as possible*, only two required in fact! `<hr class="__chatgpt_plugin">` and `role::system|assistant|user`
 - Use *frontmatter* to change variables for the ChatGPT API
 - *Stream* characters to Obsidian, creating a realtime feel
 - Uses *regular Markdown*. Meaning everything from *lists* to *code blocks* from ChatGPT *will render*!
