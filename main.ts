@@ -10,6 +10,7 @@ import {
 	TFile,
 	Notice,
 	SuggestModal,
+	TFolder,
 } from "obsidian";
 
 import matter from "gray-matter";
@@ -130,7 +131,6 @@ export default class ChatGPT_MD extends Plugin {
 				// split response by new line
 				const responseLines = response.split("\n\n");
 
-				console.log(responseLines)
 				if (responseLines.length == 0) {
 					throw new Error("[ChatGPT MD] no response")
 				}
@@ -319,6 +319,8 @@ export default class ChatGPT_MD extends Plugin {
 	}
 
 	async onload() {
+		const statusBarItemEl = this.addStatusBarItem();
+
 		await this.loadSettings();
 
 		// This adds an editor command that can perform some operation on the current editor instance
@@ -327,7 +329,6 @@ export default class ChatGPT_MD extends Plugin {
 			name: "Chat",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-				const statusBarItemEl = this.addStatusBarItem();
 				statusBarItemEl.setText("[ChatGPT MD] Calling API...");
 				// get frontmatter
 				const frontmatter = this.getFrontmatter(view);
@@ -397,7 +398,7 @@ export default class ChatGPT_MD extends Plugin {
 
 		this.addCommand({
 			id: "add-hr",
-			name: "Add HR",
+			name: "Add divider",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				this.addHR(editor, "user");
 			},
@@ -406,7 +407,7 @@ export default class ChatGPT_MD extends Plugin {
 		// grab highlighted text and move to new file in default chat format
 		this.addCommand({
 			id: "move-to-chat",
-			name: "Create New Chat with Highlighted Text",
+			name: "Create new chat with highlighted text",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				const selectedText = editor.getSelection();
 				const newFile = await this.app.vault.create(
@@ -421,7 +422,7 @@ export default class ChatGPT_MD extends Plugin {
 
 		this.addCommand({
 			id: "choose-chat-template",
-			name: "Create New Chat From Template",
+			name: "Create new chat from template",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				new ChatTemplates(this.app, this.settings).open();
 			},
@@ -459,11 +460,13 @@ export class ChatTemplates extends SuggestModal<ChatTemplate> {
 	}
 
 	getFilesInChatFolder(): TFile[] {
-		return this.app.vault
-			.getFiles()
-			.filter(
-				(file) => file.parent.path === this.settings.chatTemplateFolder
-			);
+		const folder = this.app.vault.getAbstractFileByPath(this.settings.chatTemplateFolder) as TFolder
+		if (folder != null) {
+			return folder.children as TFile[]
+		} else {
+			new Notice(`Error getting folder: ${this.settings.chatTemplateFolder}`)
+			throw new Error(`Error getting folder: ${this.settings.chatTemplateFolder}`)
+		}
 	}
 
 	// Returns all available suggestions.
