@@ -6,7 +6,7 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
-	request,
+	requestUrl,
 	TFile,
 	Notice,
 	SuggestModal,
@@ -83,8 +83,7 @@ export default class ChatGPT_MD extends Plugin {
 		try {
 			console.log("calling openai api");
 			
-
-			const response = await request({
+			const responseUrl = await requestUrl({
 				url: `https://api.openai.com/v1/chat/completions`,
 				method: "POST",
 				headers: {
@@ -106,11 +105,35 @@ export default class ChatGPT_MD extends Plugin {
 					// logit_bias: logit_bias, // not yet supported
 					// user: user, // not yet supported
 				}),
+				throw: false
 			});
+			
+			try {
+				const json = responseUrl.json
+				
+				if (json && json.error) {
+					new Notice(`[ChatGPT MD] Error :: ${json.error.message}`)
+					throw new Error(JSON.stringify(json.error))
+				}
+			} catch (err) {
+				// continue we got a valid str back
+				if (err instanceof SyntaxError) {
+					// continue
+				} else {
+					throw new Error(err)
+				}
+			}
+
+			const response = responseUrl.text
 
 			if (stream) {
 				// split response by new line
 				const responseLines = response.split("\n\n");
+
+				console.log(responseLines)
+				if (responseLines.length == 0) {
+					throw new Error("[ChatGPT MD] no response")
+				}
 
 				// remove data: from each line
 				for (let i = 0; i < responseLines.length; i++) {
@@ -347,7 +370,8 @@ export default class ChatGPT_MD extends Plugin {
 					frontmatter.n,
 					frontmatter.logit_bias,
 					frontmatter.user
-				).then((response) => {
+				)
+				.then((response) => {
 					if (response === "streaming") {
 						// append \n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n
 						const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
