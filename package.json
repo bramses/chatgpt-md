@@ -1,6 +1,6 @@
 {
 	"name": "chatgpt-md",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "A (nearly) seamless integration of ChatGPT into Obsidian.",
 	"main": "main.js",
 	"scripts": {
