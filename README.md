@@ -46,11 +46,20 @@ Add a ChatGPT MD Horizontal Rule and `role::user`.
 
 ## Installation
 
+### Community Plugins
+
+Go to Community Plugins and search `ChatGPT MD`
+
+### Local
+
 1. Clone this repo into your `plugins` directory in your vault
 2. Run `npm i` and `npm run build`
-3. Insert your OpenAI API Key into the settings
-4. Set `Chat Folder` and `Chat Template Folder`
-5. Add a hotkey for `Chat` (Im using `alt-[`)
+
+### Both
+
+1. Insert your OpenAI API Key into the settings
+2. Set `Chat Folder` and `Chat Template Folder`
+3. Add a hotkey for `Chat` (Im using `alt-[`)
 
 
 ## About the Developer
