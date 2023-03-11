@@ -13,8 +13,6 @@ import {
 	TFolder,
 } from "obsidian";
 
-import matter from "gray-matter";
-
 interface ChatGPT_MDSettings {
 	apiKey: string;
 	defaultChatFrontmatter: string;
@@ -225,7 +223,6 @@ export default class ChatGPT_MD extends Plugin {
 
 			const metaMatter =
 				app.metadataCache.getFileCache(noteFile)?.frontmatter;
-			const data = matter(view.getViewData());
 
 			const frontmatter = {
 				title: metaMatter?.title || view.file.basename,
@@ -242,7 +239,6 @@ export default class ChatGPT_MD extends Plugin {
 				logit_bias: metaMatter?.logit_bias || null,
 				user: metaMatter?.user || null,
 				system_commands: metaMatter?.system_commands || null,
-				...data.data,
 			};
 
 			return frontmatter;
