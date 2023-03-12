@@ -61,12 +61,22 @@ Go to Community Plugins and search `ChatGPT MD`
 2. Set `Chat Folder` and `Chat Template Folder`
 3. Add a hotkey for `Chat` (Im using `alt-[`)
 
+## FAQ
+
+### Q: The chat seems to be getting cut off halfway through
+
+To address this, first try to increase your `max_tokens` (default is set to 300). You may also want to update it more permanently in the default frontmatter settings. See pics below:
+
+![Screenshot 2023-03-12 16-14-35](https://user-images.githubusercontent.com/3282661/224571118-080ca393-6f94-4a20-ba98-27bc8b8b6ad2.png)
+![Screenshot 2023-03-12 16-15-01](https://user-images.githubusercontent.com/3282661/224571119-cba1be45-3ab1-4b86-b056-ba596bacd918.png)
+
+
 
 ## About the Developer
 
 This repository was written by Bram Adams, a writer and programmer based out of NYC. 
 
-Bram publishes a Zettelkasten with a twice/weekly newsletter, is a community developer ambassador for OpenAI, and does freeleance contracts (for hire!) related to AI/web dev/AR+VR. 
+Bram publishes a Zettelkasten with a twice/weekly newsletter, is a [community developer ambassador for OpenAI](https://platform.openai.com/ambassadors), and does freeleance contracts (for hire!) related to AI/web dev/AR+VR. 
 
 Bram is also the creator of [Stenography](https://stenography.dev), a API and [VSC Extension](https://marketplace.visualstudio.com/items?itemName=Stenography.stenography) that automatically documents code on save. He also is the author of [Bramses' Highly Opinionated Vault](https://github.com/bramses/bramses-highly-opinionated-vault-2023), an extremely detailed philosophy + vault template used by hundreds of Obsidian users, new and old.
 
