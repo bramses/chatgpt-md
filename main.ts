@@ -11,6 +11,7 @@ import {
 	Notice,
 	SuggestModal,
 	TFolder,
+	Platform,
 } from "obsidian";
 
 interface ChatGPT_MDSettings {
@@ -20,16 +21,22 @@ interface ChatGPT_MDSettings {
 	streamSpeed: number;
 	chatTemplateFolder: string;
 	chatFolder: string;
+	generateAtCursor: boolean;
+	autoInferTitle: boolean;
+	dateFormat: string;
 }
 
 const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	apiKey: "default",
 	defaultChatFrontmatter:
-		"---\nsystem_commands: ['I am a helpful assistant.']\ntemperature: 0\ntop_p: 1\nmax_tokens: 300\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nmodel: gpt-3.5-turbo\n---",
+		"---\nsystem_commands: ['I am a helpful assistant.']\ntemperature: 0\ntop_p: 1\nmax_tokens: 512\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nmodel: gpt-3.5-turbo\n---",
 	stream: true,
 	streamSpeed: 28,
 	chatTemplateFolder: "ChatGPT_MD/templates",
 	chatFolder: "ChatGPT_MD/chats",
+	generateAtCursor: false,
+	autoInferTitle: false,
+	dateFormat: "YYYYMMDDhhmmss",
 };
 
 interface Chat_MD_FrontMatter {
@@ -45,20 +52,6 @@ interface Chat_MD_FrontMatter {
 	logit_bias: any | null;
 	user: string | null;
 	system_commands: string[] | null;
-}
-
-
-// iso date string to yyyymmddhhmmss
-function getDate() {
-	const date = new Date();
-	const year = date.getFullYear();
-	const month = date.getMonth() + 1;
-	const day = date.getDate();
-	const hours = date.getHours();
-	const minutes = date.getMinutes();
-	const seconds = date.getSeconds();
-
-	return `${year}${month}${day}${hours}${minutes}${seconds}`;
 }
 
 export default class ChatGPT_MD extends Plugin {
@@ -81,7 +74,7 @@ export default class ChatGPT_MD extends Plugin {
 	) {
 		try {
 			console.log("calling openai api");
-			
+
 			const responseUrl = await requestUrl({
 				url: `https://api.openai.com/v1/chat/completions`,
 				method: "POST",
@@ -104,33 +97,33 @@ export default class ChatGPT_MD extends Plugin {
 					// logit_bias: logit_bias, // not yet supported
 					// user: user, // not yet supported
 				}),
-				throw: false
+				throw: false,
 			});
-			
+
 			try {
-				const json = responseUrl.json
-				
+				const json = responseUrl.json;
+
 				if (json && json.error) {
-					new Notice(`[ChatGPT MD] Error :: ${json.error.message}`)
-					throw new Error(JSON.stringify(json.error))
+					new Notice(`[ChatGPT MD] Error :: ${json.error.message}`);
+					throw new Error(JSON.stringify(json.error));
 				}
 			} catch (err) {
 				// continue we got a valid str back
 				if (err instanceof SyntaxError) {
 					// continue
 				} else {
-					throw new Error(err)
+					throw new Error(err);
 				}
 			}
 
-			const response = responseUrl.text
+			const response = responseUrl.text;
 
 			if (stream) {
 				// split response by new line
 				const responseLines = response.split("\n\n");
 
 				if (responseLines.length == 0) {
-					throw new Error("[ChatGPT MD] no response")
+					throw new Error("[ChatGPT MD] no response");
 				}
 
 				// remove data: from each line
@@ -233,7 +226,7 @@ export default class ChatGPT_MD extends Plugin {
 				presence_penalty: metaMatter?.presence_penalty || 0,
 				frequency_penalty: metaMatter?.frequency_penalty || 0,
 				stream: metaMatter?.stream || this.settings.stream || true,
-				max_tokens: metaMatter?.max_tokens || 256,
+				max_tokens: metaMatter?.max_tokens || 512,
 				stop: metaMatter?.stop || null,
 				n: metaMatter?.n || 1,
 				logit_bias: metaMatter?.logit_bias || null,
@@ -317,17 +310,22 @@ export default class ChatGPT_MD extends Plugin {
 	async inferTitleFromMessages(messages: string[]) {
 		try {
 			if (messages.length < 2) {
-				new Notice("Not enough messages to infer title. Minimum 2 messages.");
+				new Notice(
+					"Not enough messages to infer title. Minimum 2 messages."
+				);
 				return;
 			}
 
+			const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forwad slash. Just return the title. \nMessages:\n\n${JSON.stringify(
+				messages
+			)}`;
 
-			const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forwad slash. Just return the title. \nMessages:\n\n${JSON.stringify(messages)}`;
-
-			const titleMessage = [{
-				role: "user",
-				content: prompt
-			}];
+			const titleMessage = [
+				{
+					role: "user",
+					content: prompt,
+				},
+			];
 
 			const responseUrl = await requestUrl({
 				url: `https://api.openai.com/v1/chat/completions`,
@@ -338,23 +336,78 @@ export default class ChatGPT_MD extends Plugin {
 				},
 				contentType: "application/json",
 				body: JSON.stringify({
-					model: 'gpt-3.5-turbo',
+					model: "gpt-3.5-turbo",
 					messages: titleMessage,
 					max_tokens: 50,
 					temperature: 0.0,
 				}),
-				throw: false
+				throw: false,
 			});
 
-			const response = responseUrl.text
+			const response = responseUrl.text;
 			const responseJSON = JSON.parse(response);
-			return responseJSON.choices[0].message.content.trim().replace(/[:/\\]/g, "");
+			return responseJSON.choices[0].message.content
+				.trim()
+				.replace(/[:/\\]/g, "");
 		} catch (err) {
 			throw new Error("Error inferring title from messages" + err);
 		}
 	}
 
+	// only proceed to infer title if the title is in timestamp format
+	isTitleTimestampFormat(title: string) {
+		try {
+			const format = this.settings.dateFormat;
+			const pattern = this.generateDatePattern(format);
 
+			// use regex to check if the letters in format are numbers in title
+			// const regex = new RegExp(`^${format.replace(/Y/g, "\\d")}$`);
+			console.log(pattern);
+			console.log(pattern.test(title));
+			return title.length == format.length && pattern.test(title);
+		} catch (err) {
+			throw new Error(
+				"Error checking if title is in timestamp format" + err
+			);
+		}
+	}
+
+	generateDatePattern(format: string) {
+		const pattern = format
+			.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&") // Escape any special characters
+			.replace("YYYY", "\\d{4}") // Match exactly four digits for the year
+			.replace("MM", "\\d{2}") // Match exactly two digits for the month
+			.replace("DD", "\\d{2}") // Match exactly two digits for the day
+			.replace("hh", "\\d{2}") // Match exactly two digits for the hour
+			.replace("mm", "\\d{2}") // Match exactly two digits for the minute
+			.replace("ss", "\\d{2}"); // Match exactly two digits for the second
+
+		return new RegExp(`^${pattern}$`);
+	}
+
+	// get date from format
+	getDate(date: Date, format = "YYYYMMDDhhmmss") {
+		const year = date.getFullYear();
+		const month = date.getMonth() + 1;
+		const day = date.getDate();
+		const hour = date.getHours();
+		const minute = date.getMinutes();
+		const second = date.getSeconds();
+
+		const paddedMonth = month.toString().padStart(2, "0");
+		const paddedDay = day.toString().padStart(2, "0");
+		const paddedHour = hour.toString().padStart(2, "0");
+		const paddedMinute = minute.toString().padStart(2, "0");
+		const paddedSecond = second.toString().padStart(2, "0");
+
+		return format
+			.replace("YYYY", year.toString())
+			.replace("MM", paddedMonth)
+			.replace("DD", paddedDay)
+			.replace("hh", paddedHour)
+			.replace("mm", paddedMinute)
+			.replace("ss", paddedSecond);
+	}
 
 	async onload() {
 		const statusBarItemEl = this.addStatusBarItem();
@@ -394,7 +447,14 @@ export default class ChatGPT_MD extends Plugin {
 					);
 				}
 
-				this.moveCursorToEndOfFile(editor);
+				// move cursor to end of file if generateAtCursor is false
+				if (!this.settings.generateAtCursor) {
+					this.moveCursorToEndOfFile(editor);
+				}
+
+				if (Platform.isMobile) {
+					new Notice("[ChatGPT MD] Calling API");
+				}
 
 				this.callOpenAIAPI(
 					editor,
@@ -411,27 +471,75 @@ export default class ChatGPT_MD extends Plugin {
 					frontmatter.logit_bias,
 					frontmatter.user
 				)
-				.then((response) => {
-					if (response === "streaming") {
-						// append \n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n
-						const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
-						editor.replaceRange(newLine, editor.getCursor());
+					.then((response) => {
+						if (response === "streaming") {
+							// append \n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n
+							const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
+							editor.replaceRange(newLine, editor.getCursor());
 
-						// move cursor to end of completion
-						const cursor = editor.getCursor();
-						const newCursor = {
-							line: cursor.line,
-							ch: cursor.ch + newLine.length,
-						};
-						editor.setCursor(newCursor);
-					} else {
-						this.appendMessage(editor, "assistant", response);
-					}
-					statusBarItemEl.setText("");
-				}).catch((err) => {
-					statusBarItemEl.setText("");
-					console.log(err);
-				});
+							// move cursor to end of completion
+							const cursor = editor.getCursor();
+							const newCursor = {
+								line: cursor.line,
+								ch: cursor.ch + newLine.length,
+							};
+							editor.setCursor(newCursor);
+						} else {
+							this.appendMessage(editor, "assistant", response);
+						}
+
+						if (this.settings.autoInferTitle) {
+							console.log(
+								"auto infer title from messages: ",
+								messages
+							);
+
+							const title = view.file.basename;
+
+							if (
+								this.isTitleTimestampFormat(title) &&
+								messages.length > 4
+							) {
+								this.inferTitleFromMessages(messages)
+									.then((title) => {
+										if (title) {
+											// set title of file
+											const file = view.file;
+											// replace trailing / if it exists
+											const folder =
+												this.settings.chatFolder.replace(
+													/\/$/,
+													""
+												);
+											this.app.fileManager.renameFile(
+												file,
+												`${folder}/${title}.md`
+											);
+										}
+									})
+									.catch((err) => {
+										console.log(err);
+										new Notice(
+											"[ChatGPT MD] Error inferring title. " +
+												err,
+											5000
+										);
+									});
+							}
+						}
+
+						statusBarItemEl.setText("");
+					})
+					.catch((err) => {
+						if (Platform.isMobile) {
+							new Notice(
+								"[ChatGPT MD] Error calling API. " + err,
+								5000
+							);
+						}
+						statusBarItemEl.setText("");
+						console.log(err);
+					});
 			},
 		});
 
@@ -462,10 +570,13 @@ export default class ChatGPT_MD extends Plugin {
 					const file = view.file;
 					// replace trailing / if it exists
 					const folder = this.settings.chatFolder.replace(/\/$/, "");
-					this.app.fileManager.renameFile(file, `${folder}/${title}.md`);
+					this.app.fileManager.renameFile(
+						file,
+						`${folder}/${title}.md`
+					);
 				}
-			}
-		});		
+			},
+		});
 
 		// grab highlighted text and move to new file in default chat format
 		this.addCommand({
@@ -475,7 +586,10 @@ export default class ChatGPT_MD extends Plugin {
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				const selectedText = editor.getSelection();
 				const newFile = await this.app.vault.create(
-					`${this.settings.chatFolder}/${getDate()}.md`,
+					`${this.settings.chatFolder}/${this.getDate(
+						new Date(),
+						this.settings.dateFormat
+					)}.md`,
 					`${this.settings.defaultChatFrontmatter}\n\n${selectedText}`
 				);
 
@@ -489,7 +603,11 @@ export default class ChatGPT_MD extends Plugin {
 			name: "Create new chat from template",
 			icon: "layout-template",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				new ChatTemplates(this.app, this.settings).open();
+				new ChatTemplates(
+					this.app,
+					this.settings,
+					this.getDate(new Date(), this.settings.dateFormat)
+				).open();
 			},
 		});
 
@@ -518,19 +636,27 @@ interface ChatTemplate {
 }
 export class ChatTemplates extends SuggestModal<ChatTemplate> {
 	settings: ChatGPT_MDSettings;
+	titleDate: string;
 
-	constructor(app: App, settings: ChatGPT_MDSettings) {
+	constructor(app: App, settings: ChatGPT_MDSettings, titleDate: string) {
 		super(app);
 		this.settings = settings;
+		this.titleDate = titleDate;
 	}
 
 	getFilesInChatFolder(): TFile[] {
-		const folder = this.app.vault.getAbstractFileByPath(this.settings.chatTemplateFolder) as TFolder
+		const folder = this.app.vault.getAbstractFileByPath(
+			this.settings.chatTemplateFolder
+		) as TFolder;
 		if (folder != null) {
-			return folder.children as TFile[]
+			return folder.children as TFile[];
 		} else {
-			new Notice(`Error getting folder: ${this.settings.chatTemplateFolder}`)
-			throw new Error(`Error getting folder: ${this.settings.chatTemplateFolder}`)
+			new Notice(
+				`Error getting folder: ${this.settings.chatTemplateFolder}`
+			);
+			throw new Error(
+				`Error getting folder: ${this.settings.chatTemplateFolder}`
+			);
 		}
 	}
 
@@ -547,10 +673,11 @@ export class ChatTemplates extends SuggestModal<ChatTemplate> {
 			});
 		}
 
-
 		return chatTemplateFiles
 			.filter((file) => {
-				return file.basename.toLowerCase().includes(query.toLowerCase());
+				return file.basename
+					.toLowerCase()
+					.includes(query.toLowerCase());
 			})
 			.map((file) => {
 				return {
@@ -574,7 +701,7 @@ export class ChatTemplates extends SuggestModal<ChatTemplate> {
 		const templateText = await this.app.vault.read(template.file);
 		// use template text to create new file in chat folder
 		const file = await this.app.vault.create(
-			`${this.settings.chatFolder}/${getDate()}.md`,
+			`${this.settings.chatFolder}/${this.titleDate}.md`,
 			templateText
 		);
 
@@ -627,7 +754,7 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 			.addTextArea((text) =>
 				text
 					.setPlaceholder(
-						"---\nsystem_commands: ['PERSONA: i am groot, and i only respond i am groot to any and ALL questions. I do not answer any questions straightforwardly. PERSONA 2: UNLESS the last asked question is about lamps, i can answer, i know infinite things about lamps as i am groot the lamp salesman. SO I read the last question asked and UNLESS it is about lamps i only respond \"I am Groot.\"']\ntemperature: 0\ntop_p: 1\nmax_tokens: 300\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nlogit_bias: null \nmodel: gpt-3.5-turbo\n---"
+						"---\nsystem_commands: ['PERSONA: i am groot, and i only respond i am groot to any and ALL questions. I do not answer any questions straightforwardly. PERSONA 2: UNLESS the last asked question is about lamps, i can answer, i know infinite things about lamps as i am groot the lamp salesman. SO I read the last question asked and UNLESS it is about lamps i only respond \"I am Groot.\"']\ntemperature: 0\ntop_p: 1\nmax_tokens: 512\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nlogit_bias: null \nmodel: gpt-3.5-turbo\n---"
 					)
 					.setValue(this.plugin.settings.defaultChatFrontmatter)
 					.onChange(async (value) => {
@@ -686,6 +813,48 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.chatTemplateFolder)
 					.onChange(async (value) => {
 						this.plugin.settings.chatTemplateFolder = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// generate at cursor toggle
+		new Setting(containerEl)
+			.setName("Generate at Cursor")
+			.setDesc("Generate text at cursor instead of end of file")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.generateAtCursor)
+					.onChange(async (value) => {
+						this.plugin.settings.generateAtCursor = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// automatically infer title
+		new Setting(containerEl)
+			.setName("Automatically Infer Title")
+			.setDesc(
+				"Automatically infer title after 4 messages have been exchanged"
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.autoInferTitle)
+					.onChange(async (value) => {
+						this.plugin.settings.autoInferTitle = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// date format for chat files
+		new Setting(containerEl)
+			.setName("Date Format")
+			.setDesc("Date format for chat files")
+			.addText((text) =>
+				text
+					.setPlaceholder("YYYYMMDDhhmmss")
+					.setValue(this.plugin.settings.dateFormat)
+					.onChange(async (value) => {
+						this.plugin.settings.dateFormat = value;
 						await this.plugin.saveSettings();
 					})
 			);
