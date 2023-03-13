@@ -40,7 +40,7 @@ Take currently highlighted text and default frontmatter and create a new chat fi
 
 Create a new chat file from a template specified in `Chat Template Folder`. Remember to check out [chatgpt-md-templates](https://github.com/bramses/chatgpt-md-templates) for some templates!
 
-### (NEW!) Infer Title
+#### (NEW!) Infer Title
 
 Infer the title of the chat from the messages. Requires at least 2 messages. Can be set in settings to run automatically after >4 messages.
 
