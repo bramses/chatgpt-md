@@ -327,6 +327,10 @@ export default class ChatGPT_MD extends Plugin {
 				},
 			];
 
+			if (Platform.isMobile) {	
+				new Notice("[ChatGPT] Inferring title from messages...")
+			}
+
 			const responseUrl = await requestUrl({
 				url: `https://api.openai.com/v1/chat/completions`,
 				method: "POST",
