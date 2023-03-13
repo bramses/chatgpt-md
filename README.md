@@ -22,7 +22,7 @@ https://user-images.githubusercontent.com/3282661/223005882-6632c997-b9a6-445b-8
 - *Stream* characters to Obsidian, creating a realtime feel
 - Uses *regular Markdown*. Meaning everything from *lists* to *code blocks* from ChatGPT *will render*!
 - Create chats from *highlighted text*.
-- (NEW!) *Infer title* from messages. Can be set to run automatically after >4 messages.
+- (NEW!) [*Infer title* from messages](https://github.com/bramses/chatgpt-md/discussions/11). Can be set to run automatically after >4 messages.
 - (NEW!) Stream at cursor position or at end of file. Can be set in settings.
 
 ### Commands
@@ -42,7 +42,7 @@ Create a new chat file from a template specified in `Chat Template Folder`. Reme
 
 #### (NEW!) Infer Title
 
-Infer the title of the chat from the messages. Requires at least 2 messages. Can be set in settings to run automatically after >4 messages.
+[Infer the title of the chat from the messages](https://github.com/bramses/chatgpt-md/discussions/11). Requires at least 2 messages. Can be set in settings to run automatically after >4 messages.
 
 #### Add HR
 
