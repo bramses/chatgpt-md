@@ -314,6 +314,48 @@ export default class ChatGPT_MD extends Plugin {
 		editor.replaceRange(newLine, editor.getCursor());
 	}
 
+	async inferTitleFromMessages(messages: string[]) {
+		try {
+			if (messages.length < 2) {
+				new Notice("Not enough messages to infer title. Minimum 2 messages.");
+				return;
+			}
+
+
+			const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forwad slash. Just return the title. \nMessages:\n\n${JSON.stringify(messages)}`;
+
+			const titleMessage = [{
+				role: "user",
+				content: prompt
+			}];
+
+			const responseUrl = await requestUrl({
+				url: `https://api.openai.com/v1/chat/completions`,
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${this.settings.apiKey}`,
+					"Content-Type": "application/json",
+				},
+				contentType: "application/json",
+				body: JSON.stringify({
+					model: 'gpt-3.5-turbo',
+					messages: titleMessage,
+					max_tokens: 50,
+					temperature: 0.0,
+				}),
+				throw: false
+			});
+
+			const response = responseUrl.text
+			const responseJSON = JSON.parse(response);
+			return responseJSON.choices[0].message.content.trim().replace(/[:/\\]/g, "");
+		} catch (err) {
+			throw new Error("Error inferring title from messages" + err);
+		}
+	}
+
+
+
 	async onload() {
 		const statusBarItemEl = this.addStatusBarItem();
 
@@ -323,6 +365,7 @@ export default class ChatGPT_MD extends Plugin {
 		this.addCommand({
 			id: "call-chatgpt-api",
 			name: "Chat",
+			icon: "message-circle",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 				statusBarItemEl.setText("[ChatGPT MD] Calling API...");
@@ -395,15 +438,40 @@ export default class ChatGPT_MD extends Plugin {
 		this.addCommand({
 			id: "add-hr",
 			name: "Add divider",
+			icon: "minus",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				this.addHR(editor, "user");
 			},
 		});
 
+		this.addCommand({
+			id: "infer-title",
+			name: "Infer title",
+			icon: "subtitles",
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				// get messages
+				const bodyWithoutYML = this.removeYMLFromMessage(
+					editor.getValue()
+				);
+				const messages = this.splitMessages(bodyWithoutYML);
+
+				const title = await this.inferTitleFromMessages(messages);
+
+				if (title) {
+					// set title of file
+					const file = view.file;
+					// replace trailing / if it exists
+					const folder = this.settings.chatFolder.replace(/\/$/, "");
+					this.app.fileManager.renameFile(file, `${folder}/${title}.md`);
+				}
+			}
+		});		
+
 		// grab highlighted text and move to new file in default chat format
 		this.addCommand({
 			id: "move-to-chat",
 			name: "Create new chat with highlighted text",
+			icon: "highlighter",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				const selectedText = editor.getSelection();
 				const newFile = await this.app.vault.create(
@@ -419,6 +487,7 @@ export default class ChatGPT_MD extends Plugin {
 		this.addCommand({
 			id: "choose-chat-template",
 			name: "Create new chat from template",
+			icon: "layout-template",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				new ChatTemplates(this.app, this.settings).open();
 			},
