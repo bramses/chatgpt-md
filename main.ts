@@ -217,6 +217,13 @@ export default class ChatGPT_MD extends Plugin {
 			const metaMatter =
 				app.metadataCache.getFileCache(noteFile)?.frontmatter;
 
+			const shouldStream =
+				metaMatter?.stream !== undefined
+					? metaMatter.stream // If defined in frontmatter, use its value.
+					: this.settings.stream !== undefined
+					? this.settings.stream // If not defined in frontmatter but exists globally, use its value.
+					: true; // Otherwise fallback on true.
+
 			const frontmatter = {
 				title: metaMatter?.title || view.file.basename,
 				tags: metaMatter?.tags || [],
@@ -225,7 +232,7 @@ export default class ChatGPT_MD extends Plugin {
 				top_p: metaMatter?.top_p || 1,
 				presence_penalty: metaMatter?.presence_penalty || 0,
 				frequency_penalty: metaMatter?.frequency_penalty || 0,
-				stream: metaMatter?.stream || this.settings.stream || true,
+				stream: shouldStream,
 				max_tokens: metaMatter?.max_tokens || 512,
 				stop: metaMatter?.stop || null,
 				n: metaMatter?.n || 1,
@@ -327,8 +334,8 @@ export default class ChatGPT_MD extends Plugin {
 				},
 			];
 
-			if (Platform.isMobile) {	
-				new Notice("[ChatGPT] Inferring title from messages...")
+			if (Platform.isMobile) {
+				new Notice("[ChatGPT] Inferring title from messages...");
 			}
 
 			const responseUrl = await requestUrl({
@@ -502,7 +509,7 @@ export default class ChatGPT_MD extends Plugin {
 
 							if (
 								this.isTitleTimestampFormat(title) &&
-								messages.length > 4
+								messages.length >= 4
 							) {
 								this.inferTitleFromMessages(messages)
 									.then((title) => {
