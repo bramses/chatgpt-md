@@ -177,7 +177,7 @@ export default class ChatGPT_MD extends Plugin {
 
 				console.log(fullstr);
 
-				return "streaming";
+				return { fullstr: fullstr, mode: "streaming"};
 			} else {
 				const responseJSON = JSON.parse(response);
 				return responseJSON.choices[0].message.content;
@@ -371,10 +371,6 @@ export default class ChatGPT_MD extends Plugin {
 			const format = this.settings.dateFormat;
 			const pattern = this.generateDatePattern(format);
 
-			// use regex to check if the letters in format are numbers in title
-			// const regex = new RegExp(`^${format.replace(/Y/g, "\\d")}$`);
-			console.log(pattern);
-			console.log(pattern.test(title));
 			return title.length == format.length && pattern.test(title);
 		} catch (err) {
 			throw new Error(
@@ -483,7 +479,9 @@ export default class ChatGPT_MD extends Plugin {
 					frontmatter.user
 				)
 					.then((response) => {
-						if (response === "streaming") {
+						let responseStr = response;
+						if (response.mode === "streaming") {
+							responseStr = response.fullstr;
 							// append \n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n
 							const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
 							editor.replaceRange(newLine, editor.getCursor());
@@ -500,19 +498,21 @@ export default class ChatGPT_MD extends Plugin {
 						}
 
 						if (this.settings.autoInferTitle) {
-							console.log(
-								"auto infer title from messages: ",
-								messages
-							);
-
+							console.log("[ChatGPT MD] auto infer title");
 							const title = view.file.basename;
+
+							const messagesWithResponse = messages.concat(
+								responseStr
+							);
 
 							if (
 								this.isTitleTimestampFormat(title) &&
-								messages.length >= 4
+								messagesWithResponse.length >= 4
 							) {
-								this.inferTitleFromMessages(messages)
+								
+								this.inferTitleFromMessages(messagesWithResponse)
 									.then((title) => {
+										console.log(title);
 										if (title) {
 											// set title of file
 											const file = view.file;
@@ -525,6 +525,11 @@ export default class ChatGPT_MD extends Plugin {
 											this.app.fileManager.renameFile(
 												file,
 												`${folder}/${title}.md`
+											);
+										} else {
+											new Notice(
+												"[ChatGPT MD] Could not infer title",
+												5000
 											);
 										}
 									})
