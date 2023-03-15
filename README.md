@@ -44,7 +44,7 @@ Create a new chat file from a template specified in `Chat Template Folder`. Reme
 
 [Infer the title of the chat from the messages](https://github.com/bramses/chatgpt-md/discussions/11). Requires at least 2 messages. Can be set in settings to run automatically after >4 messages.
 
-#### Add HR
+#### Add Divider
 
 Add a ChatGPT MD Horizontal Rule and `role::user`. 
 
@@ -76,8 +76,19 @@ To address this, first try to increase your `max_tokens` (default is set to 300)
 ![Screenshot 2023-03-12 16-14-35](https://user-images.githubusercontent.com/3282661/224571118-080ca393-6f94-4a20-ba98-27bc8b8b6ad2.png)
 ![Screenshot 2023-03-12 16-15-01](https://user-images.githubusercontent.com/3282661/224571119-cba1be45-3ab1-4b86-b056-ba596bacd918.png)
 
+### Q: Code Blocks cut off halfway through and leave \`\`\`
+
+The Obsidian editor renders backticks in and fires extra logic that causes the stream to add extra backticks. To address this, you can:
+
+1. at the end of the code block add \`\`\` (three backticks) to close the code block BEFORE the `<hr>` and delete the three extra Obsidian added automatically.
+2. in `role::user` write "keep going"
+
+See pics below:
 
 
+### Q: How do I use GPT-4?
+
+If you are off the [waitlist](https://openai.com/waitlist/gpt-4-api), simply replace `model: gpt-3.5-turbo` with `model: gpt-4` in the frontmatter.
 ## About the Developer
 
 This repository was written by Bram Adams, a writer and programmer based out of NYC. 
