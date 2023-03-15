@@ -85,6 +85,9 @@ The Obsidian editor renders backticks in and fires extra logic that causes the s
 
 See pics below:
 
+![Screenshot 2023-03-15 18-47-40](https://user-images.githubusercontent.com/3282661/225460844-54101bf2-d5ac-4725-95b5-c79bf6b6ed6a.png)
+![Screenshot 2023-03-15 18-48-30](https://user-images.githubusercontent.com/3282661/225460845-6ff12c98-ea74-4ae8-bc2d-4161e89acdda.png)
+
 
 ### Q: How do I use GPT-4?
 
