@@ -78,7 +78,7 @@ To address this, first try to increase your `max_tokens` (default is set to 300)
 
 ### Q: Code Blocks cut off halfway through and leave \`\`\`
 
-The Obsidian editor renders backticks in and fires extra logic that causes the stream to add extra backticks. To address this, you can:
+The Obsidian editor renders backticks in automatically (see [issue](https://github.com/bramses/chatgpt-md/issues/15#issuecomment-1466813500)) and fires extra logic that causes the stream to add extra backticks. To address this, you can:
 
 1. at the end of the code block add \`\`\` (three backticks) to close the code block BEFORE the `<hr>` and delete the three extra Obsidian added automatically.
 2. in `role::user` write "keep going"
