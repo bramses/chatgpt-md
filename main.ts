@@ -14,6 +14,8 @@ import {
 	Platform,
 } from "obsidian";
 
+import { main } from "./stream";
+
 interface ChatGPT_MDSettings {
 	apiKey: string;
 	defaultChatFrontmatter: string;
@@ -177,7 +179,7 @@ export default class ChatGPT_MD extends Plugin {
 
 				console.log(fullstr);
 
-				return { fullstr: fullstr, mode: "streaming"};
+				return { fullstr: fullstr, mode: "streaming" };
 			} else {
 				const responseJSON = JSON.parse(response);
 				return responseJSON.choices[0].message.content;
@@ -501,16 +503,16 @@ export default class ChatGPT_MD extends Plugin {
 							console.log("[ChatGPT MD] auto infer title");
 							const title = view.file.basename;
 
-							const messagesWithResponse = messages.concat(
-								responseStr
-							);
+							const messagesWithResponse =
+								messages.concat(responseStr);
 
 							if (
 								this.isTitleTimestampFormat(title) &&
 								messagesWithResponse.length >= 4
 							) {
-								
-								this.inferTitleFromMessages(messagesWithResponse)
+								this.inferTitleFromMessages(
+									messagesWithResponse
+								)
 									.then((title) => {
 										console.log(title);
 										if (title) {
@@ -591,6 +593,29 @@ export default class ChatGPT_MD extends Plugin {
 						`${folder}/${title}.md`
 					);
 				}
+			},
+		});
+
+		this.addCommand({
+			id: "test-stream",
+			name: "Test stream",
+			icon: "subtitles",
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				const stream = main(editor);
+				// res.writeHead(200, {
+				// 	"Content-Type": "text/event-stream",
+				// 	"Cache-Control": "no-cache, no-transform",
+				// 	Connection: "keep-alive",
+				//   });
+
+				// Write the data from the stream to the response
+				// for await (const data of stream) {
+				// 	console.log(data);
+				// 	//res.write(data);
+				// }
+
+				// End the response when the stream is done
+				//res.end();
 			},
 		});
 
