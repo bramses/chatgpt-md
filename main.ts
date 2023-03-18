@@ -14,7 +14,7 @@ import {
 	Platform,
 } from "obsidian";
 
-import { main } from "./stream";
+import { streamSSE } from "./stream";
 
 interface ChatGPT_MDSettings {
 	apiKey: string;
@@ -77,112 +77,155 @@ export default class ChatGPT_MD extends Plugin {
 		try {
 			console.log("calling openai api");
 
-			const responseUrl = await requestUrl({
-				url: `https://api.openai.com/v1/chat/completions`,
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${this.settings.apiKey}`,
-					"Content-Type": "application/json",
-				},
-				contentType: "application/json",
-				body: JSON.stringify({
-					model: model,
-					messages: messages,
-					max_tokens: max_tokens,
-					temperature: temperature,
-					top_p: top_p,
-					presence_penalty: presence_penalty,
-					frequency_penalty: frequency_penalty,
-					stream: stream,
-					stop: stop,
-					n: n,
-					// logit_bias: logit_bias, // not yet supported
-					// user: user, // not yet supported
-				}),
-				throw: false,
-			});
-
-			try {
-				const json = responseUrl.json;
-
-				if (json && json.error) {
-					new Notice(`[ChatGPT MD] Error :: ${json.error.message}`);
-					throw new Error(JSON.stringify(json.error));
-				}
-			} catch (err) {
-				// continue we got a valid str back
-				if (err instanceof SyntaxError) {
-					// continue
-				} else {
-					throw new Error(err);
-				}
-			}
-
-			const response = responseUrl.text;
-
 			if (stream) {
-				// split response by new line
-				const responseLines = response.split("\n\n");
-
-				if (responseLines.length == 0) {
-					throw new Error("[ChatGPT MD] no response");
-				}
-
-				// remove data: from each line
-				for (let i = 0; i < responseLines.length; i++) {
-					responseLines[i] = responseLines[i].split("data: ")[1];
-				}
-
 				const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
-				editor.replaceRange(newLine, editor.getCursor());
+					editor.replaceRange(newLine, editor.getCursor());
 
-				// move cursor to end of line
-				const cursor = editor.getCursor();
-				const newCursor = {
-					line: cursor.line,
-					ch: cursor.ch + newLine.length,
-				};
-				editor.setCursor(newCursor);
+					// move cursor to end of line
+					const cursor = editor.getCursor();
+					const newCursor = {
+						line: cursor.line,
+						ch: cursor.ch + newLine.length,
+					};
+					editor.setCursor(newCursor);
 
-				let fullstr = "";
+					let fullstr = "";
 
-				// loop through response lines
-				for (const responseLine of responseLines) {
-					// if response line is not [DONE] then parse json and append delta to file
-					if (responseLine && !responseLine.includes("[DONE]")) {
-						const responseJSON = JSON.parse(responseLine);
-						const delta = responseJSON.choices[0].delta.content;
+					const options = {
+						model: model,
+						messages: messages,
+						max_tokens: max_tokens,
+						temperature: temperature,
+						top_p: top_p,
+						presence_penalty: presence_penalty,
+						frequency_penalty: frequency_penalty,
+						stream: stream,
+						stop: stop,
+						n: n,
+						// logit_bias: logit_bias, // not yet supported
+						// user: user, // not yet supported
+					};
 
-						// if delta is not undefined then append delta to file
-						if (delta) {
-							const cursor = editor.getCursor();
-							if (delta === "`") {
-								editor.replaceRange(delta, cursor);
-								await new Promise((r) => setTimeout(r, 82)); // what in the actual fuck -- why does this work
-							} else {
-								editor.replaceRange(delta, cursor);
-								await new Promise((r) =>
-									setTimeout(r, this.settings.streamSpeed)
-								);
-							}
 
-							const newCursor = {
-								line: cursor.line,
-								ch: cursor.ch + delta.length,
-							};
-							editor.setCursor(newCursor);
+					const response = await streamSSE(
+						editor,
+						this.settings.apiKey,
+						options
+					);
 
-							fullstr += delta;
-						}
+					console.log("response", response);
+
+
+			} else {
+				const responseUrl = await requestUrl({
+					url: `https://api.openai.com/v1/chat/completions`,
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${this.settings.apiKey}`,
+						"Content-Type": "application/json",
+					},
+					contentType: "application/json",
+					body: JSON.stringify({
+						model: model,
+						messages: messages,
+						max_tokens: max_tokens,
+						temperature: temperature,
+						top_p: top_p,
+						presence_penalty: presence_penalty,
+						frequency_penalty: frequency_penalty,
+						stream: stream,
+						stop: stop,
+						n: n,
+						// logit_bias: logit_bias, // not yet supported
+						// user: user, // not yet supported
+					}),
+					throw: false,
+				});
+
+				try {
+					const json = responseUrl.json;
+
+					if (json && json.error) {
+						new Notice(
+							`[ChatGPT MD] Error :: ${json.error.message}`
+						);
+						throw new Error(JSON.stringify(json.error));
+					}
+				} catch (err) {
+					// continue we got a valid str back
+					if (err instanceof SyntaxError) {
+						// continue
+					} else {
+						throw new Error(err);
 					}
 				}
 
-				console.log(fullstr);
+				const response = responseUrl.text;
 
-				return { fullstr: fullstr, mode: "streaming" };
-			} else {
-				const responseJSON = JSON.parse(response);
-				return responseJSON.choices[0].message.content;
+				if (stream) {
+					// split response by new line
+					const responseLines = response.split("\n\n");
+
+					if (responseLines.length == 0) {
+						throw new Error("[ChatGPT MD] no response");
+					}
+
+					// remove data: from each line
+					for (let i = 0; i < responseLines.length; i++) {
+						responseLines[i] = responseLines[i].split("data: ")[1];
+					}
+
+					const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
+					editor.replaceRange(newLine, editor.getCursor());
+
+					// move cursor to end of line
+					const cursor = editor.getCursor();
+					const newCursor = {
+						line: cursor.line,
+						ch: cursor.ch + newLine.length,
+					};
+					editor.setCursor(newCursor);
+
+					let fullstr = "";
+
+					// loop through response lines
+					for (const responseLine of responseLines) {
+						// if response line is not [DONE] then parse json and append delta to file
+						if (responseLine && !responseLine.includes("[DONE]")) {
+							const responseJSON = JSON.parse(responseLine);
+							const delta = responseJSON.choices[0].delta.content;
+
+							// if delta is not undefined then append delta to file
+							if (delta) {
+								const cursor = editor.getCursor();
+								if (delta === "`") {
+									editor.replaceRange(delta, cursor);
+									await new Promise((r) => setTimeout(r, 82)); // what in the actual fuck -- why does this work
+								} else {
+									editor.replaceRange(delta, cursor);
+									await new Promise((r) =>
+										setTimeout(r, this.settings.streamSpeed)
+									);
+								}
+
+								const newCursor = {
+									line: cursor.line,
+									ch: cursor.ch + delta.length,
+								};
+								editor.setCursor(newCursor);
+
+								fullstr += delta;
+							}
+						}
+					}
+
+					console.log(fullstr);
+
+					return { fullstr: fullstr, mode: "streaming" };
+				} else {
+					const responseJSON = JSON.parse(response);
+					return responseJSON.choices[0].message.content;
+				}
 			}
 		} catch (err) {
 			new Notice(
@@ -601,7 +644,11 @@ export default class ChatGPT_MD extends Plugin {
 			name: "Test stream",
 			icon: "subtitles",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
-				const stream = main(editor);
+				// let edit = app.workspace.activeEditor
+
+				const activeFile = this.app.workspace.getActiveFile();
+
+				const stream = main(editor, this.app.vault, activeFile);
 				// res.writeHead(200, {
 				// 	"Content-Type": "text/event-stream",
 				// 	"Cache-Control": "no-cache, no-transform",
