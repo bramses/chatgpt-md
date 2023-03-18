@@ -5,81 +5,92 @@
 // } from "eventsource-parser";
 
 import { Editor } from "obsidian";
-import { SSE } from "sse"
+import { SSE } from "sse";
 
-  export interface OpenAIStreamPayload {
-    model: string;
-    messages: Array<{ role: string; content: string }>;
-    temperature: number;
-    presence_penalty: number;
-    max_tokens: number;
-    stream: boolean;
-  }
-
-export const main = async (editor: Editor) => {
-
-    const data: OpenAIStreamPayload = {
-        model: "gpt-3.5-turbo",
-        messages: [
-            {
-                role: "system",
-                content: "A conversation between two people.",
-            },
-            { role: "user", content: "Write the game of pong. Write it as a python script" },
-        ],
-        temperature: 0.5,
-        presence_penalty: 1,
-        max_tokens: 1000,
-        stream: true, // Enable streaming in response
-    };
-    const url = "https://api.openai.com/v1/chat/completions"
-    
-    console.log(SSE)
-
-
-    const source = new SSE(url, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer`,
-        },
-        method: "POST",
-        payload: JSON.stringify(data),
-      });
-
-      source.addEventListener("message", (e: any) => {
-        if (e.data != "[DONE]") {
-          const payload = JSON.parse(e.data);
-          const text = payload.choices[0].delta.content;
-
-          // if text undefined, then do nothing
-            if (!text) {
-                return;
-            }
-
-            console.log("Received message: " + text);
-            const cursor = editor.getCursor();
-            editor.replaceRange(text, cursor);
-								
-            const newCursor = {
-                line: cursor.line,
-                ch: cursor.ch + text.length,
-            };
-            editor.setCursor(newCursor);
-
-        } else {
-          source.close();
-        }
-      });
-
-      source.addEventListener("readystatechange", (e: any) => {
-        if (e.readyState >= 2) {
-          console.log("ReadyState: " + e.readyState);
-        }
-      });
-
-      source.stream();
+export interface OpenAIStreamPayload {
+	model: string;
+	messages: Array<{ role: string; content: string }>;
+	temperature: number;
+  top_p: number;
+	presence_penalty: number;
+  frequency_penalty: number;
+  stop: string[] | null;
+  n: number;
+  logit_bias?: any | null;
+  user?: string | null;
+	max_tokens: number;
+	stream: boolean;
 }
 
+export const streamSSE = async (editor: Editor, apiKey: string, options: OpenAIStreamPayload) => {
+  console.log("streamSSE", options)
+	// const data: OpenAIStreamPayload = {
+	// 	model: "gpt-3.5-turbo",
+	// 	messages: [
+	// 		{
+	// 			role: "system",
+	// 			content: "A conversation between two people.",
+	// 		},
+	// 		{
+	// 			role: "user",
+	// 			content: "Write the game of pong. Write it as a python script",
+	// 		},
+	// 	],
+	// 	temperature: 0.5,
+	// 	presence_penalty: 1,
+	// 	max_tokens: 1000,
+	// 	stream: true, // Enable streaming in response
+	// };
+	const url = "https://api.openai.com/v1/chat/completions";
+// Write the game of pong. Write it as a python script
+
+	const source = new SSE(url, {
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${apiKey}`,
+		},
+		method: "POST",
+		payload: JSON.stringify(options),
+	});
+
+	source.addEventListener("message", (e: any) => {
+		if (e.data != "[DONE]") {
+			const payload = JSON.parse(e.data);
+			const text = payload.choices[0].delta.content;
+
+			// if text undefined, then do nothing
+			if (!text) {
+				return;
+			}
+
+			// const cursor = editor.getCursor();
+			// const convPos = editor.posToOffset(cursor);
+			// const cm6 = editor.cm;
+			// const transaction = cm6.state.update({
+			// 	changes: { from: convPos, to: convPos, insert: text },
+			// });
+			// cm6.dispatch(transaction);
+			const cursor = editor.getCursor();
+			editor.replaceRange(text, cursor);
+
+			const newCursor = {
+				line: cursor.line,
+				ch: cursor.ch + text.length,
+			};
+			editor.setCursor(newCursor);
+		} else {
+			source.close();
+		}
+	});
+
+	source.addEventListener("readystatechange", (e: any) => {
+		if (e.readyState >= 2) {
+			console.log("ReadyState: " + e.readyState);
+		}
+	});
+
+	source.stream();
+};
 
 // attempt 3
 
@@ -123,7 +134,6 @@ export const main = async (editor: Editor) => {
 //     'name'?: string;
 // }
 
-
 // export interface ChatCompletionResponseMessage {
 //     /**
 //      * The role of the author of this message.
@@ -146,9 +156,6 @@ export const main = async (editor: Editor) => {
 // } as const;
 
 // export type ChatCompletionResponseMessageRoleEnum = typeof ChatCompletionResponseMessageRoleEnum[keyof typeof ChatCompletionResponseMessageRoleEnum];
-
-
-
 
 // export async function* main() {
 // 	try {
