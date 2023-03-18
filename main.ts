@@ -79,43 +79,43 @@ export default class ChatGPT_MD extends Plugin {
 
 			if (stream) {
 				const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
-					editor.replaceRange(newLine, editor.getCursor());
+				editor.replaceRange(newLine, editor.getCursor());
 
-					// move cursor to end of line
-					const cursor = editor.getCursor();
-					const newCursor = {
-						line: cursor.line,
-						ch: cursor.ch + newLine.length,
-					};
-					editor.setCursor(newCursor);
+				// move cursor to end of line
+				const cursor = editor.getCursor();
+				const newCursor = {
+					line: cursor.line,
+					ch: cursor.ch + newLine.length,
+				};
+				editor.setCursor(newCursor);
 
-					let fullstr = "";
+				let fullstr = "";
 
-					const options = {
-						model: model,
-						messages: messages,
-						max_tokens: max_tokens,
-						temperature: temperature,
-						top_p: top_p,
-						presence_penalty: presence_penalty,
-						frequency_penalty: frequency_penalty,
-						stream: stream,
-						stop: stop,
-						n: n,
-						// logit_bias: logit_bias, // not yet supported
-						// user: user, // not yet supported
-					};
+				const options = {
+					model: model,
+					messages: messages,
+					max_tokens: max_tokens,
+					temperature: temperature,
+					top_p: top_p,
+					presence_penalty: presence_penalty,
+					frequency_penalty: frequency_penalty,
+					stream: stream,
+					stop: stop,
+					n: n,
+					// logit_bias: logit_bias, // not yet supported
+					// user: user, // not yet supported
+				};
 
+				const response = await streamSSE(
+					editor,
+					this.settings.apiKey,
+					options,
+					this.settings.generateAtCursor
+				);
 
-					const response = await streamSSE(
-						editor,
-						this.settings.apiKey,
-						options
-					);
+				console.log("response", response);
 
-					console.log("response", response);
-
-
+				return { fullstr: response, mode: "streaming" }
 			} else {
 				const responseUrl = await requestUrl({
 					url: `https://api.openai.com/v1/chat/completions`,
@@ -162,70 +162,69 @@ export default class ChatGPT_MD extends Plugin {
 
 				const response = responseUrl.text;
 
-				if (stream) {
-					// split response by new line
-					const responseLines = response.split("\n\n");
+				// if (stream) {
+				// 	// split response by new line
+				// 	const responseLines = response.split("\n\n");
 
-					if (responseLines.length == 0) {
-						throw new Error("[ChatGPT MD] no response");
-					}
+				// 	if (responseLines.length == 0) {
+				// 		throw new Error("[ChatGPT MD] no response");
+				// 	}
 
-					// remove data: from each line
-					for (let i = 0; i < responseLines.length; i++) {
-						responseLines[i] = responseLines[i].split("data: ")[1];
-					}
+				// 	// remove data: from each line
+				// 	for (let i = 0; i < responseLines.length; i++) {
+				// 		responseLines[i] = responseLines[i].split("data: ")[1];
+				// 	}
 
-					const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
-					editor.replaceRange(newLine, editor.getCursor());
+				// 	const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
+				// 	editor.replaceRange(newLine, editor.getCursor());
 
-					// move cursor to end of line
-					const cursor = editor.getCursor();
-					const newCursor = {
-						line: cursor.line,
-						ch: cursor.ch + newLine.length,
-					};
-					editor.setCursor(newCursor);
+				// 	// move cursor to end of line
+				// 	const cursor = editor.getCursor();
+				// 	const newCursor = {
+				// 		line: cursor.line,
+				// 		ch: cursor.ch + newLine.length,
+				// 	};
+				// 	editor.setCursor(newCursor);
 
-					let fullstr = "";
+				// 	let fullstr = "";
 
-					// loop through response lines
-					for (const responseLine of responseLines) {
-						// if response line is not [DONE] then parse json and append delta to file
-						if (responseLine && !responseLine.includes("[DONE]")) {
-							const responseJSON = JSON.parse(responseLine);
-							const delta = responseJSON.choices[0].delta.content;
+				// 	// loop through response lines
+				// 	for (const responseLine of responseLines) {
+				// 		// if response line is not [DONE] then parse json and append delta to file
+				// 		if (responseLine && !responseLine.includes("[DONE]")) {
+				// 			const responseJSON = JSON.parse(responseLine);
+				// 			const delta = responseJSON.choices[0].delta.content;
 
-							// if delta is not undefined then append delta to file
-							if (delta) {
-								const cursor = editor.getCursor();
-								if (delta === "`") {
-									editor.replaceRange(delta, cursor);
-									await new Promise((r) => setTimeout(r, 82)); // what in the actual fuck -- why does this work
-								} else {
-									editor.replaceRange(delta, cursor);
-									await new Promise((r) =>
-										setTimeout(r, this.settings.streamSpeed)
-									);
-								}
+				// 			// if delta is not undefined then append delta to file
+				// 			if (delta) {
+				// 				const cursor = editor.getCursor();
+				// 				if (delta === "`") {
+				// 					editor.replaceRange(delta, cursor);
+				// 					await new Promise((r) => setTimeout(r, 82)); // what in the actual fuck -- why does this work
+				// 				} else {
+				// 					editor.replaceRange(delta, cursor);
+				// 					await new Promise((r) =>
+				// 						setTimeout(r, this.settings.streamSpeed)
+				// 					);
+				// 				}
 
-								const newCursor = {
-									line: cursor.line,
-									ch: cursor.ch + delta.length,
-								};
-								editor.setCursor(newCursor);
+				// 				const newCursor = {
+				// 					line: cursor.line,
+				// 					ch: cursor.ch + delta.length,
+				// 				};
+				// 				editor.setCursor(newCursor);
 
-								fullstr += delta;
-							}
-						}
-					}
+				// 				fullstr += delta;
+				// 			}
+				// 		}
+				// 	}
 
-					console.log(fullstr);
+				// 	console.log(fullstr);
 
-					return { fullstr: fullstr, mode: "streaming" };
-				} else {
-					const responseJSON = JSON.parse(response);
-					return responseJSON.choices[0].message.content;
-				}
+				// 	return { fullstr: fullstr, mode: "streaming" };
+				// } else {
+				const responseJSON = JSON.parse(response);
+				return responseJSON.choices[0].message.content;
 			}
 		} catch (err) {
 			new Notice(
@@ -636,33 +635,6 @@ export default class ChatGPT_MD extends Plugin {
 						`${folder}/${title}.md`
 					);
 				}
-			},
-		});
-
-		this.addCommand({
-			id: "test-stream",
-			name: "Test stream",
-			icon: "subtitles",
-			editorCallback: async (editor: Editor, view: MarkdownView) => {
-				// let edit = app.workspace.activeEditor
-
-				const activeFile = this.app.workspace.getActiveFile();
-
-				const stream = main(editor, this.app.vault, activeFile);
-				// res.writeHead(200, {
-				// 	"Content-Type": "text/event-stream",
-				// 	"Cache-Control": "no-cache, no-transform",
-				// 	Connection: "keep-alive",
-				//   });
-
-				// Write the data from the stream to the response
-				// for await (const data of stream) {
-				// 	console.log(data);
-				// 	//res.write(data);
-				// }
-
-				// End the response when the stream is done
-				//res.end();
 			},
 		});
 
