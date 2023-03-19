@@ -91,7 +91,9 @@ See pics below:
 
 ### Q: How do I use GPT-4?
 
-If you are off the [waitlist](https://openai.com/waitlist/gpt-4-api), simply replace `model: gpt-3.5-turbo` with `model: gpt-4` in the frontmatter.
+If you are off the [waitlist](https://openai.com/waitlist/gpt-4-api), simply replace `model: gpt-3.5-turbo` with `model: gpt-4` in the frontmatter. (*note: gpt-4 is slower than turbo!*)
+
+
 ## About the Developer
 
 This repository was written by Bram Adams, a writer and programmer based out of NYC. 
