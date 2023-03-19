@@ -89,8 +89,6 @@ export default class ChatGPT_MD extends Plugin {
 				};
 				editor.setCursor(newCursor);
 
-				let fullstr = "";
-
 				const options = {
 					model: model,
 					messages: messages,
@@ -113,7 +111,7 @@ export default class ChatGPT_MD extends Plugin {
 					this.settings.generateAtCursor
 				);
 
-				console.log("response", response);
+				console.log("response from stream", response);
 
 				return { fullstr: response, mode: "streaming" }
 			} else {
@@ -161,68 +159,6 @@ export default class ChatGPT_MD extends Plugin {
 				}
 
 				const response = responseUrl.text;
-
-				// if (stream) {
-				// 	// split response by new line
-				// 	const responseLines = response.split("\n\n");
-
-				// 	if (responseLines.length == 0) {
-				// 		throw new Error("[ChatGPT MD] no response");
-				// 	}
-
-				// 	// remove data: from each line
-				// 	for (let i = 0; i < responseLines.length; i++) {
-				// 		responseLines[i] = responseLines[i].split("data: ")[1];
-				// 	}
-
-				// 	const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
-				// 	editor.replaceRange(newLine, editor.getCursor());
-
-				// 	// move cursor to end of line
-				// 	const cursor = editor.getCursor();
-				// 	const newCursor = {
-				// 		line: cursor.line,
-				// 		ch: cursor.ch + newLine.length,
-				// 	};
-				// 	editor.setCursor(newCursor);
-
-				// 	let fullstr = "";
-
-				// 	// loop through response lines
-				// 	for (const responseLine of responseLines) {
-				// 		// if response line is not [DONE] then parse json and append delta to file
-				// 		if (responseLine && !responseLine.includes("[DONE]")) {
-				// 			const responseJSON = JSON.parse(responseLine);
-				// 			const delta = responseJSON.choices[0].delta.content;
-
-				// 			// if delta is not undefined then append delta to file
-				// 			if (delta) {
-				// 				const cursor = editor.getCursor();
-				// 				if (delta === "`") {
-				// 					editor.replaceRange(delta, cursor);
-				// 					await new Promise((r) => setTimeout(r, 82)); // what in the actual fuck -- why does this work
-				// 				} else {
-				// 					editor.replaceRange(delta, cursor);
-				// 					await new Promise((r) =>
-				// 						setTimeout(r, this.settings.streamSpeed)
-				// 					);
-				// 				}
-
-				// 				const newCursor = {
-				// 					line: cursor.line,
-				// 					ch: cursor.ch + delta.length,
-				// 				};
-				// 				editor.setCursor(newCursor);
-
-				// 				fullstr += delta;
-				// 			}
-				// 		}
-				// 	}
-
-				// 	console.log(fullstr);
-
-				// 	return { fullstr: fullstr, mode: "streaming" };
-				// } else {
 				const responseJSON = JSON.parse(response);
 				return responseJSON.choices[0].message.content;
 			}
