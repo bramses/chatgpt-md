@@ -21,32 +21,32 @@ export const streamSSE = async (
 	editor: Editor,
 	apiKey: string,
 	options: OpenAIStreamPayload,
-	setAtCursor: boolean
+	setAtCursor: boolean,
+	headingPrefix: string
 ) => {
-  return new Promise((resolve, reject) => {
-    try {
-      console.log("streamSSE", options);
-  
-      const url = "https://api.openai.com/v1/chat/completions";
-  
-      const source = new SSE(url, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        method: "POST",
-        payload: JSON.stringify(options),
-      });
+	return new Promise((resolve, reject) => {
+		try {
+			console.log("streamSSE", options);
 
+			const url = "https://api.openai.com/v1/chat/completions";
 
-      let txt = "";
-      let initialCursorPosCh = editor.getCursor().ch;
-      let initialCursorPosLine = editor.getCursor().line;
+			const source = new SSE(url, {
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${apiKey}`,
+				},
+				method: "POST",
+				payload: JSON.stringify(options),
+			});
 
-      source.addEventListener("open", (e: any) => {
-        console.log("[ChatGPT MD] SSE Opened");
+			let txt = "";
+			let initialCursorPosCh = editor.getCursor().ch;
+			let initialCursorPosLine = editor.getCursor().line;
 
-      const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
+			source.addEventListener("open", (e: any) => {
+				console.log("[ChatGPT MD] SSE Opened");
+
+				const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${headingPrefix}role::assistant\n\n`;
 				editor.replaceRange(newLine, editor.getCursor());
 
 				// move cursor to end of line
@@ -57,94 +57,91 @@ export const streamSSE = async (
 				};
 				editor.setCursor(newCursor);
 
-        initialCursorPosCh = newCursor.ch;
-        initialCursorPosLine = newCursor.line;
-      });
-  
-      
-      source.addEventListener("message", (e: any) => {
-        if (e.data != "[DONE]") {
-          const payload = JSON.parse(e.data);
-          const text = payload.choices[0].delta.content;
-  
-          // if text undefined, then do nothing
-          if (!text) {
-            return;
-          }
-  
-          const cursor = editor.getCursor();
-          const convPos = editor.posToOffset(cursor);
-  
-          // @ts-ignore
-          const cm6 = editor.cm;
-          const transaction = cm6.state.update({
-            changes: { from: convPos, to: convPos, insert: text },
-          });
-          cm6.dispatch(transaction);
-  
-  
-          txt += text;
-  
-          const newCursor = {
-            line: cursor.line,
-            ch: cursor.ch + text.length,
-          };
-          editor.setCursor(newCursor);
-        } else {
-          source.close();
-          console.log("[ChatGPT MD] SSE Closed");
-  
-          // replace the text from initialCursor to fix any formatting issues from streaming
-          const cursor = editor.getCursor();
-          editor.replaceRange(
-            txt,
-            { line: initialCursorPosLine, ch: initialCursorPosCh },
-            cursor
-          );
-  
-          // set cursor to end of replacement text
-          const newCursor = {
-            line: initialCursorPosLine,
-            ch: initialCursorPosCh + txt.length,
-          };
-          editor.setCursor(newCursor);
-  
-  
-          if (!setAtCursor) {
-            // remove the text after the cursor
-            editor.replaceRange("", newCursor, {
-              line: Infinity,
-              ch: Infinity,
-            });
-          } else {
-            new Notice(
-              "[ChatGPT MD] Text pasted at cursor may leave artifacts. Please remove them manually. ChatGPT MD cannot safely remove text when pasting at cursor."
-            );
-          }
-  
-          resolve(txt);
-          // return txt;
-        }
-      });
+				initialCursorPosCh = newCursor.ch;
+				initialCursorPosLine = newCursor.line;
+			});
 
-      source.addEventListener("error", (e: any) => {
-        try {
-          console.log("[ChatGPT MD] SSE Error: ", JSON.parse(e.data));
-          source.close();
-          console.log("[ChatGPT MD] SSE Closed");
-          reject(JSON.parse(e.data));
-        } catch (err) {
-          console.log("[ChatGPT MD] Unknown Error: ", e);
-          source.close();
-          console.log("[ChatGPT MD] SSE Closed");
-          reject(e);
-        }
-      });
-  
-      source.stream();
-    } catch (err) {
-      console.log("SSE Error", err);
-      reject(err);
-    }
-  });
+			source.addEventListener("message", (e: any) => {
+				if (e.data != "[DONE]") {
+					const payload = JSON.parse(e.data);
+					const text = payload.choices[0].delta.content;
+
+					// if text undefined, then do nothing
+					if (!text) {
+						return;
+					}
+
+					const cursor = editor.getCursor();
+					const convPos = editor.posToOffset(cursor);
+
+					// @ts-ignore
+					const cm6 = editor.cm;
+					const transaction = cm6.state.update({
+						changes: { from: convPos, to: convPos, insert: text },
+					});
+					cm6.dispatch(transaction);
+
+					txt += text;
+
+					const newCursor = {
+						line: cursor.line,
+						ch: cursor.ch + text.length,
+					};
+					editor.setCursor(newCursor);
+				} else {
+					source.close();
+					console.log("[ChatGPT MD] SSE Closed");
+
+					// replace the text from initialCursor to fix any formatting issues from streaming
+					const cursor = editor.getCursor();
+					editor.replaceRange(
+						txt,
+						{ line: initialCursorPosLine, ch: initialCursorPosCh },
+						cursor
+					);
+
+					// set cursor to end of replacement text
+					const newCursor = {
+						line: initialCursorPosLine,
+						ch: initialCursorPosCh + txt.length,
+					};
+					editor.setCursor(newCursor);
+
+					if (!setAtCursor) {
+						// remove the text after the cursor
+						editor.replaceRange("", newCursor, {
+							line: Infinity,
+							ch: Infinity,
+						});
+					} else {
+						new Notice(
+							"[ChatGPT MD] Text pasted at cursor may leave artifacts. Please remove them manually. ChatGPT MD cannot safely remove text when pasting at cursor."
+						);
+					}
+
+					resolve(txt);
+					// return txt;
+				}
+			});
+
+			source.addEventListener("error", (e: any) => {
+				try {
+					console.log("[ChatGPT MD] SSE Error: ", JSON.parse(e.data));
+					source.close();
+					console.log("[ChatGPT MD] SSE Closed");
+					reject(JSON.parse(e.data));
+				} catch (err) {
+					console.log("[ChatGPT MD] Unknown Error: ", e);
+					source.close();
+					console.log("[ChatGPT MD] SSE Closed");
+					reject(e);
+				}
+			});
+
+			source.stream();
+		} catch (err) {
+			console.log("SSE Error", err);
+			reject(err);
+		}
+	});
 };
