@@ -1,9 +1,3 @@
-// import {
-// 	createParser,
-// 	ParsedEvent,
-// 	ReconnectInterval,
-// } from "eventsource-parser";
-
 import { Editor, Notice } from "obsidian";
 import { SSE } from "sse";
 
@@ -43,10 +37,31 @@ export const streamSSE = async (
         method: "POST",
         payload: JSON.stringify(options),
       });
-  
+
+
       let txt = "";
-      const initialCursorPosCh = editor.getCursor().ch;
-      const initialCursorPosLine = editor.getCursor().line;
+      let initialCursorPosCh = editor.getCursor().ch;
+      let initialCursorPosLine = editor.getCursor().line;
+
+      source.addEventListener("open", (e: any) => {
+        console.log("[ChatGPT MD] SSE Opened");
+
+      const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
+				editor.replaceRange(newLine, editor.getCursor());
+
+				// move cursor to end of line
+				const cursor = editor.getCursor();
+				const newCursor = {
+					line: cursor.line,
+					ch: cursor.ch + newLine.length,
+				};
+				editor.setCursor(newCursor);
+
+        initialCursorPosCh = newCursor.ch;
+        initialCursorPosLine = newCursor.line;
+      });
+  
+      
       source.addEventListener("message", (e: any) => {
         if (e.data != "[DONE]") {
           const payload = JSON.parse(e.data);
@@ -93,11 +108,6 @@ export const streamSSE = async (
           };
           editor.setCursor(newCursor);
   
-          // remove extraneous text
-          // const textAfterCursor = editor.getRange(newCursor, {
-          // 	line: Infinity,
-          // 	ch: Infinity,
-          // });
   
           if (!setAtCursor) {
             // remove the text after the cursor
@@ -115,17 +125,22 @@ export const streamSSE = async (
           // return txt;
         }
       });
-  
-      source.addEventListener("readystatechange", (e: any) => {
-        if (e.readyState >= 2) {
-          console.log("ReadyState: " + e.readyState);
+
+      source.addEventListener("error", (e: any) => {
+        try {
+          console.log("[ChatGPT MD] SSE Error: ", JSON.parse(e.data));
+          source.close();
+          reject(JSON.parse(e.data));
+        } catch (err) {
+          console.log("[ChatGPT MD] Unknown Error: ", e);
+          source.close();
+          reject(e);
         }
       });
   
       source.stream();
     } catch (err) {
-      console.error(err);
-      new Notice("[ChatGPT MD] Error streaming text. Please check console.");
+      console.log("SSE Error", err);
       reject(err);
     }
   });
