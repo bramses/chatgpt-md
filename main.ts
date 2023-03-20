@@ -78,17 +78,6 @@ export default class ChatGPT_MD extends Plugin {
 			console.log("calling openai api");
 
 			if (stream) {
-				const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::assistant\n\n`;
-				editor.replaceRange(newLine, editor.getCursor());
-
-				// move cursor to end of line
-				const cursor = editor.getCursor();
-				const newCursor = {
-					line: cursor.line,
-					ch: cursor.ch + newLine.length,
-				};
-				editor.setCursor(newCursor);
-
 				const options = {
 					model: model,
 					messages: messages,
@@ -163,6 +152,21 @@ export default class ChatGPT_MD extends Plugin {
 				return responseJSON.choices[0].message.content;
 			}
 		} catch (err) {
+
+			if (err instanceof Object) {
+				if (err.error) {
+					new Notice(
+						`[ChatGPT MD] Error :: ${err.error.message}`
+					);
+					throw new Error(JSON.stringify(err.error));
+				} else {
+					new Notice(
+						`[ChatGPT MD] Error :: ${JSON.stringify(err)}`
+					);
+					throw new Error(JSON.stringify(err));
+				}
+			}
+
 			new Notice(
 				"issue calling OpenAI API, see console for more details"
 			);
@@ -478,7 +482,6 @@ export default class ChatGPT_MD extends Plugin {
 						}
 
 						if (this.settings.autoInferTitle) {
-							console.log("[ChatGPT MD] auto infer title");
 							const title = view.file.basename;
 
 							const messagesWithResponse =
@@ -488,12 +491,14 @@ export default class ChatGPT_MD extends Plugin {
 								this.isTitleTimestampFormat(title) &&
 								messagesWithResponse.length >= 4
 							) {
+								console.log("[ChatGPT MD] auto inferring title from messages");
+								
 								this.inferTitleFromMessages(
 									messagesWithResponse
 								)
 									.then((title) => {
-										console.log(title);
 										if (title) {
+											console.log(`[ChatGPT MD] inferred title: ${title}. Changing file name...`);
 											// set title of file
 											const file = view.file;
 											// replace trailing / if it exists
@@ -529,8 +534,8 @@ export default class ChatGPT_MD extends Plugin {
 					.catch((err) => {
 						if (Platform.isMobile) {
 							new Notice(
-								"[ChatGPT MD] Error calling API. " + err,
-								5000
+								"[ChatGPT MD Mobile] Full Error calling API. " + err,
+								9000
 							);
 						}
 						statusBarItemEl.setText("");
