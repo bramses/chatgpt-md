@@ -20,7 +20,6 @@ interface ChatGPT_MDSettings {
 	apiKey: string;
 	defaultChatFrontmatter: string;
 	stream: boolean;
-	streamSpeed: number;
 	chatTemplateFolder: string;
 	chatFolder: string;
 	generateAtCursor: boolean;
@@ -33,7 +32,6 @@ const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	defaultChatFrontmatter:
 		"---\nsystem_commands: ['I am a helpful assistant.']\ntemperature: 0\ntop_p: 1\nmax_tokens: 512\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nmodel: gpt-3.5-turbo\n---",
 	stream: true,
-	streamSpeed: 28,
 	chatTemplateFolder: "ChatGPT_MD/templates",
 	chatFolder: "ChatGPT_MD/chats",
 	generateAtCursor: false,
@@ -365,7 +363,7 @@ export default class ChatGPT_MD extends Plugin {
 
 	generateDatePattern(format: string) {
 		const pattern = format
-			.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&") // Escape any special characters
+			.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&") // Escape any special characters
 			.replace("YYYY", "\\d{4}") // Match exactly four digits for the year
 			.replace("MM", "\\d{2}") // Match exactly two digits for the month
 			.replace("DD", "\\d{2}") // Match exactly two digits for the day
@@ -777,19 +775,7 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 					})
 			);
 
-		// stream speed slider
-		new Setting(containerEl)
-			.setName("Stream Speed")
-			.setDesc("Stream speed in milliseconds")
-			.addSlider((slider) =>
-				slider
-					.setLimits(20, 50, 1)
-					.setValue(this.plugin.settings.streamSpeed)
-					.onChange(async (value) => {
-						this.plugin.settings.streamSpeed = value;
-						await this.plugin.saveSettings();
-					})
-			);
+
 
 		// folder for chat files
 		new Setting(containerEl)
@@ -849,7 +835,7 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 		// date format for chat files
 		new Setting(containerEl)
 			.setName("Date Format")
-			.setDesc("Date format for chat files")
+			.setDesc("Date format for chat files. Valid date blocks are: YYYY, MM, DD, hh, mm, ss")
 			.addText((text) =>
 				text
 					.setPlaceholder("YYYYMMDDhhmmss")

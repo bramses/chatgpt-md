@@ -92,6 +92,7 @@ export const streamSSE = async (
           editor.setCursor(newCursor);
         } else {
           source.close();
+          console.log("[ChatGPT MD] SSE Closed");
   
           // replace the text from initialCursor to fix any formatting issues from streaming
           const cursor = editor.getCursor();
@@ -130,10 +131,12 @@ export const streamSSE = async (
         try {
           console.log("[ChatGPT MD] SSE Error: ", JSON.parse(e.data));
           source.close();
+          console.log("[ChatGPT MD] SSE Closed");
           reject(JSON.parse(e.data));
         } catch (err) {
           console.log("[ChatGPT MD] Unknown Error: ", e);
           source.close();
+          console.log("[ChatGPT MD] SSE Closed");
           reject(e);
         }
       });
