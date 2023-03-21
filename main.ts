@@ -15,6 +15,8 @@ import {
 } from "obsidian";
 
 import { streamSSE } from "./stream";
+import { unfinishedCodeBlock } from "helpers";
+
 
 interface ChatGPT_MDSettings {
 	apiKey: string;
@@ -38,7 +40,7 @@ const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	generateAtCursor: false,
 	autoInferTitle: false,
 	dateFormat: "YYYYMMDDhhmmss",
-	headingLevel: 2,
+	headingLevel: 0,
 };
 
 interface Chat_MD_FrontMatter {
@@ -75,6 +77,7 @@ export default class ChatGPT_MD extends Plugin {
 		user: string | null = null
 	) {
 		try {
+			console.log(temperature)
 			console.log("calling openai api");
 
 			if (stream) {
@@ -204,11 +207,14 @@ export default class ChatGPT_MD extends Plugin {
 					? this.settings.stream // If not defined in frontmatter but exists globally, use its value.
 					: true; // Otherwise fallback on true.
 
+			const temperature = metaMatter?.temperature !== undefined ? metaMatter.temperature : 0.3;
+			console.log(temperature)
+
 			const frontmatter = {
 				title: metaMatter?.title || view.file.basename,
 				tags: metaMatter?.tags || [],
 				model: metaMatter?.model || "gpt-3.5-turbo",
-				temperature: metaMatter?.temperature || 0.5,
+				temperature: temperature,
 				top_p: metaMatter?.top_p || 1,
 				presence_penalty: metaMatter?.presence_penalty || 0,
 				frequency_penalty: metaMatter?.frequency_penalty || 0,
@@ -288,6 +294,8 @@ export default class ChatGPT_MD extends Plugin {
 		const headingLevel = this.settings.headingLevel;
 		if (headingLevel === 0) {
 			return "";
+		} else if (headingLevel > 6) {
+			return "#".repeat(6) + " ";
 		}
 		return "#".repeat(headingLevel) + " ";
 	}
@@ -482,7 +490,12 @@ export default class ChatGPT_MD extends Plugin {
 							};
 							editor.setCursor(newCursor);
 						} else {
-							this.appendMessage(editor, "assistant", response);
+
+							if (unfinishedCodeBlock(responseStr)) {
+								responseStr = responseStr + "\n```";
+							}
+
+							this.appendMessage(editor, "assistant", responseStr);
 						}
 
 						if (this.settings.autoInferTitle) {
