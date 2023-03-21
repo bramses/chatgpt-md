@@ -27,7 +27,7 @@ export const streamSSE = async (
 ) => {
 	return new Promise((resolve, reject) => {
 		try {
-			console.log("streamSSE", options);
+			console.log("[ChatGPT MD] streamSSE", options);
 
 			const url = "https://api.openai.com/v1/chat/completions";
 

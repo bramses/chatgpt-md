@@ -77,7 +77,6 @@ export default class ChatGPT_MD extends Plugin {
 		user: string | null = null
 	) {
 		try {
-			console.log(temperature)
 			console.log("calling openai api");
 
 			if (stream) {
@@ -208,7 +207,6 @@ export default class ChatGPT_MD extends Plugin {
 					: true; // Otherwise fallback on true.
 
 			const temperature = metaMatter?.temperature !== undefined ? metaMatter.temperature : 0.3;
-			console.log(temperature)
 
 			const frontmatter = {
 				title: metaMatter?.title || view.file.basename,
