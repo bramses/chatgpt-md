@@ -23,7 +23,8 @@ https://user-images.githubusercontent.com/3282661/223005882-6632c997-b9a6-445b-8
 - Uses *regular Markdown*. Meaning everything from *lists* to *code blocks* from ChatGPT *will render*!
 - Create chats from *highlighted text*.
 - (NEW!) [*Infer title* from messages](https://github.com/bramses/chatgpt-md/discussions/11). Can be set to run automatically after >4 messages.
-- (NEW!) Stream at cursor position or at end of file. Can be set in settings.
+- Stream at cursor position or at end of file. Can be set in settings.
+- (NEW!) Choose [heading level for role](https://github.com/bramses/chatgpt-md/pull/22) h1-h6. Can be set in settings.
 
 ### Commands
 
