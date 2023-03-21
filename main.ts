@@ -25,6 +25,7 @@ interface ChatGPT_MDSettings {
 	generateAtCursor: boolean;
 	autoInferTitle: boolean;
 	dateFormat: string;
+	headingLevel: number;
 }
 
 const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
@@ -37,6 +38,7 @@ const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	generateAtCursor: false,
 	autoInferTitle: false,
 	dateFormat: "YYYYMMDDhhmmss",
+	headingLevel: 2,
 };
 
 interface Chat_MD_FrontMatter {
@@ -95,12 +97,13 @@ export default class ChatGPT_MD extends Plugin {
 					editor,
 					this.settings.apiKey,
 					options,
-					this.settings.generateAtCursor
+					this.settings.generateAtCursor,
+					this.getHeadingPrefix()
 				);
 
 				console.log("response from stream", response);
 
-				return { fullstr: response, mode: "streaming" }
+				return { fullstr: response, mode: "streaming" };
 			} else {
 				const responseUrl = await requestUrl({
 					url: `https://api.openai.com/v1/chat/completions`,
@@ -150,17 +153,12 @@ export default class ChatGPT_MD extends Plugin {
 				return responseJSON.choices[0].message.content;
 			}
 		} catch (err) {
-
 			if (err instanceof Object) {
 				if (err.error) {
-					new Notice(
-						`[ChatGPT MD] Error :: ${err.error.message}`
-					);
+					new Notice(`[ChatGPT MD] Error :: ${err.error.message}`);
 					throw new Error(JSON.stringify(err.error));
 				} else {
-					new Notice(
-						`[ChatGPT MD] Error :: ${JSON.stringify(err)}`
-					);
+					new Notice(`[ChatGPT MD] Error :: ${JSON.stringify(err)}`);
 					throw new Error(JSON.stringify(err));
 				}
 			}
@@ -175,7 +173,7 @@ export default class ChatGPT_MD extends Plugin {
 	}
 
 	addHR(editor: Editor, role: string) {
-		const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::${role}\n\n`;
+		const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::${role}\n\n`;
 		editor.replaceRange(newLine, editor.getCursor());
 
 		// move cursor to end of file
@@ -286,13 +284,21 @@ export default class ChatGPT_MD extends Plugin {
 		}
 	}
 
+	getHeadingPrefix() {
+		const headingLevel = this.settings.headingLevel;
+		if (headingLevel === 0) {
+			return "";
+		}
+		return "#".repeat(headingLevel) + " ";
+	}
+
 	appendMessage(editor: Editor, role: string, message: string) {
 		/*
 		 append to bottom of editor file:
-		 	const newLine = `<hr class="__chatgpt_plugin">\nrole::${role}\n\n${message}`;
+		 	const newLine = `<hr class="__chatgpt_plugin">\n${this.getHeadingPrefix()}role::${role}\n\n${message}`;
 		*/
 
-		const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::${role}\n\n${message}\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
+		const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::${role}\n\n${message}\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::user\n\n`;
 		editor.replaceRange(newLine, editor.getCursor());
 	}
 
@@ -464,8 +470,8 @@ export default class ChatGPT_MD extends Plugin {
 						let responseStr = response;
 						if (response.mode === "streaming") {
 							responseStr = response.fullstr;
-							// append \n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n
-							const newLine = `\n\n<hr class="__chatgpt_plugin">\n\nrole::user\n\n`;
+							// append \n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::user\n\n
+							const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::user\n\n`;
 							editor.replaceRange(newLine, editor.getCursor());
 
 							// move cursor to end of completion
@@ -489,14 +495,18 @@ export default class ChatGPT_MD extends Plugin {
 								this.isTitleTimestampFormat(title) &&
 								messagesWithResponse.length >= 4
 							) {
-								console.log("[ChatGPT MD] auto inferring title from messages");
-								
+								console.log(
+									"[ChatGPT MD] auto inferring title from messages"
+								);
+
 								this.inferTitleFromMessages(
 									messagesWithResponse
 								)
 									.then((title) => {
 										if (title) {
-											console.log(`[ChatGPT MD] inferred title: ${title}. Changing file name...`);
+											console.log(
+												`[ChatGPT MD] inferred title: ${title}. Changing file name...`
+											);
 											// set title of file
 											const file = view.file;
 											// replace trailing / if it exists
@@ -532,7 +542,8 @@ export default class ChatGPT_MD extends Plugin {
 					.catch((err) => {
 						if (Platform.isMobile) {
 							new Notice(
-								"[ChatGPT MD Mobile] Full Error calling API. " + err,
+								"[ChatGPT MD Mobile] Full Error calling API. " +
+									err,
 								9000
 							);
 						}
@@ -775,8 +786,6 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 					})
 			);
 
-
-
 		// folder for chat files
 		new Setting(containerEl)
 			.setName("Chat Folder")
@@ -835,13 +844,30 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 		// date format for chat files
 		new Setting(containerEl)
 			.setName("Date Format")
-			.setDesc("Date format for chat files. Valid date blocks are: YYYY, MM, DD, hh, mm, ss")
+			.setDesc(
+				"Date format for chat files. Valid date blocks are: YYYY, MM, DD, hh, mm, ss"
+			)
 			.addText((text) =>
 				text
 					.setPlaceholder("YYYYMMDDhhmmss")
 					.setValue(this.plugin.settings.dateFormat)
 					.onChange(async (value) => {
 						this.plugin.settings.dateFormat = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// heading level
+		new Setting(containerEl)
+			.setName("Heading Level")
+			.setDesc(
+				"Heading level for messages (example for heading level 2: '## role::user'). Valid heading levels are 0, 1, 2, 3, 4, 5, 6"
+			)
+			.addText((text) =>
+				text
+					.setValue(this.plugin.settings.headingLevel.toString())
+					.onChange(async (value) => {
+						this.plugin.settings.headingLevel = parseInt(value);
 						await this.plugin.saveSettings();
 					})
 			);
