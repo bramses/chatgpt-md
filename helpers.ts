@@ -5,7 +5,7 @@ export const unfinishedCodeBlock = (txt: string) => {
         return false;
     }
 
-    if (matcher.length % 2 !== 0) console.log("unclosed code block detected");
+    if (matcher.length % 2 !== 0) console.log("[ChatGPT MD] unclosed code block detected");
 
     return matcher.length % 2 !== 0;
 };
