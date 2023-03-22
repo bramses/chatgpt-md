@@ -21,6 +21,7 @@ export interface OpenAIStreamPayload {
 export const streamSSE = async (
 	editor: Editor,
 	apiKey: string,
+	url: string,
 	options: OpenAIStreamPayload,
 	setAtCursor: boolean,
 	headingPrefix: string
@@ -28,8 +29,6 @@ export const streamSSE = async (
 	return new Promise((resolve, reject) => {
 		try {
 			console.log("[ChatGPT MD] streamSSE", options);
-
-			const url = "https://api.openai.com/v1/chat/completions";
 
 			const source = new SSE(url, {
 				headers: {
