@@ -82,7 +82,6 @@ export default class ChatGPT_MD extends Plugin {
 		const the_url = url || DEFAULT_URL
 		try {
 			console.log("calling openai api");
-			console.log(the_url);
 
 			if (stream) {
 				const options = {
