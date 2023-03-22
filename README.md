@@ -51,6 +51,19 @@ Add a ChatGPT MD Horizontal Rule and `role::user`.
 
 **!! Note: both `role::system|assistant|user` AND `<hr class="__chatgpt_plugin">` are REQUIRED for the plugin to work!!**
 
+### Custom Endpoints
+
+Custom endpoints can be specified using the url parameter in your front matter. Here is an example
+
+```md
+---
+system_commands: ['I create small self contained app ideas that could fit in a CodePen or a Replit']
+url: https://localhost
+---
+```
+
+The custom API must conform to the OpenAI API spec. eg you could use Azure's OpenAI hosted endpoints here.
+
 ## Installation
 
 ### Community Plugins
