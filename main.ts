@@ -17,6 +17,7 @@ import {
 import { streamSSE } from "./stream";
 import { unfinishedCodeBlock } from "helpers";
 
+const DEFAULT_URL = `https://api.openai.com/v1/chat/completions`
 
 interface ChatGPT_MDSettings {
 	apiKey: string;
@@ -56,6 +57,7 @@ interface Chat_MD_FrontMatter {
 	logit_bias: any | null;
 	user: string | null;
 	system_commands: string[] | null;
+	url: string | null;
 }
 
 export default class ChatGPT_MD extends Plugin {
@@ -74,10 +76,13 @@ export default class ChatGPT_MD extends Plugin {
 		stop: string[] | null = null,
 		n = 1,
 		logit_bias: any | null = null,
-		user: string | null = null
+		user: string | null = null,
+		url: string | null = null
 	) {
+		const the_url = url || DEFAULT_URL
 		try {
 			console.log("calling openai api");
+			console.log(the_url);
 
 			if (stream) {
 				const options = {
@@ -98,6 +103,7 @@ export default class ChatGPT_MD extends Plugin {
 				const response = await streamSSE(
 					editor,
 					this.settings.apiKey,
+					the_url,
 					options,
 					this.settings.generateAtCursor,
 					this.getHeadingPrefix()
@@ -108,7 +114,7 @@ export default class ChatGPT_MD extends Plugin {
 				return { fullstr: response, mode: "streaming" };
 			} else {
 				const responseUrl = await requestUrl({
-					url: `https://api.openai.com/v1/chat/completions`,
+					url: the_url,
 					method: "POST",
 					headers: {
 						Authorization: `Bearer ${this.settings.apiKey}`,
@@ -223,6 +229,7 @@ export default class ChatGPT_MD extends Plugin {
 				logit_bias: metaMatter?.logit_bias || null,
 				user: metaMatter?.user || null,
 				system_commands: metaMatter?.system_commands || null,
+				url: metaMatter?.url || null
 			};
 
 			return frontmatter;
@@ -470,7 +477,8 @@ export default class ChatGPT_MD extends Plugin {
 					frontmatter.stop,
 					frontmatter.n,
 					frontmatter.logit_bias,
-					frontmatter.user
+					frontmatter.user,
+					frontmatter.url
 				)
 					.then((response) => {
 						let responseStr = response;
