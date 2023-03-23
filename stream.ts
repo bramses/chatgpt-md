@@ -1,4 +1,4 @@
-import { Editor, Notice } from "obsidian";
+import { Editor, Notice, Platform } from "obsidian";
 import { SSE } from "sse";
 import { unfinishedCodeBlock } from "helpers";
 
@@ -24,10 +24,14 @@ export class StreamManager {
 	constructor() {}
 
 	stopStreaming = () => {
+		if (Platform.isMobile) {
+			new Notice("[ChatGPT MD] Mobile not supported.")
+			return;
+		}
 		if (this.sse) {
+			this.manualClose = true;
 			this.sse.close();
 			console.log("[ChatGPT MD] SSE manually closed");
-			this.manualClose = true;
 			this.sse = null;
 		}
 	};
@@ -158,6 +162,7 @@ export class StreamManager {
 					if (this.manualClose) {
 						resolve(txt);
 					} else {
+						console.log("no manual close for abort");
 						reject(e);
 					}
 				});

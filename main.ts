@@ -599,7 +599,7 @@ export default class ChatGPT_MD extends Plugin {
 		this.addCommand({
 			id: "stop-streaming",
 			name: "Stop streaming",
-			icon: "stop",
+			icon: "octagon",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				streamManager.stopStreaming();
 			},
