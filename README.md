@@ -22,9 +22,10 @@ https://user-images.githubusercontent.com/3282661/223005882-6632c997-b9a6-445b-8
 - *Stream* characters to Obsidian, creating a realtime feel
 - Uses *regular Markdown*. Meaning everything from *lists* to *code blocks* from ChatGPT *will render*!
 - Create chats from *highlighted text*.
-- (NEW!) [*Infer title* from messages](https://github.com/bramses/chatgpt-md/discussions/11). Can be set to run automatically after >4 messages.
+- [*Infer title* from messages](https://github.com/bramses/chatgpt-md/discussions/11). Can be set to run automatically after >4 messages.
 - Stream at cursor position or at end of file. Can be set in settings.
 - (NEW!) Choose [heading level for role](https://github.com/bramses/chatgpt-md/pull/22) h1-h6. Can be set in settings.
+- (NEW!) Custom endpoints can be specified using the url parameter in your front matter. See FAQ for an example
 
 ### Commands
 
@@ -41,7 +42,7 @@ Take currently highlighted text and default frontmatter and create a new chat fi
 
 Create a new chat file from a template specified in `Chat Template Folder`. Remember to check out [chatgpt-md-templates](https://github.com/bramses/chatgpt-md-templates) for some templates!
 
-#### (NEW!) Infer Title
+#### Infer Title
 
 [Infer the title of the chat from the messages](https://github.com/bramses/chatgpt-md/discussions/11). Requires at least 2 messages. Can be set in settings to run automatically after >4 messages.
 
@@ -94,6 +95,16 @@ See pics below:
 
 If you are off the [waitlist](https://openai.com/waitlist/gpt-4-api), simply replace `model: gpt-3.5-turbo` with `model: gpt-4` in the frontmatter. (*note: gpt-4 is slower than turbo!*)
 
+### Q: How do I use a custom endpoint?
+
+```md
+---
+system_commands: ['I create small self contained app ideas that could fit in a CodePen or a Replit']
+url: https://localhost
+---
+```
+
+The custom API must conform to the OpenAI API spec. eg you could use Azure's OpenAI hosted endpoints here. Refer to your provider for API key handling.
 
 ## About the Developer
 

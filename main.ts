@@ -42,6 +42,8 @@ const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	headingLevel: 0,
 };
 
+const DEFAULT_URL = `https://api.openai.com/v1/chat/completions`
+
 interface Chat_MD_FrontMatter {
 	temperature: number;
 	top_p: number;
@@ -55,6 +57,7 @@ interface Chat_MD_FrontMatter {
 	logit_bias: any | null;
 	user: string | null;
 	system_commands: string[] | null;
+	url: string;
 }
 
 export default class ChatGPT_MD extends Plugin {
@@ -73,7 +76,8 @@ export default class ChatGPT_MD extends Plugin {
 		stop: string[] | null = null,
 		n = 1,
 		logit_bias: any | null = null,
-		user: string | null = null
+		user: string | null = null,
+		url = DEFAULT_URL
 	) {
 		try {
 			console.log("calling openai api");
@@ -97,6 +101,7 @@ export default class ChatGPT_MD extends Plugin {
 				const response = await streamSSE(
 					editor,
 					this.settings.apiKey,
+					url,
 					options,
 					this.settings.generateAtCursor,
 					this.getHeadingPrefix()
@@ -107,7 +112,7 @@ export default class ChatGPT_MD extends Plugin {
 				return { fullstr: response, mode: "streaming" };
 			} else {
 				const responseUrl = await requestUrl({
-					url: `https://api.openai.com/v1/chat/completions`,
+					url: url,
 					method: "POST",
 					headers: {
 						Authorization: `Bearer ${this.settings.apiKey}`,
@@ -136,7 +141,7 @@ export default class ChatGPT_MD extends Plugin {
 
 					if (json && json.error) {
 						new Notice(
-							`[ChatGPT MD] Error :: ${json.error.message}`
+							`[ChatGPT MD] Stream = False Error :: ${json.error.message}`
 						);
 						throw new Error(JSON.stringify(json.error));
 					}
@@ -159,8 +164,13 @@ export default class ChatGPT_MD extends Plugin {
 					new Notice(`[ChatGPT MD] Error :: ${err.error.message}`);
 					throw new Error(JSON.stringify(err.error));
 				} else {
-					new Notice(`[ChatGPT MD] Error :: ${JSON.stringify(err)}`);
-					throw new Error(JSON.stringify(err));
+					if (url !== DEFAULT_URL) {
+						new Notice("[ChatGPT MD] Issue calling specified url: " + url);
+						throw new Error("[ChatGPT MD] Issue calling specified url: " + url);
+					} else {
+						new Notice(`[ChatGPT MD] Error :: ${JSON.stringify(err)}`);
+						throw new Error(JSON.stringify(err));
+					}
 				}
 			}
 
@@ -225,6 +235,7 @@ export default class ChatGPT_MD extends Plugin {
 				logit_bias: metaMatter?.logit_bias || null,
 				user: metaMatter?.user || null,
 				system_commands: metaMatter?.system_commands || null,
+				url: metaMatter?.url || DEFAULT_URL
 			};
 
 			return frontmatter;
@@ -472,7 +483,8 @@ export default class ChatGPT_MD extends Plugin {
 					frontmatter.stop,
 					frontmatter.n,
 					frontmatter.logit_bias,
-					frontmatter.user
+					frontmatter.user,
+					frontmatter.url
 				)
 					.then((response) => {
 						let responseStr = response;
