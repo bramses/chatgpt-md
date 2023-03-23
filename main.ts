@@ -17,7 +17,6 @@ import {
 import { streamSSE } from "./stream";
 import { unfinishedCodeBlock } from "helpers";
 
-
 interface ChatGPT_MDSettings {
 	apiKey: string;
 	defaultChatFrontmatter: string;
@@ -206,7 +205,10 @@ export default class ChatGPT_MD extends Plugin {
 					? this.settings.stream // If not defined in frontmatter but exists globally, use its value.
 					: true; // Otherwise fallback on true.
 
-			const temperature = metaMatter?.temperature !== undefined ? metaMatter.temperature : 0.3;
+			const temperature =
+				metaMatter?.temperature !== undefined
+					? metaMatter.temperature
+					: 0.3;
 
 			const frontmatter = {
 				title: metaMatter?.title || view.file.basename,
@@ -488,12 +490,15 @@ export default class ChatGPT_MD extends Plugin {
 							};
 							editor.setCursor(newCursor);
 						} else {
-
 							if (unfinishedCodeBlock(responseStr)) {
 								responseStr = responseStr + "\n```";
 							}
 
-							this.appendMessage(editor, "assistant", responseStr);
+							this.appendMessage(
+								editor,
+								"assistant",
+								responseStr
+							);
 						}
 
 						if (this.settings.autoInferTitle) {
@@ -605,17 +610,40 @@ export default class ChatGPT_MD extends Plugin {
 			name: "Create new chat with highlighted text",
 			icon: "highlighter",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
-				const selectedText = editor.getSelection();
-				const newFile = await this.app.vault.create(
-					`${this.settings.chatFolder}/${this.getDate(
-						new Date(),
-						this.settings.dateFormat
-					)}.md`,
-					`${this.settings.defaultChatFrontmatter}\n\n${selectedText}`
-				);
+				try {
+					const selectedText = editor.getSelection();
 
-				// open new file
-				this.app.workspace.openLinkText(newFile.basename, "", true);
+					if (
+						!this.settings.chatFolder ||
+						!this.app.vault.getAbstractFileByPath(
+							this.settings.chatFolder
+						)
+					) {
+						new Notice(
+							`[ChatGPT MD] No chat folder found. Please set one in settings and make sure it exists.`
+						);
+						return;
+					}
+
+					const newFile = await this.app.vault.create(
+						`${this.settings.chatFolder}/${this.getDate(
+							new Date(),
+							this.settings.dateFormat
+						)}.md`,
+						`${this.settings.defaultChatFrontmatter}\n\n${selectedText}`
+					);
+
+					// open new file
+					this.app.workspace.openLinkText(newFile.basename, "", true);
+				} catch (err) {
+					console.error(
+						`[ChatGPT MD] Error in Create new chat with highlighted text`,
+						err
+					);
+					new Notice(
+						`[ChatGPT MD] Error in Create new chat with highlighted text, check console`
+					);
+				}
 			},
 		});
 
@@ -624,6 +652,32 @@ export default class ChatGPT_MD extends Plugin {
 			name: "Create new chat from template",
 			icon: "layout-template",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
+				// check if chats folder exists
+				if (
+					!this.settings.chatFolder ||
+					!this.app.vault.getAbstractFileByPath(
+						this.settings.chatFolder
+					)
+				) {
+					new Notice(
+						`[ChatGPT MD] No chat folder found. Please set one in settings and make sure it exists.`
+					);
+					return;
+				}
+
+				// check if templates folder exists
+				if (
+					!this.settings.chatTemplateFolder ||
+					!this.app.vault.getAbstractFileByPath(
+						this.settings.chatTemplateFolder
+					)
+				) {
+					new Notice(
+						`[ChatGPT MD] No templates folder found. Please set one in settings and make sure it exists.`
+					);
+					return;
+				}
+
 				new ChatTemplates(
 					this.app,
 					this.settings,
