@@ -25,7 +25,8 @@ https://user-images.githubusercontent.com/3282661/223005882-6632c997-b9a6-445b-8
 - [*Infer title* from messages](https://github.com/bramses/chatgpt-md/discussions/11). Can be set to run automatically after >4 messages.
 - Stream at cursor position or at end of file. Can be set in settings.
 - (NEW!) Choose [heading level for role](https://github.com/bramses/chatgpt-md/pull/22) h1-h6. Can be set in settings.
-- (NEW!) Custom endpoints can be specified using the url parameter in your front matter. See FAQ for an example
+- (NEW!) Custom endpoints can be specified using the url parameter in your front matter. See FAQ for an example.
+- (NEW!) Stop a running stream with a command. See commands section below.
 
 ### Commands
 
@@ -45,6 +46,10 @@ Create a new chat file from a template specified in `Chat Template Folder`. Reme
 #### Infer Title
 
 [Infer the title of the chat from the messages](https://github.com/bramses/chatgpt-md/discussions/11). Requires at least 2 messages. Can be set in settings to run automatically after >4 messages.
+
+#### Stop Streaming
+
+Stops the stream. Useful if you want to stop the stream if you don't like where ChatGPT is heading/going too long.
 
 #### Add Divider
 
