@@ -47,7 +47,7 @@ Create a new chat file from a template specified in `Chat Template Folder`. Reme
 
 [Infer the title of the chat from the messages](https://github.com/bramses/chatgpt-md/discussions/11). Requires at least 2 messages. Can be set in settings to run automatically after >4 messages.
 
-#### Stop Streaming
+#### Stop Streaming (Does not work on mobile)
 
 Stops the stream. Useful if you want to stop the stream if you don't like where ChatGPT is heading/going too long.
 
