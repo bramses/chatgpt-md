@@ -14,7 +14,7 @@ import {
 	Platform,
 } from "obsidian";
 
-import { streamSSE } from "./stream";
+import { StreamManager } from "./stream";
 import { unfinishedCodeBlock } from "helpers";
 
 interface ChatGPT_MDSettings {
@@ -64,6 +64,7 @@ export default class ChatGPT_MD extends Plugin {
 	settings: ChatGPT_MDSettings;
 
 	async callOpenAIAPI(
+		streamManager: StreamManager,
 		editor: Editor,
 		messages: { role: string; content: string }[],
 		model = "gpt-3.5-turbo",
@@ -98,7 +99,7 @@ export default class ChatGPT_MD extends Plugin {
 					// user: user, // not yet supported
 				};
 
-				const response = await streamSSE(
+				const response = await streamManager.streamSSE(
 					editor,
 					this.settings.apiKey,
 					url,
@@ -322,6 +323,7 @@ export default class ChatGPT_MD extends Plugin {
 	}
 
 	async inferTitleFromMessages(messages: string[]) {
+		console.log("[ChtGPT MD] Inferring Title")
 		try {
 			if (messages.length < 2) {
 				new Notice(
@@ -368,7 +370,8 @@ export default class ChatGPT_MD extends Plugin {
 				.trim()
 				.replace(/[:/\\]/g, "");
 		} catch (err) {
-			throw new Error("Error inferring title from messages" + err);
+			new Notice("[ChatGPT MD] Error inferring title from messages");
+			throw new Error("[ChatGPT MD] Error inferring title from messages" + err);
 		}
 	}
 
@@ -428,6 +431,8 @@ export default class ChatGPT_MD extends Plugin {
 
 		await this.loadSettings();
 
+		const streamManager = new StreamManager();
+
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
 			id: "call-chatgpt-api",
@@ -471,6 +476,7 @@ export default class ChatGPT_MD extends Plugin {
 				}
 
 				this.callOpenAIAPI(
+					streamManager,
 					editor,
 					messagesWithRoleAndMessage,
 					frontmatter.model,
@@ -587,6 +593,15 @@ export default class ChatGPT_MD extends Plugin {
 			icon: "minus",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				this.addHR(editor, "user");
+			},
+		});
+
+		this.addCommand({
+			id: "stop-streaming",
+			name: "Stop streaming",
+			icon: "stop",
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				streamManager.stopStreaming();
 			},
 		});
 
