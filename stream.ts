@@ -163,7 +163,7 @@ export class StreamManager {
 						resolve(txt);
 					} else {
 						console.log("no manual close for abort");
-						reject(e);
+						resolve(e); // bugged -- todo
 					}
 				});
 
