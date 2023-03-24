@@ -161,9 +161,6 @@ export class StreamManager {
 					// if e was triggered by stopStreaming, then resolve
 					if (this.manualClose) {
 						resolve(txt);
-					} else {
-						console.log("no manual close for abort");
-						resolve(e); // bugged -- todo
 					}
 				});
 
