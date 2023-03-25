@@ -15,7 +15,7 @@ import {
 } from "obsidian";
 
 import { StreamManager } from "./stream";
-import { unfinishedCodeBlock } from "helpers";
+import { unfinishedCodeBlock, writeInferredTitleToEditor } from "helpers";
 
 interface ChatGPT_MDSettings {
 	apiKey: string;
@@ -42,7 +42,7 @@ const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	headingLevel: 0,
 };
 
-const DEFAULT_URL = `https://api.openai.com/v1/chat/completions`
+const DEFAULT_URL = `https://api.openai.com/v1/chat/completions`;
 
 interface Chat_MD_FrontMatter {
 	temperature: number;
@@ -166,10 +166,16 @@ export default class ChatGPT_MD extends Plugin {
 					throw new Error(JSON.stringify(err.error));
 				} else {
 					if (url !== DEFAULT_URL) {
-						new Notice("[ChatGPT MD] Issue calling specified url: " + url);
-						throw new Error("[ChatGPT MD] Issue calling specified url: " + url);
+						new Notice(
+							"[ChatGPT MD] Issue calling specified url: " + url
+						);
+						throw new Error(
+							"[ChatGPT MD] Issue calling specified url: " + url
+						);
 					} else {
-						new Notice(`[ChatGPT MD] Error :: ${JSON.stringify(err)}`);
+						new Notice(
+							`[ChatGPT MD] Error :: ${JSON.stringify(err)}`
+						);
 						throw new Error(JSON.stringify(err));
 					}
 				}
@@ -236,7 +242,7 @@ export default class ChatGPT_MD extends Plugin {
 				logit_bias: metaMatter?.logit_bias || null,
 				user: metaMatter?.user || null,
 				system_commands: metaMatter?.system_commands || null,
-				url: metaMatter?.url || DEFAULT_URL
+				url: metaMatter?.url || DEFAULT_URL,
 			};
 
 			return frontmatter;
@@ -323,7 +329,9 @@ export default class ChatGPT_MD extends Plugin {
 	}
 
 	async inferTitleFromMessages(messages: string[]) {
-		console.log("[ChtGPT MD] Inferring Title")
+		console.log("[ChtGPT MD] Inferring Title");
+		new Notice("[ChatGPT] Inferring title from messages...");
+
 		try {
 			if (messages.length < 2) {
 				new Notice(
@@ -332,7 +340,7 @@ export default class ChatGPT_MD extends Plugin {
 				return;
 			}
 
-			const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forwad slash. Just return the title. \nMessages:\n\n${JSON.stringify(
+			const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. \nMessages:\n\n${JSON.stringify(
 				messages
 			)}`;
 
@@ -342,10 +350,6 @@ export default class ChatGPT_MD extends Plugin {
 					content: prompt,
 				},
 			];
-
-			if (Platform.isMobile) {
-				new Notice("[ChatGPT] Inferring title from messages...");
-			}
 
 			const responseUrl = await requestUrl({
 				url: `https://api.openai.com/v1/chat/completions`,
@@ -368,10 +372,14 @@ export default class ChatGPT_MD extends Plugin {
 			const responseJSON = JSON.parse(response);
 			return responseJSON.choices[0].message.content
 				.trim()
-				.replace(/[:/\\]/g, "");
+				.replace(/[:/\\]/g, "")
+				.replace("Title", "")
+				.replace("title", "");
 		} catch (err) {
 			new Notice("[ChatGPT MD] Error inferring title from messages");
-			throw new Error("[ChatGPT MD] Error inferring title from messages" + err);
+			throw new Error(
+				"[ChatGPT MD] Error inferring title from messages" + err
+			);
 		}
 	}
 
@@ -533,25 +541,25 @@ export default class ChatGPT_MD extends Plugin {
 									"[ChatGPT MD] auto inferring title from messages"
 								);
 
+								statusBarItemEl.setText(
+									"[ChatGPT MD] Calling API..."
+								);
 								this.inferTitleFromMessages(
 									messagesWithResponse
 								)
-									.then((title) => {
+									.then(async (title) => {
 										if (title) {
 											console.log(
-												`[ChatGPT MD] inferred title: ${title}. Changing file name...`
+												`[ChatGPT MD] automatically inferred title: ${title}. Changing file name...`
 											);
-											// set title of file
-											const file = view.file;
-											// replace trailing / if it exists
-											const folder =
-												this.settings.chatFolder.replace(
-													/\/$/,
-													""
-												);
-											this.app.fileManager.renameFile(
-												file,
-												`${folder}/${title}.md`
+											statusBarItemEl.setText("");
+
+											await writeInferredTitleToEditor(
+												this.app.vault,
+												view,
+												this.app.fileManager,
+												this.settings.chatFolder,
+												title
 											);
 										} else {
 											new Notice(
@@ -562,11 +570,14 @@ export default class ChatGPT_MD extends Plugin {
 									})
 									.catch((err) => {
 										console.log(err);
-										new Notice(
-											"[ChatGPT MD] Error inferring title. " +
-												err,
-											5000
-										);
+										statusBarItemEl.setText("");
+										if (Platform.isMobile) {
+											new Notice(
+												"[ChatGPT MD] Error inferring title. " +
+													err,
+												5000
+											);
+										}
 									});
 							}
 						}
@@ -616,16 +627,17 @@ export default class ChatGPT_MD extends Plugin {
 				);
 				const messages = this.splitMessages(bodyWithoutYML);
 
+				statusBarItemEl.setText("[ChatGPT MD] Calling API...");
 				const title = await this.inferTitleFromMessages(messages);
+				statusBarItemEl.setText("");
 
 				if (title) {
-					// set title of file
-					const file = view.file;
-					// replace trailing / if it exists
-					const folder = this.settings.chatFolder.replace(/\/$/, "");
-					this.app.fileManager.renameFile(
-						file,
-						`${folder}/${title}.md`
+					await writeInferredTitleToEditor(
+						this.app.vault,
+						view,
+						this.app.fileManager,
+						this.settings.chatFolder,
+						title
 					);
 				}
 			},
