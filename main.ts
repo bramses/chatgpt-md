@@ -371,10 +371,10 @@ export default class ChatGPT_MD extends Plugin {
 			const response = responseUrl.text;
 			const responseJSON = JSON.parse(response);
 			return responseJSON.choices[0].message.content
-				.trim()
 				.replace(/[:/\\]/g, "")
 				.replace("Title", "")
-				.replace("title", "");
+				.replace("title", "")
+				.trim();
 		} catch (err) {
 			new Notice("[ChatGPT MD] Error inferring title from messages");
 			throw new Error(
