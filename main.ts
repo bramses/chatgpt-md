@@ -15,7 +15,7 @@ import {
 } from "obsidian";
 
 import { StreamManager } from "./stream";
-import { unfinishedCodeBlock, writeInferredTitleToEditor } from "helpers";
+import { unfinishedCodeBlock, writeInferredTitleToEditor, createFolderModal } from "helpers";
 
 interface ChatGPT_MDSettings {
 	apiKey: string;
@@ -652,16 +652,21 @@ export default class ChatGPT_MD extends Plugin {
 				try {
 					const selectedText = editor.getSelection();
 
-					if (
-						!this.settings.chatFolder ||
-						!this.app.vault.getAbstractFileByPath(
-							this.settings.chatFolder
-						)
-					) {
+					if (!this.settings.chatFolder || this.settings.chatFolder.trim() === "") {
 						new Notice(
-							`[ChatGPT MD] No chat folder found. Please set one in settings and make sure it exists.`
+							`[ChatGPT MD] No chat folder value found. Please set one in settings.`
 						);
 						return;
+					}
+
+					if (!await this.app.vault.adapter.exists(this.settings.chatFolder)) {
+						const result = await createFolderModal(this.app, this.app.vault, "chatFolder", this.settings.chatFolder);
+						if (!result) {
+							new Notice(
+								`[ChatGPT MD] No chat folder found. One must be created to use plugin. Set one in settings and make sure it exists.`
+							);
+							return;
+						}
 					}
 
 					const newFile = await this.app.vault.create(
@@ -690,31 +695,40 @@ export default class ChatGPT_MD extends Plugin {
 			id: "choose-chat-template",
 			name: "Create new chat from template",
 			icon: "layout-template",
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				// check if chats folder exists
-				if (
-					!this.settings.chatFolder ||
-					!this.app.vault.getAbstractFileByPath(
-						this.settings.chatFolder
-					)
-				) {
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+
+				if (!this.settings.chatFolder || this.settings.chatFolder.trim() === "") {
 					new Notice(
-						`[ChatGPT MD] No chat folder found. Please set one in settings and make sure it exists.`
+						`[ChatGPT MD] No chat folder value found. Please set one in settings.`
 					);
 					return;
 				}
 
-				// check if templates folder exists
-				if (
-					!this.settings.chatTemplateFolder ||
-					!this.app.vault.getAbstractFileByPath(
-						this.settings.chatTemplateFolder
-					)
-				) {
+				if (!await this.app.vault.adapter.exists(this.settings.chatFolder)) {
+					const result = await createFolderModal(this.app, this.app.vault, "chatFolder", this.settings.chatFolder);
+					if (!result) {
+						new Notice(
+							`[ChatGPT MD] No chat folder found. One must be created to use plugin. Set one in settings and make sure it exists.`
+						);
+						return;
+					}
+				}
+
+				if (!this.settings.chatTemplateFolder || this.settings.chatTemplateFolder.trim() === "") {
 					new Notice(
-						`[ChatGPT MD] No templates folder found. Please set one in settings and make sure it exists.`
+						`[ChatGPT MD] No chat template folder value found. Please set one in settings.`
 					);
 					return;
+				}
+
+				if (!await this.app.vault.adapter.exists(this.settings.chatTemplateFolder)) {
+					const result = await createFolderModal(this.app, this.app.vault, "chatTemplateFolder", this.settings.chatTemplateFolder);
+					if (!result) {
+						new Notice(
+							`[ChatGPT MD] No chat template folder found. One must be created to use plugin. Set one in settings and make sure it exists.`
+						);
+						return;
+					}
 				}
 
 				new ChatTemplates(
