@@ -27,6 +27,7 @@ interface ChatGPT_MDSettings {
 	autoInferTitle: boolean;
 	dateFormat: string;
 	headingLevel: number;
+	inferTitleLanguage: string;
 }
 
 const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
@@ -40,6 +41,7 @@ const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	autoInferTitle: false,
 	dateFormat: "YYYYMMDDhhmmss",
 	headingLevel: 0,
+	inferTitleLanguage: "English",
 };
 
 const DEFAULT_URL = `https://api.openai.com/v1/chat/completions`;
@@ -340,9 +342,9 @@ export default class ChatGPT_MD extends Plugin {
 				return;
 			}
 
-			const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. \nMessages:\n\n${JSON.stringify(
-				messages
-			)}`;
+			const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${
+				this.settings.inferTitleLanguage
+			}. \nMessages:\n\n${JSON.stringify(messages)}`;
 
 			const titleMessage = [
 				{
@@ -989,5 +991,27 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		new Setting(containerEl)
+			.setName("Infer title language")
+			.setDesc("Language to use for title inference.")
+			.addDropdown((dropdown) => {
+				dropdown.addOptions({
+					English: "English",
+					Japanese: "Japanese",
+					Spanish: "Spanish",
+					French: "French",
+					German: "German",
+					Chinese: "Chinese",
+					Korean: "Korean",
+					Italian: "Italian",
+					Russian: "Russian",
+				});
+				dropdown.setValue(this.plugin.settings.inferTitleLanguage);
+				dropdown.onChange(async (value) => {
+					this.plugin.settings.inferTitleLanguage = value;
+					await this.plugin.saveSettings();
+				});
+			});
 	}
 }
