@@ -25,6 +25,7 @@ interface ChatGPT_MDSettings {
 	apiKey: string;
 	defaultChatFrontmatter: string;
 	stream: boolean;
+	doNotSendFullNote: boolean;
 	chatTemplateFolder: string;
 	chatFolder: string;
 	generateAtCursor: boolean;
@@ -39,6 +40,7 @@ const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	defaultChatFrontmatter:
 		"---\nsystem_commands: ['I am a helpful assistant.']\ntemperature: 0\ntop_p: 1\nmax_tokens: 512\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nmodel: gpt-3.5-turbo\n---",
 	stream: true,
+	doNotSendFullNote: true,
 	chatTemplateFolder: "ChatGPT_MD/templates",
 	chatFolder: "ChatGPT_MD/chats",
 	generateAtCursor: false,
@@ -51,6 +53,7 @@ const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 const DEFAULT_URL = `https://api.openai.com/v1/chat/completions`;
 
 interface Chat_MD_FrontMatter {
+	chatFile: boolean;
 	temperature: number;
 	top_p: number;
 	presence_penalty: number;
@@ -233,8 +236,13 @@ export default class ChatGPT_MD extends Plugin {
 					? metaMatter.temperature
 					: 0.3;
 
+			const chatFile = metaMatter?.model !== undefined
+				? metaMatter.model.toString().toLowerCase().includes("gpt")
+				: false
+
 			const frontmatter = {
 				title: metaMatter?.title || view.file.basename,
+				chatFile: chatFile,
 				tags: metaMatter?.tags || [],
 				model: metaMatter?.model || "gpt-3.5-turbo",
 				temperature: temperature,
@@ -257,11 +265,11 @@ export default class ChatGPT_MD extends Plugin {
 		}
 	}
 
-	splitMessages(text: string) {
+	splitMessages(text: string, chatFile: boolean) {
 		try {
 			// <hr class="__chatgpt_plugin">
 			const messages = text.split('<hr class="__chatgpt_plugin">');
-			return messages;
+			return messages.slice((chatFile || !this.settings.doNotSendFullNote) ? 0 : 1);
 		} catch (err) {
 			throw new Error("Error splitting messages" + err);
 		}
@@ -501,8 +509,6 @@ export default class ChatGPT_MD extends Plugin {
 			name: "Chat",
 			icon: "message-circle",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-				statusBarItemEl.setText("[ChatGPT MD] Calling API...");
 				// get frontmatter
 				const frontmatter = this.getFrontmatter(view);
 
@@ -510,7 +516,16 @@ export default class ChatGPT_MD extends Plugin {
 				const bodyWithoutYML = this.removeYMLFromMessage(
 					editor.getValue()
 				);
-				let messages = this.splitMessages(bodyWithoutYML);
+
+				let messages = this.splitMessages(bodyWithoutYML, frontmatter.chatFile);
+
+				if (messages.length === 0) {
+					return;
+				}
+
+				// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
+				statusBarItemEl.setText("[ChatGPT MD] Calling API...");
+
 				messages = messages.map((message) => {
 					return this.removeCommentsFromMessages(message);
 				});
@@ -707,7 +722,7 @@ export default class ChatGPT_MD extends Plugin {
 				const bodyWithoutYML = this.removeYMLFromMessage(
 					editor.getValue()
 				);
-				let messages = this.splitMessages(bodyWithoutYML);
+				let messages = this.splitMessages(bodyWithoutYML, false);
 				messages = messages.map((message) => {
 					return this.removeCommentsFromMessages(message);
 				});
@@ -1044,6 +1059,18 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.stream)
 					.onChange(async (value) => {
 						this.plugin.settings.stream = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Don't send full note unless a chat file detected")
+			.setDesc("Allow to call Chat GPT API only in files having ChatGPT frontmatter or dividers. The text above first divider is not sent.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.doNotSendFullNote)
+					.onChange(async (value) => {
+						this.plugin.settings.doNotSendFullNote = value;
 						await this.plugin.saveSettings();
 					})
 			);
