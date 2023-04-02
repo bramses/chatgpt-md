@@ -25,7 +25,7 @@ interface ChatGPT_MDSettings {
 	apiKey: string;
 	defaultChatFrontmatter: string;
 	stream: boolean;
-	doNotSendFullNote: boolean;
+	doNotSendWholeNote: boolean;
 	chatTemplateFolder: string;
 	chatFolder: string;
 	generateAtCursor: boolean;
@@ -40,7 +40,7 @@ const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	defaultChatFrontmatter:
 		"---\nsystem_commands: ['I am a helpful assistant.']\ntemperature: 0\ntop_p: 1\nmax_tokens: 512\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nmodel: gpt-3.5-turbo\n---",
 	stream: true,
-	doNotSendFullNote: true,
+	doNotSendWholeNote: true,
 	chatTemplateFolder: "ChatGPT_MD/templates",
 	chatFolder: "ChatGPT_MD/chats",
 	generateAtCursor: false,
@@ -269,7 +269,7 @@ export default class ChatGPT_MD extends Plugin {
 		try {
 			// <hr class="__chatgpt_plugin">
 			const messages = text.split('<hr class="__chatgpt_plugin">');
-			return messages.slice((chatFile || !this.settings.doNotSendFullNote) ? 0 : 1);
+			return messages.slice((chatFile || !this.settings.doNotSendWholeNote) ? 0 : 1);
 		} catch (err) {
 			throw new Error("Error splitting messages" + err);
 		}
@@ -1064,13 +1064,13 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Don't send full note unless a chat file detected")
-			.setDesc("Allow to call Chat GPT API only in files having ChatGPT frontmatter or dividers. The text above first divider is not sent.")
+			.setName("Don't send whole note")
+			.setDesc("Don't send the whole note (unless a chat file detected). It allows to call Chat GPT API only in files having ChatGPT frontmatter or dividers. The text above the first divider is not sent.")
 			.addToggle((toggle) =>
 				toggle
-					.setValue(this.plugin.settings.doNotSendFullNote)
+					.setValue(this.plugin.settings.doNotSendWholeNote)
 					.onChange(async (value) => {
-						this.plugin.settings.doNotSendFullNote = value;
+						this.plugin.settings.doNotSendWholeNote = value;
 						await this.plugin.saveSettings();
 					})
 			);
