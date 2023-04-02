@@ -27,6 +27,7 @@ interface ChatGPT_MDSettings {
 	autoInferTitle: boolean;
 	dateFormat: string;
 	headingLevel: number;
+	onlyInChatFiles: boolean;
 }
 
 const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
@@ -40,6 +41,7 @@ const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 	autoInferTitle: false,
 	dateFormat: "YYYYMMDDhhmmss",
 	headingLevel: 0,
+	onlyInChatFiles: true
 };
 
 const DEFAULT_URL = `https://api.openai.com/v1/chat/completions`;
@@ -203,7 +205,7 @@ export default class ChatGPT_MD extends Plugin {
 		editor.setCursor(newCursor);
 	}
 
-	getFrontmatter(view: MarkdownView): Chat_MD_FrontMatter {
+	getFrontmatter(view: MarkdownView): Chat_MD_FrontMatter | null {
 		try {
 			// get frontmatter
 			const noteFile = app.workspace.getActiveFile();
@@ -226,6 +228,10 @@ export default class ChatGPT_MD extends Plugin {
 				metaMatter?.temperature !== undefined
 					? metaMatter.temperature
 					: 0.3;
+
+			if (this.settings.onlyInChatFiles && !metaMatter?.model.toLowerCase().includes("gpt")) {
+				return null;
+			}
 
 			const frontmatter = {
 				title: metaMatter?.title || view.file.basename,
@@ -447,10 +453,15 @@ export default class ChatGPT_MD extends Plugin {
 			name: "Chat",
 			icon: "message-circle",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-				statusBarItemEl.setText("[ChatGPT MD] Calling API...");
 				// get frontmatter
 				const frontmatter = this.getFrontmatter(view);
+
+				if (!frontmatter) {
+					return;
+				}
+
+				// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
+				statusBarItemEl.setText("[ChatGPT MD] Calling API...");
 
 				// get messages
 				const bodyWithoutYML = this.removeYMLFromMessage(
@@ -900,6 +911,18 @@ class ChatGPT_MDSettingsTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.stream)
 					.onChange(async (value) => {
 						this.plugin.settings.stream = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Only In Chat Files")
+			.setDesc("Allow to call Chat GPT API only in files having ChatGPT frontmatter")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.onlyInChatFiles)
+					.onChange(async (value) => {
+						this.plugin.settings.onlyInChatFiles = value;
 						await this.plugin.saveSettings();
 					})
 			);
