@@ -58,6 +58,9 @@ Comments begin with `=begin-chatgpt-md-comment` and end with `=end-chatgpt-md-co
 ![Screenshot 2023-04-03 16-47-05](https://user-images.githubusercontent.com/3282661/229628591-eda70076-9e03-44e3-98b5-16be73f39957.png)
 ![Screenshot 2023-04-03 16-59-26](https://user-images.githubusercontent.com/3282661/229628629-2fc9ec19-7cce-4754-9c09-11f2364395e5.png)
 
+#### Clear Chat
+
+Removes all messages but leaves frontmatter
 
 #### Stop Streaming (Does not work on mobile)
 
