@@ -680,7 +680,16 @@ export default class ChatGPT_MD extends Plugin {
 					);
 
 					// open new file
-					this.app.workspace.openLinkText(newFile.basename, "", true);
+					await this.app.workspace.openLinkText(newFile.basename, "", true, { state: { mode: "source" } });
+					const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+
+					if (!activeView) {
+						new Notice('No active markdown editor found.');
+						return;
+					}
+
+					activeView.editor.focus();
+					this.moveCursorToEndOfFile(activeView.editor);
 				} catch (err) {
 					console.error(
 						`[ChatGPT MD] Error in Create new chat with highlighted text`,
