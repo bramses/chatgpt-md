@@ -15,7 +15,11 @@ import {
 } from "obsidian";
 
 import { StreamManager } from "./stream";
-import { unfinishedCodeBlock, writeInferredTitleToEditor, createFolderModal } from "helpers";
+import {
+	unfinishedCodeBlock,
+	writeInferredTitleToEditor,
+	createFolderModal,
+} from "helpers";
 
 interface ChatGPT_MDSettings {
 	apiKey: string;
@@ -265,7 +269,6 @@ export default class ChatGPT_MD extends Plugin {
 
 	clearConversationExceptFrontmatter(editor: Editor) {
 		try {
-			
 			// get frontmatter
 			const YAMLFrontMatter = /---\s*[\s\S]*?\s*---/g;
 			const frontmatter = editor.getValue().match(YAMLFrontMatter);
@@ -276,7 +279,7 @@ export default class ChatGPT_MD extends Plugin {
 
 			// clear editor
 			editor.setValue("");
-			
+
 			// add frontmatter
 			editor.replaceRange(frontmatter[0], editor.getCursor());
 
@@ -296,7 +299,6 @@ export default class ChatGPT_MD extends Plugin {
 			throw new Error("Error clearing conversation" + err);
 		}
 	}
-
 
 	moveCursorToEndOfFile(editor: Editor) {
 		try {
@@ -363,6 +365,21 @@ export default class ChatGPT_MD extends Plugin {
 
 		const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::${role}\n\n${message}\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::user\n\n`;
 		editor.replaceRange(newLine, editor.getCursor());
+	}
+
+	removeCommentsFromMessages(message: string) {
+		try {
+			// comment block in form of =begin-chatgpt-md-comment and =end-chatgpt-md-comment
+			const commentBlock =
+				/=begin-chatgpt-md-comment[\s\S]*?=end-chatgpt-md-comment/g;
+
+			// remove comment block
+			const newMessage = message.replace(commentBlock, "");
+
+			return newMessage;
+		} catch (err) {
+			throw new Error("Error removing comments from messages" + err);
+		}
 	}
 
 	async inferTitleFromMessages(messages: string[]) {
@@ -493,7 +510,11 @@ export default class ChatGPT_MD extends Plugin {
 				const bodyWithoutYML = this.removeYMLFromMessage(
 					editor.getValue()
 				);
-				const messages = this.splitMessages(bodyWithoutYML);
+				let messages = this.splitMessages(bodyWithoutYML);
+				messages = messages.map((message) => {
+					return this.removeCommentsFromMessages(message);
+				});
+
 				const messagesWithRoleAndMessage = messages.map((message) => {
 					return this.extractRoleAndMessage(message);
 				});
@@ -567,8 +588,10 @@ export default class ChatGPT_MD extends Plugin {
 						if (this.settings.autoInferTitle) {
 							const title = view.file.basename;
 
-							const messagesWithResponse =
-								messages.concat(responseStr);
+							let messagesWithResponse = messages.concat(responseStr);
+							messagesWithResponse = messagesWithResponse.map((message) => {
+								return this.removeCommentsFromMessages(message);
+							});
 
 							if (
 								this.isTitleTimestampFormat(title) &&
@@ -645,6 +668,28 @@ export default class ChatGPT_MD extends Plugin {
 		});
 
 		this.addCommand({
+			id: "add-comment-block",
+			name: "Add comment block",
+			icon: "comment",
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				// add a comment block at cursor in format: =begin-chatgpt-md-comment and =end-chatgpt-md-comment
+				const cursor = editor.getCursor();
+				const line = cursor.line;
+				const ch = cursor.ch;
+
+				const commentBlock = `=begin-chatgpt-md-comment\n\n=end-chatgpt-md-comment`;
+				editor.replaceRange(commentBlock, cursor);
+
+				// move cursor to middle of comment block
+				const newCursor = {
+					line: line + 1,
+					ch: ch,
+				};
+				editor.setCursor(newCursor);
+			},
+		});
+
+		this.addCommand({
 			id: "stop-streaming",
 			name: "Stop streaming",
 			icon: "octagon",
@@ -662,7 +707,10 @@ export default class ChatGPT_MD extends Plugin {
 				const bodyWithoutYML = this.removeYMLFromMessage(
 					editor.getValue()
 				);
-				const messages = this.splitMessages(bodyWithoutYML);
+				let messages = this.splitMessages(bodyWithoutYML);
+				messages = messages.map((message) => {
+					return this.removeCommentsFromMessages(message);
+				});
 
 				statusBarItemEl.setText("[ChatGPT MD] Calling API...");
 				const title = await this.inferTitleFromMessages(messages);
@@ -689,15 +737,27 @@ export default class ChatGPT_MD extends Plugin {
 				try {
 					const selectedText = editor.getSelection();
 
-					if (!this.settings.chatFolder || this.settings.chatFolder.trim() === "") {
+					if (
+						!this.settings.chatFolder ||
+						this.settings.chatFolder.trim() === ""
+					) {
 						new Notice(
 							`[ChatGPT MD] No chat folder value found. Please set one in settings.`
 						);
 						return;
 					}
 
-					if (!await this.app.vault.adapter.exists(this.settings.chatFolder)) {
-						const result = await createFolderModal(this.app, this.app.vault, "chatFolder", this.settings.chatFolder);
+					if (
+						!(await this.app.vault.adapter.exists(
+							this.settings.chatFolder
+						))
+					) {
+						const result = await createFolderModal(
+							this.app,
+							this.app.vault,
+							"chatFolder",
+							this.settings.chatFolder
+						);
 						if (!result) {
 							new Notice(
 								`[ChatGPT MD] No chat folder found. One must be created to use plugin. Set one in settings and make sure it exists.`
@@ -715,11 +775,17 @@ export default class ChatGPT_MD extends Plugin {
 					);
 
 					// open new file
-					await this.app.workspace.openLinkText(newFile.basename, "", true, { state: { mode: "source" } });
-					const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+					await this.app.workspace.openLinkText(
+						newFile.basename,
+						"",
+						true,
+						{ state: { mode: "source" } }
+					);
+					const activeView =
+						this.app.workspace.getActiveViewOfType(MarkdownView);
 
 					if (!activeView) {
-						new Notice('No active markdown editor found.');
+						new Notice("No active markdown editor found.");
 						return;
 					}
 
@@ -742,16 +808,27 @@ export default class ChatGPT_MD extends Plugin {
 			name: "Create new chat from template",
 			icon: "layout-template",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
-
-				if (!this.settings.chatFolder || this.settings.chatFolder.trim() === "") {
+				if (
+					!this.settings.chatFolder ||
+					this.settings.chatFolder.trim() === ""
+				) {
 					new Notice(
 						`[ChatGPT MD] No chat folder value found. Please set one in settings.`
 					);
 					return;
 				}
 
-				if (!await this.app.vault.adapter.exists(this.settings.chatFolder)) {
-					const result = await createFolderModal(this.app, this.app.vault, "chatFolder", this.settings.chatFolder);
+				if (
+					!(await this.app.vault.adapter.exists(
+						this.settings.chatFolder
+					))
+				) {
+					const result = await createFolderModal(
+						this.app,
+						this.app.vault,
+						"chatFolder",
+						this.settings.chatFolder
+					);
 					if (!result) {
 						new Notice(
 							`[ChatGPT MD] No chat folder found. One must be created to use plugin. Set one in settings and make sure it exists.`
@@ -760,15 +837,27 @@ export default class ChatGPT_MD extends Plugin {
 					}
 				}
 
-				if (!this.settings.chatTemplateFolder || this.settings.chatTemplateFolder.trim() === "") {
+				if (
+					!this.settings.chatTemplateFolder ||
+					this.settings.chatTemplateFolder.trim() === ""
+				) {
 					new Notice(
 						`[ChatGPT MD] No chat template folder value found. Please set one in settings.`
 					);
 					return;
 				}
 
-				if (!await this.app.vault.adapter.exists(this.settings.chatTemplateFolder)) {
-					const result = await createFolderModal(this.app, this.app.vault, "chatTemplateFolder", this.settings.chatTemplateFolder);
+				if (
+					!(await this.app.vault.adapter.exists(
+						this.settings.chatTemplateFolder
+					))
+				) {
+					const result = await createFolderModal(
+						this.app,
+						this.app.vault,
+						"chatTemplateFolder",
+						this.settings.chatTemplateFolder
+					);
 					if (!result) {
 						new Notice(
 							`[ChatGPT MD] No chat template folder found. One must be created to use plugin. Set one in settings and make sure it exists.`
