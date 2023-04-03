@@ -263,6 +263,41 @@ export default class ChatGPT_MD extends Plugin {
 		}
 	}
 
+	clearConversationExceptFrontmatter(editor: Editor) {
+		try {
+			
+			// get frontmatter
+			const YAMLFrontMatter = /---\s*[\s\S]*?\s*---/g;
+			const frontmatter = editor.getValue().match(YAMLFrontMatter);
+
+			if (!frontmatter) {
+				throw new Error("no frontmatter found");
+			}
+
+			// clear editor
+			editor.setValue("");
+			
+			// add frontmatter
+			editor.replaceRange(frontmatter[0], editor.getCursor());
+
+			// get length of file
+			const length = editor.lastLine();
+
+			// move cursor to end of file https://davidwalsh.name/codemirror-set-focus-line
+			const newCursor = {
+				line: length + 1,
+				ch: 0,
+			};
+
+			editor.setCursor(newCursor);
+
+			return newCursor;
+		} catch (err) {
+			throw new Error("Error clearing conversation" + err);
+		}
+	}
+
+
 	moveCursorToEndOfFile(editor: Editor) {
 		try {
 			// get length of file
@@ -747,6 +782,15 @@ export default class ChatGPT_MD extends Plugin {
 					this.settings,
 					this.getDate(new Date(), this.settings.dateFormat)
 				).open();
+			},
+		});
+
+		this.addCommand({
+			id: "clear-chat",
+			name: "Clear chat (except frontmatter)",
+			icon: "trash",
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				this.clearConversationExceptFrontmatter(editor);
 			},
 		});
 
