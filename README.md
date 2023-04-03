@@ -24,9 +24,11 @@ https://user-images.githubusercontent.com/3282661/223005882-6632c997-b9a6-445b-8
 - Create chats from *highlighted text*.
 - [*Infer title* from messages](https://github.com/bramses/chatgpt-md/discussions/11). Can be set to run automatically after >4 messages.
 - Stream at cursor position or at end of file. Can be set in settings.
-- (NEW!) Choose [heading level for role](https://github.com/bramses/chatgpt-md/pull/22) h1-h6. Can be set in settings.
-- (NEW!) Custom endpoints can be specified using the url parameter in your front matter. See FAQ for an example.
-- (NEW!) Stop a running stream with a command. See commands section below.
+- Choose [heading level for role](https://github.com/bramses/chatgpt-md/pull/22) h1-h6. Can be set in settings.
+- Custom endpoints can be specified using the url parameter in your front matter. See FAQ for an example.
+- Stop a running stream with a command. See commands section below.
+- (NEW!) Choose between nine languages for "Infer Title". Can be set in settings.
+- (NEW!) ChatGPT comment blocks. Allows you to leave scratchpad notes, backlinks...or anything else really!! See command below for details.
 
 ### Commands
 
@@ -46,6 +48,16 @@ Create a new chat file from a template specified in `Chat Template Folder`. Reme
 #### Infer Title
 
 [Infer the title of the chat from the messages](https://github.com/bramses/chatgpt-md/discussions/11). Requires at least 2 messages. Can be set in settings to run automatically after >4 messages.
+
+#### Add comment block
+
+Add a comment block to the editor that will not be processed by ChatGPT. Allows you to leave scratchpad notes, backlinks...or anything else really!
+
+Comments begin with `=begin-chatgpt-md-comment` and end with `=end-chatgpt-md-comment`
+
+![Screenshot 2023-04-03 16-47-05](https://user-images.githubusercontent.com/3282661/229628591-eda70076-9e03-44e3-98b5-16be73f39957.png)
+![Screenshot 2023-04-03 16-59-26](https://user-images.githubusercontent.com/3282661/229628629-2fc9ec19-7cce-4754-9c09-11f2364395e5.png)
+
 
 #### Stop Streaming (Does not work on mobile)
 
