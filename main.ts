@@ -807,7 +807,7 @@ export default class ChatGPT_MD extends Plugin {
 			id: "choose-chat-template",
 			name: "Create new chat from template",
 			icon: "layout-template",
-			editorCallback: async (editor: Editor, view: MarkdownView) => {
+			callback: async () => {
 				if (
 					!this.settings.chatFolder ||
 					this.settings.chatFolder.trim() === ""
