@@ -234,7 +234,7 @@ export default class ChatGPT_MD extends Plugin {
 					: 0.3;
 
 			const frontmatter = {
-				title: metaMatter?.title || view.file.basename,
+				title: metaMatter?.title || view.file?.basename || "Untitled",
 				tags: metaMatter?.tags || [],
 				model: metaMatter?.model || "gpt-3.5-turbo",
 				temperature: temperature,
@@ -586,12 +586,18 @@ export default class ChatGPT_MD extends Plugin {
 						}
 
 						if (this.settings.autoInferTitle) {
-							const title = view.file.basename;
+							const title =
+								view.file?.basename || "file-name-not-found";
 
-							let messagesWithResponse = messages.concat(responseStr);
-							messagesWithResponse = messagesWithResponse.map((message) => {
-								return this.removeCommentsFromMessages(message);
-							});
+							let messagesWithResponse =
+								messages.concat(responseStr);
+							messagesWithResponse = messagesWithResponse.map(
+								(message) => {
+									return this.removeCommentsFromMessages(
+										message
+									);
+								}
+							);
 
 							if (
 								this.isTitleTimestampFormat(title) &&
