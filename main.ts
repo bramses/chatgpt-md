@@ -771,8 +771,10 @@ export default class ChatGPT_MD extends Plugin {
 							new Date(),
 							this.settings.dateFormat
 						)}.md`,
-						`${this.settings.defaultChatFrontmatter}\n\n${selectedText}`
+						`${this.settings.defaultChatFrontmatter}\n\n[${selectedText}](${encodeURIComponent(view.file.name)})`
 					);
+
+				  	editor.replaceSelection(`[${selectedText}](${encodeURIComponent(newFile.name)})`);
 
 					// open new file
 					await this.app.workspace.openLinkText(
