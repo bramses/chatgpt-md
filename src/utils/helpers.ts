@@ -8,6 +8,7 @@ import {
   Editor,
   Modal,
 } from "obsidian";
+import { TemplateSelectionDialog } from "./TemplateSelectionDialog";
 
 export const unfinishedCodeBlock = (txt: string): boolean => {
   const matcher = txt.match(/```/g);
@@ -37,7 +38,7 @@ export const writeInferredTitleToEditor = async (
       i++;
     }
 
-    fileManager.renameFile(file, newFileName);
+    await fileManager.renameFile(file, newFileName);
   } catch (err) {
     new Notice("[ChatGPT MD] Error writing inferred title to editor");
     console.error("[ChatGPT MD] Error writing inferred title to editor", err);
@@ -50,7 +51,7 @@ export const createFolderModal = async (
   vault: Vault,
   folderName: string,
   folderPath: string
-) => {
+): Promise<boolean> => {
   const folderCreationModal = new FolderCreationModal(
     app,
     folderName,
@@ -123,7 +124,7 @@ class FolderCreationModal extends Modal {
     );
   }
 
-  waitForModalValue() {
+  waitForModalValue(): Promise<boolean> {
     return this.modalPromise;
   }
 
@@ -133,7 +134,9 @@ class FolderCreationModal extends Modal {
   }
 }
 
-export const moveCursorToEndOfFile = (editor: Editor) => {
+export const moveCursorToEndOfFile = (
+  editor: Editor
+): { line: number; ch: number } => {
   try {
     const length = editor.lastLine();
     const newCursor = { line: length + 1, ch: 0 };

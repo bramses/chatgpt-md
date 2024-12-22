@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, PluginSettingTab, Setting, DropdownComponent } from "obsidian";
 import ChatGPT_MD from "../main";
 
 export class SettingsView extends PluginSettingTab {
@@ -18,6 +18,7 @@ export class SettingsView extends PluginSettingTab {
   }
 
   createSettingsUI(containerEl: HTMLElement) {
+    // 1. OpenAI API Key
     new Setting(containerEl)
       .setName("OpenAI API Key")
       .setDesc("Enter your OpenAI API key")
@@ -31,6 +32,7 @@ export class SettingsView extends PluginSettingTab {
           })
       );
 
+    // 2. Default Chat Frontmatter
     new Setting(containerEl)
       .setName("Default Chat Frontmatter")
       .setDesc("Default frontmatter for new chat files.")
@@ -44,6 +46,7 @@ export class SettingsView extends PluginSettingTab {
           })
       );
 
+    // 3. Stream Toggle
     new Setting(containerEl)
       .setName("Stream")
       .setDesc("Enable stream mode by default")
@@ -54,6 +57,7 @@ export class SettingsView extends PluginSettingTab {
         })
       );
 
+    // 4. Chat Folder
     new Setting(containerEl)
       .setName("Chat Folder")
       .setDesc("Path to the folder for saving chat files")
@@ -67,6 +71,7 @@ export class SettingsView extends PluginSettingTab {
           })
       );
 
+    // 5. Chat Template Folder
     new Setting(containerEl)
       .setName("Chat Template Folder")
       .setDesc("Path to folder for chat file templates")
@@ -80,6 +85,7 @@ export class SettingsView extends PluginSettingTab {
           })
       );
 
+    // 6. Generate at Cursor Toggle
     new Setting(containerEl)
       .setName("Generate at Cursor")
       .setDesc("Generate text at cursor instead of end of file")
@@ -92,6 +98,7 @@ export class SettingsView extends PluginSettingTab {
           })
       );
 
+    // 7. Automatically Infer Title Toggle
     new Setting(containerEl)
       .setName("Automatically Infer Title")
       .setDesc("Automatically infer title after 4 messages have been exchanged")
@@ -104,6 +111,7 @@ export class SettingsView extends PluginSettingTab {
           })
       );
 
+    // 8. Date Format
     new Setting(containerEl)
       .setName("Date Format")
       .setDesc(
@@ -119,6 +127,7 @@ export class SettingsView extends PluginSettingTab {
           })
       );
 
+    // 9. Heading Level Dropdown
     new Setting(containerEl)
       .setName("Heading Level")
       .setDesc("Select the heading level for inserted sections.")
@@ -139,7 +148,24 @@ export class SettingsView extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+    // 10. AI Model Selection Dropdown
+    new Setting(containerEl)
+      .setName("AI Model")
+      .setDesc("Select the AI model to use.")
+      .addDropdown((dropdown) => {
+        dropdown.addOptions({
+          openai: "OpenAI",
+          local: "Local LLM",
+        });
+        dropdown.setValue(this.plugin.settings.model);
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.model = value;
+          await this.plugin.loadSettings();
+          await this.plugin.saveSettings();
+        });
+      });
 
+    // 11. Infer Title Language Dropdown
     new Setting(containerEl)
       .setName("Infer Title Language")
       .setDesc("Select the language to use for inferring titles.")

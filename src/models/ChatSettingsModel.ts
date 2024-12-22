@@ -9,11 +9,23 @@ export interface ChatMDSettings {
   dateFormat: string;
   headingLevel: number;
   inferTitleLanguage: string;
+  model: string;
 }
 
 export const DEFAULT_SETTINGS: ChatMDSettings = {
   apiKey: "default",
-  defaultChatFrontmatter: "...",
+  defaultChatFrontmatter: `---
+system_commands: ['I am a helpful assistant.']
+temperature: 0
+top_p: 1
+max_tokens: 512
+presence_penalty: 1
+frequency_penalty: 1
+stream: true
+stop: null
+n: 1
+model: gpt-3.5-turbo
+---`,
   stream: true,
   chatTemplateFolder: "ChatGPT_MD/templates",
   chatFolder: "ChatGPT_MD/chats",
@@ -22,6 +34,7 @@ export const DEFAULT_SETTINGS: ChatMDSettings = {
   dateFormat: "YYYYMMDDhhmmss",
   headingLevel: 0,
   inferTitleLanguage: "English",
+  model: "openai", // Default model
 };
 
 export interface ChatMDFrontMatter {

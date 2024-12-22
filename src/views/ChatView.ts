@@ -96,11 +96,33 @@ export class ChatView {
     }
   }
 
-  private getHeadingPrefix(): string {
+  public getHeadingPrefix(): string {
     const headingLevel = this.settings.headingLevel;
     if (headingLevel < 1) {
       return "";
     }
     return "#".repeat(Math.min(headingLevel, 6)) + " ";
+  }
+  public getDate(date: Date, format = "YYYYMMDDhhmmss") {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hour = date.getHours();
+    const minute = date.getMinutes();
+    const second = date.getSeconds();
+
+    const paddedMonth = month.toString().padStart(2, "0");
+    const paddedDay = day.toString().padStart(2, "0");
+    const paddedHour = hour.toString().padStart(2, "0");
+    const paddedMinute = minute.toString().padStart(2, "0");
+    const paddedSecond = second.toString().padStart(2, "0");
+
+    return format
+      .replace("YYYY", year.toString())
+      .replace("MM", paddedMonth)
+      .replace("DD", paddedDay)
+      .replace("hh", paddedHour)
+      .replace("mm", paddedMinute)
+      .replace("ss", paddedSecond);
   }
 }
