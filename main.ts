@@ -15,7 +15,11 @@ import {
 } from "obsidian";
 
 import { StreamManager } from "./stream";
-import { createFolderModal, unfinishedCodeBlock, writeInferredTitleToEditor } from "helpers";
+import {
+	createFolderModal,
+	unfinishedCodeBlock,
+	writeInferredTitleToEditor,
+} from "helpers";
 
 interface ChatGPT_MDSettings {
 	apiKey: string;
@@ -582,8 +586,10 @@ export default class ChatGPT_MD extends Plugin {
 						}
 
 						if (this.settings.autoInferTitle) {
-							const title =
-								view.file?.basename || "file-name-not-found";
+							if (!view.file) {
+								throw new Error("No active file found");
+							}
+							const title = view.file.basename;
 
 							let messagesWithResponse =
 								messages.concat(responseStr);
