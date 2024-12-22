@@ -234,7 +234,7 @@ export default class ChatGPT_MD extends Plugin {
 					: 0.3;
 
 			const frontmatter = {
-				title: metaMatter?.title || view.file.basename,
+				title: metaMatter?.title || view.file?.basename || "Untitled",
 				tags: metaMatter?.tags || [],
 				model: metaMatter?.model || "gpt-3.5-turbo",
 				temperature: temperature,
@@ -586,6 +586,9 @@ export default class ChatGPT_MD extends Plugin {
 						}
 
 						if (this.settings.autoInferTitle) {
+							if (!view.file) {
+								throw new Error("No active file found");
+							}
 							const title = view.file.basename;
 
 							let messagesWithResponse =
