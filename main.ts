@@ -3,23 +3,19 @@ import {
 	App,
 	Editor,
 	MarkdownView,
+	Notice,
+	Platform,
 	Plugin,
 	PluginSettingTab,
-	Setting,
 	requestUrl,
-	TFile,
-	Notice,
+	Setting,
 	SuggestModal,
+	TFile,
 	TFolder,
-	Platform,
 } from "obsidian";
 
 import { StreamManager } from "./stream";
-import {
-	unfinishedCodeBlock,
-	writeInferredTitleToEditor,
-	createFolderModal,
-} from "helpers";
+import { createFolderModal, unfinishedCodeBlock, writeInferredTitleToEditor } from "helpers";
 
 interface ChatGPT_MDSettings {
 	apiKey: string;
@@ -225,8 +221,8 @@ export default class ChatGPT_MD extends Plugin {
 				metaMatter?.stream !== undefined
 					? metaMatter.stream // If defined in frontmatter, use its value.
 					: this.settings.stream !== undefined
-					? this.settings.stream // If not defined in frontmatter but exists globally, use its value.
-					: true; // Otherwise fallback on true.
+						? this.settings.stream // If not defined in frontmatter but exists globally, use its value.
+						: true; // Otherwise fallback on true.
 
 			const temperature =
 				metaMatter?.temperature !== undefined

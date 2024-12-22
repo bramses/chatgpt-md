@@ -1,12 +1,4 @@
-import {
-	FileManager,
-	MarkdownView,
-	Notice,
-	Vault,
-	Modal,
-	App,
-	Setting,
-} from "obsidian";
+import { App, FileManager, MarkdownView, Modal, Notice, Setting, Vault } from "obsidian";
 
 // check for unclosed code block in MD (three backticks), string should contain three backticks in a row
 export const unfinishedCodeBlock = (txt: string) => {
