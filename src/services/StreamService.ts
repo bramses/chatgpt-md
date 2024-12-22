@@ -48,7 +48,7 @@ export class StreamService {
 
         this.sse = source;
 
-        let txt = "";
+        let responseContent = "";
         let initialCursorPosCh = editor.getCursor().ch;
         let initialCursorPosLine = editor.getCursor().line;
 
@@ -89,7 +89,7 @@ export class StreamService {
             });
             cm6.dispatch(transaction);
 
-            txt += text;
+            responseContent += text;
 
             const newCursor = {
               line: cursor.line,
@@ -100,13 +100,13 @@ export class StreamService {
             source.close();
             console.log("[ChatGPT MD] SSE Closed");
 
-            if (unfinishedCodeBlock(txt)) {
-              txt += "\n```";
+            if (unfinishedCodeBlock(responseContent)) {
+              responseContent += "\n```";
             }
 
             const cursor = editor.getCursor();
             editor.replaceRange(
-              txt,
+              responseContent,
               {
                 line: initialCursorPosLine,
                 ch: initialCursorPosCh,
@@ -116,7 +116,7 @@ export class StreamService {
 
             const newCursor = {
               line: initialCursorPosLine,
-              ch: initialCursorPosCh + txt.length,
+              ch: initialCursorPosCh + responseContent.length,
             };
             editor.setCursor(newCursor);
 

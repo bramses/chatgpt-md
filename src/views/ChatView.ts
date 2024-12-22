@@ -17,25 +17,25 @@ export class ChatView {
         return null;
       }
 
-      const metaMatter = app.metadataCache.getFileCache(noteFile)?.frontmatter;
+      const frontMatter = app.metadataCache.getFileCache(noteFile)?.frontmatter;
 
-      const shouldStream = metaMatter?.stream ?? this.settings.stream;
-      const temperature = metaMatter?.temperature ?? 0.3;
+      const shouldStream = frontMatter?.stream ?? this.settings.stream;
+      const temperature = frontMatter?.temperature ?? 0.3;
 
       return {
-        model: metaMatter?.model || "gpt-3.5-turbo",
+        model: frontMatter?.model || "gpt-3.5-turbo",
         temperature: temperature,
-        top_p: metaMatter?.top_p || 1,
-        presence_penalty: metaMatter?.presence_penalty || 0,
-        frequency_penalty: metaMatter?.frequency_penalty || 0,
+        top_p: frontMatter?.top_p || 1,
+        presence_penalty: frontMatter?.presence_penalty || 0,
+        frequency_penalty: frontMatter?.frequency_penalty || 0,
         stream: shouldStream,
-        max_tokens: metaMatter?.max_tokens || 512,
-        stop: metaMatter?.stop || null,
-        n: metaMatter?.n || 1,
-        logit_bias: metaMatter?.logit_bias || null,
-        user: metaMatter?.user || null,
-        system_commands: metaMatter?.system_commands || null,
-        url: metaMatter?.url || DEFAULT_URL,
+        max_tokens: frontMatter?.max_tokens || 512,
+        stop: frontMatter?.stop || null,
+        n: frontMatter?.n || 1,
+        logit_bias: frontMatter?.logit_bias || null,
+        user: frontMatter?.user || null,
+        system_commands: frontMatter?.system_commands || null,
+        url: frontMatter?.url || DEFAULT_URL,
       };
     } catch (err) {
       console.error("Error extracting frontmatter: ", err);

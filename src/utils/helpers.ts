@@ -10,8 +10,8 @@ import {
 } from "obsidian";
 import { TemplateSelectionDialog } from "./TemplateSelectionDialog";
 
-export const unfinishedCodeBlock = (txt: string): boolean => {
-  const matcher = txt.match(/```/g);
+export const unfinishedCodeBlock = (responseContent: string): boolean => {
+  const matcher = responseContent.match(/```/g);
   return matcher !== null && matcher.length % 2 !== 0;
 };
 

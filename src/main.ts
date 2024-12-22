@@ -9,7 +9,7 @@ export default class ChatGPT_MD extends Plugin {
   chatController: ChatController;
 
   async onload() {
-    await this.loadSettings();
+    await this.loadPluginSettings();
 
     const chatView = new ChatView(this.settings);
     this.chatController = new ChatController(
@@ -27,10 +27,16 @@ export default class ChatGPT_MD extends Plugin {
 
     this.registerEvent(
       this.app.vault.on("modify", async () => {
-        await this.loadSettings();
+        await this.loadPluginSettings(); //call the refactored function
         this.chatController.updateSettings(this.settings);
       })
     );
+  }
+  async loadPluginSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    if (this.chatController) {
+      this.chatController.updateSettings(this.settings);
+    }
   }
   registerCommands() {
     // 1. Call ChatGPT API

@@ -86,7 +86,7 @@ export class OpenAIModel implements AIModel {
           }),
         });
 
-        let txt = "";
+        let responseContent = "";
         let initialCursorPosCh = editor.getCursor().ch;
         let initialCursorPosLine = editor.getCursor().line;
 
@@ -127,7 +127,7 @@ export class OpenAIModel implements AIModel {
             });
             cm6.dispatch(transaction);
 
-            txt += text;
+            responseContent += text;
 
             const newCursor = {
               line: cursor.line,
@@ -138,13 +138,13 @@ export class OpenAIModel implements AIModel {
             this.sse?.close();
             console.log("[ChatGPT MD] SSE Closed");
 
-            if (unfinishedCodeBlock(txt)) {
-              txt += "\n```";
+            if (unfinishedCodeBlock(responseContent)) {
+              responseContent += "\n```";
             }
 
             const cursor = editor.getCursor();
             editor.replaceRange(
-              txt,
+              responseContent,
               {
                 line: initialCursorPosLine,
                 ch: initialCursorPosCh,
@@ -154,7 +154,7 @@ export class OpenAIModel implements AIModel {
 
             const newCursor = {
               line: initialCursorPosLine,
-              ch: initialCursorPosCh + txt.length,
+              ch: initialCursorPosCh + responseContent.length,
             };
             editor.setCursor(newCursor);
 
