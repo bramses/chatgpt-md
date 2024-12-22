@@ -225,8 +225,8 @@ export default class ChatGPT_MD extends Plugin {
 				metaMatter?.stream !== undefined
 					? metaMatter.stream // If defined in frontmatter, use its value.
 					: this.settings.stream !== undefined
-					? this.settings.stream // If not defined in frontmatter but exists globally, use its value.
-					: true; // Otherwise fallback on true.
+						? this.settings.stream // If not defined in frontmatter but exists globally, use its value.
+						: true; // Otherwise fallback on true.
 
 			const temperature =
 				metaMatter?.temperature !== undefined
@@ -588,10 +588,15 @@ export default class ChatGPT_MD extends Plugin {
 						if (this.settings.autoInferTitle) {
 							const title = view.file.basename;
 
-							let messagesWithResponse = messages.concat(responseStr);
-							messagesWithResponse = messagesWithResponse.map((message) => {
-								return this.removeCommentsFromMessages(message);
-							});
+							let messagesWithResponse =
+								messages.concat(responseStr);
+							messagesWithResponse = messagesWithResponse.map(
+								(message) => {
+									return this.removeCommentsFromMessages(
+										message
+									);
+								}
+							);
 
 							if (
 								this.isTitleTimestampFormat(title) &&

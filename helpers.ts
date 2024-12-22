@@ -68,12 +68,12 @@ export const createFolderModal = async (
 
 	if (result) {
 		console.log("[ChatGPT MD] Creating folder");
-        await vault.createFolder(folderPath);
+		await vault.createFolder(folderPath);
 	} else {
 		console.log("[ChatGPT MD] Not creating folder");
 	}
 
-    return result;
+	return result;
 };
 
 class FolderCreationModal extends Modal {
@@ -83,11 +83,7 @@ class FolderCreationModal extends Modal {
 	modalPromise: Promise<boolean>;
 	resolveModalPromise: (value: boolean) => void;
 
-	constructor(
-		app: App,
-		folderName: string,
-		folderPath: string
-	) {
+	constructor(app: App, folderName: string, folderPath: string) {
 		super(app);
 		this.folderName = folderName;
 		this.folderPath = folderPath;
@@ -109,7 +105,6 @@ class FolderCreationModal extends Modal {
 			text: `If you choose "Yes, Create", the plugin will automatically create a folder at: ${this.folderPath}. You can change this path in the plugin settings.`,
 		});
 
-
 		new Setting(contentEl).addButton((btn) =>
 			btn
 				.setButtonText("Yes, Create Folder")
@@ -122,7 +117,7 @@ class FolderCreationModal extends Modal {
 				})
 		);
 
-        new Setting(contentEl).addButton((btn) =>
+		new Setting(contentEl).addButton((btn) =>
 			btn
 				.setButtonText("No, I'll create it myself")
 				.setTooltip("Cancel")
@@ -133,7 +128,6 @@ class FolderCreationModal extends Modal {
 					this.close();
 				})
 		);
-
 	}
 
 	waitForModalValue() {

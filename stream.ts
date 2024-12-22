@@ -25,7 +25,7 @@ export class StreamManager {
 
 	stopStreaming = () => {
 		if (Platform.isMobile) {
-			new Notice("[ChatGPT MD] Mobile not supported.")
+			new Notice("[ChatGPT MD] Mobile not supported.");
 			return;
 		}
 		if (this.sse) {
@@ -163,7 +163,6 @@ export class StreamManager {
 						resolve(txt);
 					}
 				});
-
 
 				source.addEventListener("error", (e: any) => {
 					try {
