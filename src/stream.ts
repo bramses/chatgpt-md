@@ -2,10 +2,11 @@ import { Editor, Notice, Platform } from "obsidian";
 import { SSE } from "sse";
 
 import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
+import { Message } from "src/Models/Message";
 
 export interface OpenAIStreamPayload {
   model: string;
-  messages: Array<{ role: string; content: string }>;
+  messages: Array<Message>;
   temperature: number;
   top_p: number;
   presence_penalty: number;
