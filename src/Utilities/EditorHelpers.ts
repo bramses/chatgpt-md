@@ -1,9 +1,9 @@
-import { FileManager, MarkdownView, Notice, Vault } from "obsidian";
+import { App, MarkdownView, Notice } from "obsidian";
+import { createFolderModal } from "src/Utilities/ModalHelpers";
 
 export const writeInferredTitleToEditor = async (
-  vault: Vault,
+  app: App,
   view: MarkdownView,
-  fileManager: FileManager,
   chatFolder: string,
   title: string
 ): Promise<void> => {
@@ -21,12 +21,22 @@ export const writeInferredTitleToEditor = async (
     let newFileName = `${folder}/${title}.md`;
     let i = 1;
 
-    while (await vault.adapter.exists(newFileName)) {
+    while (await app.vault.adapter.exists(newFileName)) {
       newFileName = `${folder}/${title} (${i}).md`;
       i++;
     }
 
-    await fileManager.renameFile(file, newFileName);
+    if (!(await app.vault.adapter.exists(chatFolder))) {
+      const result = await createFolderModal(app, app.vault, "chatFolder", chatFolder);
+      if (!result) {
+        new Notice(
+          `[ChatGPT MD] No chat folder found. One must be created to use plugin. Set one in settings and make sure it exists.`
+        );
+        return;
+      }
+    }
+
+    await app.fileManager.renameFile(file, newFileName);
   } catch (err) {
     new Notice("[ChatGPT MD] Error writing inferred title to editor");
     console.log("[ChatGPT MD] Error writing inferred title to editor", err);

@@ -570,13 +570,7 @@ export default class ChatGPT_MD extends Plugin {
                       console.log(`[ChatGPT MD] automatically inferred title: ${title}. Changing file name...`);
                       statusBarItemEl.setText("");
 
-                      await writeInferredTitleToEditor(
-                        this.app.vault,
-                        view,
-                        this.app.fileManager,
-                        this.settings.chatFolder,
-                        title
-                      );
+                      await writeInferredTitleToEditor(this.app, view, this.settings.chatFolder, title);
                     } else {
                       new Notice("[ChatGPT MD] Could not infer title", 5000);
                     }
@@ -660,7 +654,7 @@ export default class ChatGPT_MD extends Plugin {
         statusBarItemEl.setText("");
 
         if (title) {
-          await writeInferredTitleToEditor(this.app.vault, view, this.app.fileManager, this.settings.chatFolder, title);
+          await writeInferredTitleToEditor(this.app, view, this.settings.chatFolder, title);
         }
       },
     });
