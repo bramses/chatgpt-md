@@ -15,7 +15,7 @@ import {
 } from "obsidian";
 
 import { StreamManager } from "./stream";
-import { unfinishedCodeBlock, writeInferredTitleToEditor, createFolderModal } from "helpers";
+import { unfinishedCodeBlock, writeInferredTitleToEditor, createFolderModal } from "src/helpers";
 
 interface ChatGPT_MDSettings {
   apiKey: string;
