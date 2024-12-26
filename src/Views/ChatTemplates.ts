@@ -1,6 +1,6 @@
 import { App, Notice, SuggestModal, TFile, TFolder } from "obsidian";
 
-import { ChatGPT_MDSettings } from "src/main";
+import { ChatGPT_MDSettings } from "src/Models/ChatGPT_MDSettings";
 
 interface ChatTemplate {
   title: string;

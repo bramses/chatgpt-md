@@ -6,51 +6,24 @@ import { ChatGPT_MDSettingsTab } from "src/Views/ChatGPT_MDSettingsTab";
 import { ensureFolderExists, writeInferredTitleToEditor } from "src/Utilities/EditorHelpers";
 import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
 import { ChatTemplates } from "src/Views/ChatTemplates";
-
-export interface ChatGPT_MDSettings {
-  apiKey: string;
-  defaultChatFrontmatter: string;
-  stream: boolean;
-  chatTemplateFolder: string;
-  chatFolder: string;
-  generateAtCursor: boolean;
-  autoInferTitle: boolean;
-  dateFormat: string;
-  headingLevel: number;
-  inferTitleLanguage: string;
-}
-
-const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
-  apiKey: "default",
-  defaultChatFrontmatter:
-    "---\nsystem_commands: ['I am a helpful assistant.']\ntemperature: 0\ntop_p: 1\nmax_tokens: 512\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nmodel: gpt-3.5-turbo\n---",
-  stream: true,
-  chatTemplateFolder: "ChatGPT_MD/templates",
-  chatFolder: "ChatGPT_MD/chats",
-  generateAtCursor: false,
-  autoInferTitle: false,
-  dateFormat: "YYYYMMDDhhmmss",
-  headingLevel: 0,
-  inferTitleLanguage: "English",
-};
-
-const DEFAULT_URL = `https://api.openai.com/v1/chat/completions`;
-
-interface Chat_MD_FrontMatter {
-  temperature: number;
-  top_p: number;
-  presence_penalty: number;
-  frequency_penalty: number;
-  model: string;
-  max_tokens: number;
-  stream: boolean;
-  stop: string[] | null;
-  n: number;
-  logit_bias: any | null;
-  user: string | null;
-  system_commands: string[] | null;
-  url: string;
-}
+import { ChatGPT_MDSettings } from "src/Models/ChatGPT_MDSettings";
+import { DEFAULT_SETTINGS } from "src/Models/Config";
+import {
+  DEFAULT_FREQUENCY_PENALTY,
+  DEFAULT_LOGIT_BIAS,
+  DEFAULT_MAX_TOKENS,
+  DEFAULT_MODEL,
+  DEFAULT_N,
+  DEFAULT_PRESENCE_PENALTY,
+  DEFAULT_STOP,
+  DEFAULT_STREAM,
+  DEFAULT_TEMPERATURE,
+  DEFAULT_TOP_P,
+  DEFAULT_URL,
+  DEFAULT_USER,
+} from "src/Models/OpenAIConfig";
+import { Chat_MD_FrontMatter } from "./Models/Chat_MD_FrontMatter";
+import { Message } from "src/Models/Message";
 
 export default class ChatGPT_MD extends Plugin {
   settings: ChatGPT_MDSettings;
@@ -58,18 +31,18 @@ export default class ChatGPT_MD extends Plugin {
   async callOpenAIAPI(
     streamManager: StreamManager,
     editor: Editor,
-    messages: { role: string; content: string }[],
-    model = "gpt-3.5-turbo",
-    max_tokens = 250,
-    temperature = 0.3,
-    top_p = 1,
-    presence_penalty = 0.5,
-    frequency_penalty = 0.5,
-    stream = true,
-    stop: string[] | null = null,
-    n = 1,
-    logit_bias: any | null = null,
-    user: string | null = null,
+    messages: Message[],
+    model = DEFAULT_MODEL,
+    max_tokens = DEFAULT_MAX_TOKENS,
+    temperature = DEFAULT_TEMPERATURE,
+    top_p = DEFAULT_TOP_P,
+    presence_penalty = DEFAULT_PRESENCE_PENALTY,
+    frequency_penalty = DEFAULT_FREQUENCY_PENALTY,
+    stream = DEFAULT_STREAM,
+    stop: string[] | null = DEFAULT_STOP,
+    n = DEFAULT_N,
+    logit_bias: any | null = DEFAULT_LOGIT_BIAS,
+    user: string | null = DEFAULT_USER,
     url = DEFAULT_URL
   ) {
     try {
