@@ -1,6 +1,7 @@
 import { Editor, Notice, Platform } from "obsidian";
 import { SSE } from "sse";
-import { unfinishedCodeBlock } from "src/helpers";
+
+import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
 
 export interface OpenAIStreamPayload {
   model: string;
