@@ -24,22 +24,7 @@ import {
 } from "src/Utilities/TextHelpers";
 import { ChatTemplates } from "src/Views/ChatTemplates";
 import { ChatGPT_MDSettings, DEFAULT_SETTINGS, HORIZONTAL_LINE } from "src/Models/Config";
-import {
-  DEFAULT_FREQUENCY_PENALTY,
-  DEFAULT_LOGIT_BIAS,
-  DEFAULT_MAX_TOKENS,
-  DEFAULT_MODEL,
-  DEFAULT_N,
-  DEFAULT_PRESENCE_PENALTY,
-  DEFAULT_STOP,
-  DEFAULT_STREAM,
-  DEFAULT_TEMPERATURE,
-  DEFAULT_TITLE_MAX_TOKENS,
-  DEFAULT_TITLE_TEMPERATURE,
-  DEFAULT_TOP_P,
-  DEFAULT_URL,
-  DEFAULT_USER,
-} from "src/Models/OpenAIConfig";
+import { DEFAULT_OPENAI_CONFIG } from "src/Models/OpenAIConfig";
 import { Message } from "src/Models/Message";
 
 export default class ChatGPT_MD extends Plugin {
@@ -49,18 +34,18 @@ export default class ChatGPT_MD extends Plugin {
     streamManager: StreamManager,
     editor: Editor,
     messages: Message[],
-    model = DEFAULT_MODEL,
-    max_tokens = DEFAULT_MAX_TOKENS,
-    temperature = DEFAULT_TEMPERATURE,
-    top_p = DEFAULT_TOP_P,
-    presence_penalty = DEFAULT_PRESENCE_PENALTY,
-    frequency_penalty = DEFAULT_FREQUENCY_PENALTY,
-    stream = DEFAULT_STREAM,
-    stop: string[] | null = DEFAULT_STOP,
-    n = DEFAULT_N,
-    logit_bias: string | null = DEFAULT_LOGIT_BIAS,
-    user: string | null = DEFAULT_USER,
-    url = DEFAULT_URL
+    model = DEFAULT_OPENAI_CONFIG.model,
+    max_tokens = DEFAULT_OPENAI_CONFIG.maxTokens,
+    temperature = DEFAULT_OPENAI_CONFIG.temperature,
+    top_p = DEFAULT_OPENAI_CONFIG.topP,
+    presence_penalty = DEFAULT_OPENAI_CONFIG.presencePenalty,
+    frequency_penalty = DEFAULT_OPENAI_CONFIG.frequencyPenalty,
+    stream = DEFAULT_OPENAI_CONFIG.stream,
+    stop: string[] | null = DEFAULT_OPENAI_CONFIG.stop,
+    n = DEFAULT_OPENAI_CONFIG.n,
+    logit_bias: string | null = DEFAULT_OPENAI_CONFIG.logitBias,
+    user: string | null = DEFAULT_OPENAI_CONFIG.user,
+    url = DEFAULT_OPENAI_CONFIG.url
   ) {
     try {
       console.log("calling openai api");
@@ -145,7 +130,7 @@ export default class ChatGPT_MD extends Plugin {
           new Notice(`[ChatGPT MD] Error :: ${err.error.message}`);
           throw new Error(JSON.stringify(err.error));
         } else {
-          if (url !== DEFAULT_URL) {
+          if (url !== DEFAULT_OPENAI_CONFIG.url) {
             new Notice("[ChatGPT MD] Issue calling specified url: " + url);
             throw new Error("[ChatGPT MD] Issue calling specified url: " + url);
           } else {
@@ -182,7 +167,7 @@ export default class ChatGPT_MD extends Plugin {
       ];
 
       const responseUrl = await requestUrl({
-        url: DEFAULT_URL,
+        url: DEFAULT_OPENAI_CONFIG.url,
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.settings.apiKey}`,
@@ -190,10 +175,10 @@ export default class ChatGPT_MD extends Plugin {
         },
         contentType: "application/json",
         body: JSON.stringify({
-          model: DEFAULT_MODEL,
+          model: DEFAULT_OPENAI_CONFIG.model,
           messages: titleMessage,
-          max_tokens: DEFAULT_TITLE_MAX_TOKENS,
-          temperature: DEFAULT_TITLE_TEMPERATURE,
+          max_tokens: DEFAULT_OPENAI_CONFIG.titleMaxTokens,
+          temperature: DEFAULT_OPENAI_CONFIG.titleTemperature,
         }),
         throw: false,
       });
