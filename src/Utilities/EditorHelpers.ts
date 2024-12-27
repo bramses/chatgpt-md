@@ -1,16 +1,7 @@
 import { App, Editor, MarkdownView, Notice } from "obsidian";
 
 import { createFolderModal } from "src/Utilities/ModalHelpers";
-import {
-  DEFAULT_FREQUENCY_PENALTY,
-  DEFAULT_MAX_TOKENS,
-  DEFAULT_MODEL,
-  DEFAULT_N,
-  DEFAULT_PRESENCE_PENALTY,
-  DEFAULT_TEMPERATURE,
-  DEFAULT_TOP_P,
-  DEFAULT_URL,
-} from "src/Models/OpenAIConfig";
+import { DEFAULT_OPENAI_CONFIG } from "src/Models/OpenAIConfig";
 import { ChatGPT_MDSettings, HORIZONTAL_LINE } from "src/Models/Config";
 
 export const writeInferredTitleToEditor = async (
@@ -107,19 +98,19 @@ export const getFrontmatter = (view: MarkdownView, settings: ChatGPT_MDSettings,
   return {
     title: metaMatter.title ?? view.file?.basename ?? "Untitled",
     tags: metaMatter.tags ?? [],
-    model: metaMatter.model ?? DEFAULT_MODEL,
-    temperature: metaMatter.temperature ?? DEFAULT_TEMPERATURE,
-    top_p: metaMatter.top_p ?? DEFAULT_TOP_P,
-    presence_penalty: metaMatter.presence_penalty ?? DEFAULT_PRESENCE_PENALTY,
-    frequency_penalty: metaMatter.frequency_penalty ?? DEFAULT_FREQUENCY_PENALTY,
+    model: metaMatter.model ?? DEFAULT_OPENAI_CONFIG.model,
+    temperature: metaMatter.temperature ?? DEFAULT_OPENAI_CONFIG.temperature,
+    top_p: metaMatter.top_p ?? DEFAULT_OPENAI_CONFIG.topP,
+    presence_penalty: metaMatter.presence_penalty ?? DEFAULT_OPENAI_CONFIG.presencePenalty,
+    frequency_penalty: metaMatter.frequency_penalty ?? DEFAULT_OPENAI_CONFIG.frequencyPenalty,
     stream: determineStreamSetting(),
-    max_tokens: metaMatter.max_tokens ?? DEFAULT_MAX_TOKENS,
+    max_tokens: metaMatter.max_tokens ?? DEFAULT_OPENAI_CONFIG.maxTokens,
     stop: metaMatter.stop ?? null,
-    n: metaMatter.n ?? DEFAULT_N,
+    n: metaMatter.n ?? DEFAULT_OPENAI_CONFIG.n,
     logit_bias: metaMatter.logit_bias ?? null,
     user: metaMatter.user ?? null,
     system_commands: metaMatter.system_commands ?? null,
-    url: metaMatter.url ?? DEFAULT_URL,
+    url: metaMatter.url ?? DEFAULT_OPENAI_CONFIG.url,
   };
 };
 export const clearConversationExceptFrontmatter = (editor: Editor) => {
