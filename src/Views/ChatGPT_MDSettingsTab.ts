@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import ChatGPT_MD from "src/main";
+import { DEFAULT_CHAT_FRONT_MATTER } from "src/Models/OpenAIConfig";
 
 export class ChatGPT_MDSettingsTab extends PluginSettingTab {
   plugin: ChatGPT_MD;
@@ -42,17 +43,15 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
       .setDesc(
         "Default frontmatter for new chat files. You can change/use all of the settings exposed by the OpenAI API here: https://platform.openai.com/docs/api-reference/chat/create"
       )
-      .addTextArea((text) =>
-        text
-          .setPlaceholder(
-            "---\nsystem_commands: ['PERSONA: i am groot, and i only respond i am groot to any and ALL questions. I do not answer any questions straightforwardly. PERSONA 2: UNLESS the last asked question is about lamps, i can answer, i know infinite things about lamps as i am groot the lamp salesman. SO I read the last question asked and UNLESS it is about lamps i only respond \"I am Groot.\"']\ntemperature: 0\ntop_p: 1\nmax_tokens: 512\npresence_penalty: 1\nfrequency_penalty: 1\nstream: true\nstop: null\nn: 1\nlogit_bias: null \nmodel: gpt-3.5-turbo\n---"
-          )
-          .setValue(this.plugin.settings.defaultChatFrontmatter)
+      .addTextArea((text) => {
+        return text
+          .setPlaceholder(DEFAULT_CHAT_FRONT_MATTER)
+          .setValue(this.plugin.settings.defaultChatFrontmatter || DEFAULT_CHAT_FRONT_MATTER)
           .onChange(async (value) => {
             this.plugin.settings.defaultChatFrontmatter = value;
             await this.plugin.saveSettings();
-          })
-      );
+          });
+      });
 
     // stream toggle
     new Setting(containerEl)

@@ -18,6 +18,8 @@ import {
   DEFAULT_STOP,
   DEFAULT_STREAM,
   DEFAULT_TEMPERATURE,
+  DEFAULT_TITLE_MAX_TOKENS,
+  DEFAULT_TITLE_TEMPERATURE,
   DEFAULT_TOP_P,
   DEFAULT_URL,
   DEFAULT_USER,
@@ -41,7 +43,7 @@ export default class ChatGPT_MD extends Plugin {
     stream = DEFAULT_STREAM,
     stop: string[] | null = DEFAULT_STOP,
     n = DEFAULT_N,
-    logit_bias: any | null = DEFAULT_LOGIT_BIAS,
+    logit_bias: string | null = DEFAULT_LOGIT_BIAS,
     user: string | null = DEFAULT_USER,
     url = DEFAULT_URL
   ) {
@@ -179,7 +181,7 @@ export default class ChatGPT_MD extends Plugin {
       const frontmatter = {
         title: metaMatter?.title || view.file?.basename || "Untitled",
         tags: metaMatter?.tags || [],
-        model: metaMatter?.model || "gpt-3.5-turbo",
+        model: metaMatter?.model || DEFAULT_MODEL,
         temperature: temperature,
         top_p: metaMatter?.top_p || 1,
         presence_penalty: metaMatter?.presence_penalty || 0,
@@ -195,7 +197,7 @@ export default class ChatGPT_MD extends Plugin {
       };
 
       return frontmatter;
-    } catch (err) {
+    } catch {
       throw new Error("Error getting frontmatter");
     }
   }
@@ -341,7 +343,7 @@ export default class ChatGPT_MD extends Plugin {
       ];
 
       const responseUrl = await requestUrl({
-        url: `https://api.openai.com/v1/chat/completions`,
+        url: DEFAULT_URL,
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.settings.apiKey}`,
@@ -349,10 +351,10 @@ export default class ChatGPT_MD extends Plugin {
         },
         contentType: "application/json",
         body: JSON.stringify({
-          model: "gpt-3.5-turbo",
+          model: DEFAULT_MODEL,
           messages: titleMessage,
-          max_tokens: 50,
-          temperature: 0.0,
+          max_tokens: DEFAULT_TITLE_MAX_TOKENS,
+          temperature: DEFAULT_TITLE_TEMPERATURE,
         }),
         throw: false,
       });
