@@ -3,11 +3,27 @@ import { Editor, MarkdownView, Notice, Platform, Plugin, requestUrl } from "obsi
 
 import { StreamManager } from "src/stream";
 import { ChatGPT_MDSettingsTab } from "src/Views/ChatGPT_MDSettingsTab";
-import { ensureFolderExists, writeInferredTitleToEditor } from "src/Utilities/EditorHelpers";
-import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
+import {
+  addHorizontalRuleWithRole,
+  appendMessage,
+  clearConversationExceptFrontmatter,
+  ensureFolderExists,
+  getDate,
+  getFrontmatter,
+  moveCursorToEndOfFile,
+  writeInferredTitleToEditor,
+} from "src/Utilities/EditorHelpers";
+import {
+  extractRoleAndMessage,
+  getHeadingPrefix,
+  isTitleTimestampFormat,
+  removeCommentsFromMessages,
+  removeYAMLFrontMatter,
+  splitMessages,
+  unfinishedCodeBlock,
+} from "src/Utilities/TextHelpers";
 import { ChatTemplates } from "src/Views/ChatTemplates";
-import { ChatGPT_MDSettings } from "src/Models/ChatGPT_MDSettings";
-import { DEFAULT_SETTINGS } from "src/Models/Config";
+import { ChatGPT_MDSettings, DEFAULT_SETTINGS, HORIZONTAL_LINE } from "src/Models/Config";
 import {
   DEFAULT_FREQUENCY_PENALTY,
   DEFAULT_LOGIT_BIAS,
@@ -24,7 +40,6 @@ import {
   DEFAULT_URL,
   DEFAULT_USER,
 } from "src/Models/OpenAIConfig";
-import { Chat_MD_FrontMatter } from "./Models/Chat_MD_FrontMatter";
 import { Message } from "src/Models/Message";
 
 export default class ChatGPT_MD extends Plugin {
@@ -72,7 +87,7 @@ export default class ChatGPT_MD extends Plugin {
           url,
           options,
           this.settings.generateAtCursor,
-          this.getHeadingPrefix()
+          getHeadingPrefix(this.settings.headingLevel)
         );
 
         console.log("response from stream", response);
@@ -145,182 +160,6 @@ export default class ChatGPT_MD extends Plugin {
     }
   }
 
-  addHR(editor: Editor, role: string) {
-    const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::${role}\n\n`;
-    editor.replaceRange(newLine, editor.getCursor());
-
-    // move cursor to end of file
-    const cursor = editor.getCursor();
-    const newCursor = {
-      line: cursor.line,
-      ch: cursor.ch + newLine.length,
-    };
-    editor.setCursor(newCursor);
-  }
-
-  getFrontmatter(view: MarkdownView): Chat_MD_FrontMatter {
-    try {
-      // get frontmatter
-      const noteFile = this.app.workspace.getActiveFile();
-
-      if (!noteFile) {
-        throw new Error("no active file");
-      }
-
-      const metaMatter = this.app.metadataCache.getFileCache(noteFile)?.frontmatter;
-
-      const shouldStream =
-        metaMatter?.stream !== undefined
-          ? metaMatter.stream // If defined in frontmatter, use its value.
-          : this.settings.stream !== undefined
-            ? this.settings.stream // If not defined in frontmatter but exists globally, use its value.
-            : true; // Otherwise fallback on true.
-
-      const temperature = metaMatter?.temperature !== undefined ? metaMatter.temperature : 0.3;
-
-      const frontmatter = {
-        title: metaMatter?.title || view.file?.basename || "Untitled",
-        tags: metaMatter?.tags || [],
-        model: metaMatter?.model || DEFAULT_MODEL,
-        temperature: temperature,
-        top_p: metaMatter?.top_p || 1,
-        presence_penalty: metaMatter?.presence_penalty || 0,
-        frequency_penalty: metaMatter?.frequency_penalty || 0,
-        stream: shouldStream,
-        max_tokens: metaMatter?.max_tokens || 512,
-        stop: metaMatter?.stop || null,
-        n: metaMatter?.n || 1,
-        logit_bias: metaMatter?.logit_bias || null,
-        user: metaMatter?.user || null,
-        system_commands: metaMatter?.system_commands || null,
-        url: metaMatter?.url || DEFAULT_URL,
-      };
-
-      return frontmatter;
-    } catch {
-      throw new Error("Error getting frontmatter");
-    }
-  }
-
-  splitMessages(text: string) {
-    try {
-      // <hr class="__chatgpt_plugin">
-      const messages = text.split('<hr class="__chatgpt_plugin">');
-      return messages;
-    } catch (err) {
-      throw new Error("Error splitting messages" + err);
-    }
-  }
-
-  clearConversationExceptFrontmatter(editor: Editor) {
-    try {
-      // get frontmatter
-      const YAMLFrontMatter = /---\s*[\s\S]*?\s*---/g;
-      const frontmatter = editor.getValue().match(YAMLFrontMatter);
-
-      if (!frontmatter) {
-        throw new Error("no frontmatter found");
-      }
-
-      // clear editor
-      editor.setValue("");
-
-      // add frontmatter
-      editor.replaceRange(frontmatter[0], editor.getCursor());
-
-      // get length of file
-      const length = editor.lastLine();
-
-      // move cursor to end of file https://davidwalsh.name/codemirror-set-focus-line
-      const newCursor = {
-        line: length + 1,
-        ch: 0,
-      };
-
-      editor.setCursor(newCursor);
-
-      return newCursor;
-    } catch (err) {
-      throw new Error("Error clearing conversation" + err);
-    }
-  }
-
-  moveCursorToEndOfFile(editor: Editor) {
-    try {
-      // get length of file
-      const length = editor.lastLine();
-
-      // move cursor to end of file https://davidwalsh.name/codemirror-set-focus-line
-      const newCursor = {
-        line: length + 1,
-        ch: 0,
-      };
-      editor.setCursor(newCursor);
-
-      return newCursor;
-    } catch (err) {
-      throw new Error("Error moving cursor to end of file" + err);
-    }
-  }
-
-  removeYMLFromMessage(message: string) {
-    try {
-      const YAMLFrontMatter = /---\s*[\s\S]*?\s*---/g;
-      const newMessage = message.replace(YAMLFrontMatter, "");
-      return newMessage;
-    } catch (err) {
-      throw new Error("Error removing YML from message" + err);
-    }
-  }
-
-  extractRoleAndMessage(message: string) {
-    try {
-      if (message.includes("role::")) {
-        const role = message.split("role::")[1].split("\n")[0].trim();
-        const content = message.split("role::")[1].split("\n").slice(1).join("\n").trim();
-        return { role, content };
-      } else {
-        return { role: "user", content: message };
-      }
-    } catch (err) {
-      throw new Error("Error extracting role and message" + err);
-    }
-  }
-
-  getHeadingPrefix() {
-    const headingLevel = this.settings.headingLevel;
-    if (headingLevel === 0) {
-      return "";
-    } else if (headingLevel > 6) {
-      return "#".repeat(6) + " ";
-    }
-    return "#".repeat(headingLevel) + " ";
-  }
-
-  appendMessage(editor: Editor, role: string, message: string) {
-    /*
-		 append to bottom of editor file:
-		 	const newLine = `<hr class="__chatgpt_plugin">\n${this.getHeadingPrefix()}role::${role}\n\n${message}`;
-		*/
-
-    const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::${role}\n\n${message}\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::user\n\n`;
-    editor.replaceRange(newLine, editor.getCursor());
-  }
-
-  removeCommentsFromMessages(message: string) {
-    try {
-      // comment block in form of =begin-chatgpt-md-comment and =end-chatgpt-md-comment
-      const commentBlock = /=begin-chatgpt-md-comment[\s\S]*?=end-chatgpt-md-comment/g;
-
-      // remove comment block
-      const newMessage = message.replace(commentBlock, "");
-
-      return newMessage;
-    } catch (err) {
-      throw new Error("Error removing comments from messages" + err);
-    }
-  }
-
   async inferTitleFromMessages(messages: string[]) {
     console.log("[ChtGPT MD] Inferring Title");
     new Notice("[ChatGPT] Inferring title from messages...");
@@ -372,55 +211,6 @@ export default class ChatGPT_MD extends Plugin {
     }
   }
 
-  // only proceed to infer title if the title is in timestamp format
-  isTitleTimestampFormat(title: string) {
-    try {
-      const format = this.settings.dateFormat;
-      const pattern = this.generateDatePattern(format);
-
-      return title.length == format.length && pattern.test(title);
-    } catch (err) {
-      throw new Error("Error checking if title is in timestamp format" + err);
-    }
-  }
-
-  generateDatePattern(format: string) {
-    const pattern = format
-      .replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&") // Escape any special characters
-      .replace("YYYY", "\\d{4}") // Match exactly four digits for the year
-      .replace("MM", "\\d{2}") // Match exactly two digits for the month
-      .replace("DD", "\\d{2}") // Match exactly two digits for the day
-      .replace("hh", "\\d{2}") // Match exactly two digits for the hour
-      .replace("mm", "\\d{2}") // Match exactly two digits for the minute
-      .replace("ss", "\\d{2}"); // Match exactly two digits for the second
-
-    return new RegExp(`^${pattern}$`);
-  }
-
-  // get date from format
-  getDate(date: Date, format = "YYYYMMDDhhmmss") {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hour = date.getHours();
-    const minute = date.getMinutes();
-    const second = date.getSeconds();
-
-    const paddedMonth = month.toString().padStart(2, "0");
-    const paddedDay = day.toString().padStart(2, "0");
-    const paddedHour = hour.toString().padStart(2, "0");
-    const paddedMinute = minute.toString().padStart(2, "0");
-    const paddedSecond = second.toString().padStart(2, "0");
-
-    return format
-      .replace("YYYY", year.toString())
-      .replace("MM", paddedMonth)
-      .replace("DD", paddedDay)
-      .replace("hh", paddedHour)
-      .replace("mm", paddedMinute)
-      .replace("ss", paddedSecond);
-  }
-
   async onload() {
     const statusBarItemEl = this.addStatusBarItem();
 
@@ -437,24 +227,24 @@ export default class ChatGPT_MD extends Plugin {
         // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
         statusBarItemEl.setText("[ChatGPT MD] Calling API...");
         // get frontmatter
-        const frontmatter = this.getFrontmatter(view);
+        const frontmatter = getFrontmatter(view, this.settings, this.app);
 
         // get messages
-        const bodyWithoutYML = this.removeYMLFromMessage(editor.getValue());
-        let messages = this.splitMessages(bodyWithoutYML);
+        const bodyWithoutYML = removeYAMLFrontMatter(editor.getValue());
+        let messages = splitMessages(bodyWithoutYML);
         messages = messages.map((message) => {
-          return this.removeCommentsFromMessages(message);
+          return removeCommentsFromMessages(message);
         });
 
         const messagesWithRoleAndMessage = messages.map((message) => {
-          return this.extractRoleAndMessage(message);
+          return extractRoleAndMessage(message);
         });
 
         if (frontmatter.system_commands) {
           const systemCommands = frontmatter.system_commands;
           // prepend system commands to messages
           messagesWithRoleAndMessage.unshift(
-            ...systemCommands.map((command) => {
+            ...systemCommands.map((command: string) => {
               return {
                 role: "system",
                 content: command,
@@ -465,7 +255,7 @@ export default class ChatGPT_MD extends Plugin {
 
         // move cursor to end of file if generateAtCursor is false
         if (!this.settings.generateAtCursor) {
-          this.moveCursorToEndOfFile(editor);
+          moveCursorToEndOfFile(editor);
         }
 
         if (Platform.isMobile) {
@@ -493,8 +283,7 @@ export default class ChatGPT_MD extends Plugin {
             let responseStr = response;
             if (response.mode === "streaming") {
               responseStr = response.fullstr;
-              // append \n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::user\n\n
-              const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${this.getHeadingPrefix()}role::user\n\n`;
+              const newLine = `\n\n${HORIZONTAL_LINE}\n\n${getHeadingPrefix(this.settings.headingLevel)}role::user\n\n`;
               editor.replaceRange(newLine, editor.getCursor());
 
               // move cursor to end of completion
@@ -509,7 +298,7 @@ export default class ChatGPT_MD extends Plugin {
                 responseStr = responseStr + "\n```";
               }
 
-              this.appendMessage(editor, "assistant", responseStr);
+              appendMessage(editor, "assistant", responseStr, getHeadingPrefix(this.settings.headingLevel));
             }
 
             if (this.settings.autoInferTitle) {
@@ -520,10 +309,10 @@ export default class ChatGPT_MD extends Plugin {
 
               let messagesWithResponse = messages.concat(responseStr);
               messagesWithResponse = messagesWithResponse.map((message) => {
-                return this.removeCommentsFromMessages(message);
+                return removeCommentsFromMessages(message);
               });
 
-              if (this.isTitleTimestampFormat(title) && messagesWithResponse.length >= 4) {
+              if (isTitleTimestampFormat(title, this.settings.dateFormat) && messagesWithResponse.length >= 4) {
                 console.log("[ChatGPT MD] auto inferring title from messages");
 
                 statusBarItemEl.setText("[ChatGPT MD] Calling API...");
@@ -565,7 +354,7 @@ export default class ChatGPT_MD extends Plugin {
       name: "Add divider",
       icon: "minus",
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        this.addHR(editor, "user");
+        addHorizontalRuleWithRole(editor, "user", getHeadingPrefix(this.settings.headingLevel));
       },
     });
 
@@ -606,10 +395,10 @@ export default class ChatGPT_MD extends Plugin {
       icon: "subtitles",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         // get messages
-        const bodyWithoutYML = this.removeYMLFromMessage(editor.getValue());
-        let messages = this.splitMessages(bodyWithoutYML);
+        const bodyWithoutYML = removeYAMLFrontMatter(editor.getValue());
+        let messages = splitMessages(bodyWithoutYML);
         messages = messages.map((message) => {
-          return this.removeCommentsFromMessages(message);
+          return removeCommentsFromMessages(message);
         });
 
         statusBarItemEl.setText("[ChatGPT MD] Calling API...");
@@ -642,7 +431,7 @@ export default class ChatGPT_MD extends Plugin {
           }
 
           const newFile = await this.app.vault.create(
-            `${this.settings.chatFolder}/${this.getDate(new Date(), this.settings.dateFormat)}.md`,
+            `${this.settings.chatFolder}/${getDate(new Date(), this.settings.dateFormat)}.md`,
             `${this.settings.defaultChatFrontmatter}\n\n${selectedText}`
           );
 
@@ -656,7 +445,7 @@ export default class ChatGPT_MD extends Plugin {
           }
 
           activeView.editor.focus();
-          this.moveCursorToEndOfFile(activeView.editor);
+          moveCursorToEndOfFile(activeView.editor);
         } catch (err) {
           console.error(`[ChatGPT MD] Error in Create new chat with highlighted text`, err);
           new Notice(`[ChatGPT MD] Error in Create new chat with highlighted text, check console`);
@@ -693,7 +482,7 @@ export default class ChatGPT_MD extends Plugin {
           return;
         }
 
-        new ChatTemplates(this.app, this.settings, this.getDate(new Date(), this.settings.dateFormat)).open();
+        new ChatTemplates(this.app, this.settings, getDate(new Date(), this.settings.dateFormat)).open();
       },
     });
 
@@ -702,7 +491,7 @@ export default class ChatGPT_MD extends Plugin {
       name: "Clear chat (except frontmatter)",
       icon: "trash",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        this.clearConversationExceptFrontmatter(editor);
+        clearConversationExceptFrontmatter(editor);
       },
     });
 
@@ -712,7 +501,7 @@ export default class ChatGPT_MD extends Plugin {
 
   onunload() {}
 
-  async loadSettings() {
+  async loadSettings(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
 

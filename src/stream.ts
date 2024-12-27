@@ -3,6 +3,7 @@ import { SSE } from "sse";
 
 import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
 import { Message } from "src/Models/Message";
+import { HORIZONTAL_LINE } from "src/Models/Config";
 
 export interface OpenAIStreamPayload {
   model: string;
@@ -68,7 +69,7 @@ export class StreamManager {
         source.addEventListener("open", (e: any) => {
           console.log("[ChatGPT MD] SSE Opened");
 
-          const newLine = `\n\n<hr class="__chatgpt_plugin">\n\n${headingPrefix}role::assistant\n\n`;
+          const newLine = `\n\n${HORIZONTAL_LINE}\n\n${headingPrefix}role::assistant\n\n`;
           editor.replaceRange(newLine, editor.getCursor());
 
           // move cursor to end of line
