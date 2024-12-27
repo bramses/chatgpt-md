@@ -1,7 +1,18 @@
-import { ChatGPT_MDSettings } from "src/Models/ChatGPT_MDSettings";
 import { DEFAULT_CHAT_FRONT_MATTER } from "src/Models/OpenAIConfig";
 
-// Default settings for ChatGPT_MD
+export interface ChatGPT_MDSettings {
+  apiKey: string;
+  defaultChatFrontmatter: string;
+  stream: boolean;
+  chatTemplateFolder: string;
+  chatFolder: string;
+  generateAtCursor: boolean;
+  autoInferTitle: boolean;
+  dateFormat: string;
+  headingLevel: number;
+  inferTitleLanguage: string;
+}
+
 export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   apiKey: "default",
   defaultChatFrontmatter: DEFAULT_CHAT_FRONT_MATTER,
@@ -14,3 +25,5 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   headingLevel: 0,
   inferTitleLanguage: "English",
 };
+
+export const HORIZONTAL_LINE = '<hr class="__chatgpt_plugin">';
