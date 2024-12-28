@@ -2,15 +2,20 @@ import { Editor, MarkdownView, Notice, Platform, Plugin } from "obsidian";
 
 import { StreamManager } from "src/stream";
 import { ChatGPT_MDSettingsTab } from "src/Views/ChatGPT_MDSettingsTab";
-import {
-  getHeadingPrefix,
-  isTitleTimestampFormat,
-  removeCommentsFromMessages,
-  unfinishedCodeBlock,
-} from "src/Utilities/TextHelpers";
+import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
 import { ChatGPT_MDSettings, DEFAULT_SETTINGS, HORIZONTAL_LINE } from "src/Models/Config";
 import { OpenAIService } from "src/Services/OpenAIService";
 import { EditorService } from "src/Services/EditorService";
+import {
+  ADD_COMMENT_BLOCK_COMMAND_ID,
+  ADD_HR_COMMAND_ID,
+  CALL_CHATGPT_API_COMMAND_ID,
+  CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
+  CLEAR_CHAT_COMMAND_ID,
+  INFER_TITLE_COMMAND_ID,
+  MOVE_TO_CHAT_COMMAND_ID,
+  STOP_STREAMING_COMMAND_ID,
+} from "src/Constants";
 
 export default class ChatGPT_MD extends Plugin {
   settings: ChatGPT_MDSettings;
@@ -28,7 +33,7 @@ export default class ChatGPT_MD extends Plugin {
 
     // This adds an editor command that can perform some operation on the current editor instance
     this.addCommand({
-      id: "call-chatgpt-api",
+      id: CALL_CHATGPT_API_COMMAND_ID,
       name: "Chat",
       icon: "message-circle",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
@@ -38,21 +43,10 @@ export default class ChatGPT_MD extends Plugin {
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
 
         // get messages from editor
-        const { messagesWithRole: messagesWithRoleAndMessage, messages } =
-          this.editorService.getMessagesFromEditor(editor);
-
-        if (frontmatter.system_commands) {
-          const systemCommands = frontmatter.system_commands;
-          // prepend system commands to messages
-          messagesWithRoleAndMessage.unshift(
-            ...systemCommands.map((command: string) => {
-              return {
-                role: "system",
-                content: command,
-              };
-            })
-          );
-        }
+        const { messagesWithRole: messagesWithRoleAndMessage, messages } = this.editorService.getMessagesFromEditor(
+          editor,
+          this.settings
+        );
 
         // move cursor to end of file if generateAtCursor is false
         if (!this.settings.generateAtCursor) {
@@ -64,7 +58,8 @@ export default class ChatGPT_MD extends Plugin {
         }
 
         try {
-          const headingPrefix = getHeadingPrefix(this.settings.headingLevel);
+          const headingPrefix = this.editorService.getHeadingPrefix(this.settings.headingLevel);
+
           const response = await this.openAIService.callOpenAIAPI(
             this.settings.apiKey,
             messagesWithRoleAndMessage,
@@ -97,36 +92,7 @@ export default class ChatGPT_MD extends Plugin {
           }
 
           if (this.settings.autoInferTitle) {
-            if (!view.file) {
-              throw new Error("No active file found");
-            }
-            const title = view.file.basename;
-            let messagesWithResponse = messages.concat(responseStr);
-
-            messagesWithResponse = messagesWithResponse.map((message) => {
-              return removeCommentsFromMessages(message);
-            });
-
-            if (isTitleTimestampFormat(title, this.settings.dateFormat) && messagesWithResponse.length >= 4) {
-              console.log("[ChatGPT MD] auto inferring title from messages");
-
-              statusBarItemEl.setText("[ChatGPT MD] Calling API...");
-              const title = await this.openAIService.inferTitleFromMessages(
-                this.settings.apiKey,
-                messagesWithResponse,
-                50, // titleMaxTokens
-                0.0, //titleTemperature,
-                this.settings.inferTitleLanguage
-              );
-
-              if (title) {
-                console.log(`[ChatGPT MD] automatically inferred title: ${title}. Changing file name...`);
-                statusBarItemEl.setText("");
-                await this.editorService.writeInferredTitle(view, this.settings.chatFolder, title);
-              } else {
-                new Notice("[ChatGPT MD] Could not infer title", 5000);
-              }
-            }
+            await this.editorService.inferTitle(editor, view, this.settings, this.settings.apiKey, messages);
           }
           statusBarItemEl.setText("");
         } catch (err) {
@@ -140,7 +106,7 @@ export default class ChatGPT_MD extends Plugin {
     });
 
     this.addCommand({
-      id: "add-hr",
+      id: ADD_HR_COMMAND_ID,
       name: "Add divider",
       icon: "minus",
       editorCallback: (editor: Editor, view: MarkdownView) => {
@@ -149,7 +115,7 @@ export default class ChatGPT_MD extends Plugin {
     });
 
     this.addCommand({
-      id: "add-comment-block",
+      id: ADD_COMMENT_BLOCK_COMMAND_ID,
       name: "Add comment block",
       icon: "comment",
       editorCallback: (editor: Editor, view: MarkdownView) => {
@@ -171,7 +137,7 @@ export default class ChatGPT_MD extends Plugin {
     });
 
     this.addCommand({
-      id: "stop-streaming",
+      id: STOP_STREAMING_COMMAND_ID,
       name: "Stop streaming",
       icon: "octagon",
       editorCallback: (editor: Editor, view: MarkdownView) => {
@@ -180,31 +146,21 @@ export default class ChatGPT_MD extends Plugin {
     });
 
     this.addCommand({
-      id: "infer-title",
+      id: INFER_TITLE_COMMAND_ID,
       name: "Infer title",
       icon: "subtitles",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        const { messages } = this.editorService.getMessagesFromEditor(editor);
+        const { messages } = this.editorService.getMessagesFromEditor(editor, this.settings);
 
         statusBarItemEl.setText("[ChatGPT MD] Calling API...");
-        const title = await this.openAIService.inferTitleFromMessages(
-          this.settings.apiKey,
-          messages,
-          50,
-          0,
-          this.settings.inferTitleLanguage
-        );
+        await this.editorService.inferTitle(editor, view, this.settings, this.settings.apiKey, messages);
         statusBarItemEl.setText("");
-
-        if (title) {
-          await this.editorService.writeInferredTitle(view, this.settings.chatFolder, title);
-        }
       },
     });
 
     // grab highlighted text and move to new file in default chat format
     this.addCommand({
-      id: "move-to-chat",
+      id: MOVE_TO_CHAT_COMMAND_ID,
       name: "Create new chat with highlighted text",
       icon: "highlighter",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
@@ -218,7 +174,7 @@ export default class ChatGPT_MD extends Plugin {
     });
 
     this.addCommand({
-      id: "choose-chat-template",
+      id: CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
       name: "Create new chat from template",
       icon: "layout-template",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
@@ -230,7 +186,7 @@ export default class ChatGPT_MD extends Plugin {
     });
 
     this.addCommand({
-      id: "clear-chat",
+      id: CLEAR_CHAT_COMMAND_ID,
       name: "Clear chat (except frontmatter)",
       icon: "trash",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
