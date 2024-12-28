@@ -1,3 +1,5 @@
+import { HORIZONTAL_LINE } from "src/Models/Config";
+
 export const unfinishedCodeBlock = (txt: string): boolean => {
   const codeBlockMatches = txt.match(/```/g) || [];
   const isUnclosed = codeBlockMatches.length % 2 !== 0;
@@ -11,8 +13,7 @@ export const unfinishedCodeBlock = (txt: string): boolean => {
 
 export const splitMessages = (text: string) => {
   try {
-    // <hr class="__chatgpt_plugin">
-    return text.split('<hr class="__chatgpt_plugin">');
+    return text.split(HORIZONTAL_LINE);
   } catch (err) {
     throw new Error("Error splitting messages" + err);
   }
@@ -54,15 +55,6 @@ export const extractRoleAndMessage = (message: string) => {
   }
 };
 
-export const getHeadingPrefix = (headingLevel: number) => {
-  if (headingLevel === 0) {
-    return "";
-  } else if (headingLevel > 6) {
-    return "#".repeat(6) + " ";
-  }
-  return "#".repeat(headingLevel) + " ";
-};
-
 export const removeCommentsFromMessages = (message: string) => {
   try {
     // comment block in form of =begin-chatgpt-md-comment and =end-chatgpt-md-comment
@@ -98,4 +90,13 @@ export const isTitleTimestampFormat = (title: string, dateFormat: string) => {
   } catch (err) {
     throw new Error("Error checking if title is in timestamp format" + err);
   }
+};
+
+export const getHeadingPrefix = (headingLevel: number) => {
+  if (headingLevel === 0) {
+    return "";
+  } else if (headingLevel > 6) {
+    return "#".repeat(6) + " ";
+  }
+  return "#".repeat(headingLevel) + " ";
 };

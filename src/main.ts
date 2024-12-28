@@ -1,200 +1,21 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
-import { Editor, MarkdownView, Notice, Platform, Plugin, requestUrl } from "obsidian";
+import { Editor, MarkdownView, Notice, Platform, Plugin } from "obsidian";
 
 import { StreamManager } from "src/stream";
 import { ChatGPT_MDSettingsTab } from "src/Views/ChatGPT_MDSettingsTab";
 import {
-  addHorizontalRuleWithRole,
-  appendMessage,
-  clearConversationExceptFrontmatter,
-  ensureFolderExists,
-  getDate,
-  getFrontmatter,
-  moveCursorToEndOfFile,
-  writeInferredTitleToEditor,
-} from "src/Utilities/EditorHelpers";
-import {
-  extractRoleAndMessage,
   getHeadingPrefix,
   isTitleTimestampFormat,
   removeCommentsFromMessages,
-  removeYAMLFrontMatter,
-  splitMessages,
   unfinishedCodeBlock,
 } from "src/Utilities/TextHelpers";
-import { ChatTemplates } from "src/Views/ChatTemplates";
 import { ChatGPT_MDSettings, DEFAULT_SETTINGS, HORIZONTAL_LINE } from "src/Models/Config";
-import { DEFAULT_OPENAI_CONFIG } from "src/Models/OpenAIConfig";
-import { Message } from "src/Models/Message";
+import { OpenAIService } from "src/Services/OpenAIService";
+import { EditorService } from "src/Services/EditorService";
 
 export default class ChatGPT_MD extends Plugin {
   settings: ChatGPT_MDSettings;
-
-  async callOpenAIAPI(
-    streamManager: StreamManager,
-    editor: Editor,
-    messages: Message[],
-    model = DEFAULT_OPENAI_CONFIG.model,
-    max_tokens = DEFAULT_OPENAI_CONFIG.maxTokens,
-    temperature = DEFAULT_OPENAI_CONFIG.temperature,
-    top_p = DEFAULT_OPENAI_CONFIG.topP,
-    presence_penalty = DEFAULT_OPENAI_CONFIG.presencePenalty,
-    frequency_penalty = DEFAULT_OPENAI_CONFIG.frequencyPenalty,
-    stream = DEFAULT_OPENAI_CONFIG.stream,
-    stop: string[] | null = DEFAULT_OPENAI_CONFIG.stop,
-    n = DEFAULT_OPENAI_CONFIG.n,
-    logit_bias: string | null = DEFAULT_OPENAI_CONFIG.logitBias,
-    user: string | null = DEFAULT_OPENAI_CONFIG.user,
-    url = DEFAULT_OPENAI_CONFIG.url
-  ) {
-    try {
-      console.log("calling openai api");
-
-      if (stream) {
-        const options = {
-          model: model,
-          messages: messages,
-          max_tokens: max_tokens,
-          temperature: temperature,
-          top_p: top_p,
-          presence_penalty: presence_penalty,
-          frequency_penalty: frequency_penalty,
-          stream: stream,
-          stop: stop,
-          n: n,
-          // logit_bias: logit_bias, // not yet supported
-          // user: user, // not yet supported
-        };
-
-        const response = await streamManager.streamSSE(
-          editor,
-          this.settings.apiKey,
-          url,
-          options,
-          this.settings.generateAtCursor,
-          getHeadingPrefix(this.settings.headingLevel)
-        );
-
-        console.log("response from stream", response);
-
-        return { fullstr: response, mode: "streaming" };
-      } else {
-        const responseUrl = await requestUrl({
-          url: url,
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${this.settings.apiKey}`,
-            "Content-Type": "application/json",
-          },
-          contentType: "application/json",
-          body: JSON.stringify({
-            model: model,
-            messages: messages,
-            max_tokens: max_tokens,
-            temperature: temperature,
-            top_p: top_p,
-            presence_penalty: presence_penalty,
-            frequency_penalty: frequency_penalty,
-            stream: stream,
-            stop: stop,
-            n: n,
-            // logit_bias: logit_bias, // not yet supported
-            // user: user, // not yet supported
-          }),
-          throw: false,
-        });
-
-        try {
-          const json = responseUrl.json;
-
-          if (json && json.error) {
-            new Notice(`[ChatGPT MD] Stream = False Error :: ${json.error.message}`);
-            throw new Error(JSON.stringify(json.error));
-          }
-        } catch (err) {
-          // continue we got a valid str back
-          if (err instanceof SyntaxError) {
-            // continue
-          } else {
-            throw new Error(err);
-          }
-        }
-
-        const response = responseUrl.text;
-        const responseJSON = JSON.parse(response);
-        return responseJSON.choices[0].message.content;
-      }
-    } catch (err) {
-      if (err instanceof Object) {
-        if (err.error) {
-          new Notice(`[ChatGPT MD] Error :: ${err.error.message}`);
-          throw new Error(JSON.stringify(err.error));
-        } else {
-          if (url !== DEFAULT_OPENAI_CONFIG.url) {
-            new Notice("[ChatGPT MD] Issue calling specified url: " + url);
-            throw new Error("[ChatGPT MD] Issue calling specified url: " + url);
-          } else {
-            new Notice(`[ChatGPT MD] Error :: ${JSON.stringify(err)}`);
-            throw new Error(JSON.stringify(err));
-          }
-        }
-      }
-
-      new Notice("issue calling OpenAI API, see console for more details");
-      throw new Error("issue calling OpenAI API, see error for more details: " + err);
-    }
-  }
-
-  async inferTitleFromMessages(messages: string[]) {
-    console.log("[ChtGPT MD] Inferring Title");
-    new Notice("[ChatGPT] Inferring title from messages...");
-
-    try {
-      if (messages.length < 2) {
-        new Notice("Not enough messages to infer title. Minimum 2 messages.");
-        return;
-      }
-
-      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${
-        this.settings.inferTitleLanguage
-      }. \nMessages:\n\n${JSON.stringify(messages)}`;
-
-      const titleMessage = [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ];
-
-      const responseUrl = await requestUrl({
-        url: DEFAULT_OPENAI_CONFIG.url,
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.settings.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        contentType: "application/json",
-        body: JSON.stringify({
-          model: DEFAULT_OPENAI_CONFIG.model,
-          messages: titleMessage,
-          max_tokens: DEFAULT_OPENAI_CONFIG.titleMaxTokens,
-          temperature: DEFAULT_OPENAI_CONFIG.titleTemperature,
-        }),
-        throw: false,
-      });
-
-      const response = responseUrl.text;
-      const responseJSON = JSON.parse(response);
-      return responseJSON.choices[0].message.content
-        .replace(/[:/\\]/g, "")
-        .replace("Title", "")
-        .replace("title", "")
-        .trim();
-    } catch (err) {
-      new Notice("[ChatGPT MD] Error inferring title from messages");
-      throw new Error("[ChatGPT MD] Error inferring title from messages" + err);
-    }
-  }
+  openAIService: OpenAIService;
+  editorService: EditorService;
 
   async onload() {
     const statusBarItemEl = this.addStatusBarItem();
@@ -202,28 +23,23 @@ export default class ChatGPT_MD extends Plugin {
     await this.loadSettings();
 
     const streamManager = new StreamManager();
+    this.openAIService = new OpenAIService(streamManager);
+    this.editorService = new EditorService(this.app);
 
     // This adds an editor command that can perform some operation on the current editor instance
     this.addCommand({
       id: "call-chatgpt-api",
       name: "Chat",
       icon: "message-circle",
-      editorCallback: (editor: Editor, view: MarkdownView) => {
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
         // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
         statusBarItemEl.setText("[ChatGPT MD] Calling API...");
         // get frontmatter
-        const frontmatter = getFrontmatter(view, this.settings, this.app);
+        const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
 
-        // get messages
-        const bodyWithoutYML = removeYAMLFrontMatter(editor.getValue());
-        let messages = splitMessages(bodyWithoutYML);
-        messages = messages.map((message) => {
-          return removeCommentsFromMessages(message);
-        });
-
-        const messagesWithRoleAndMessage = messages.map((message) => {
-          return extractRoleAndMessage(message);
-        });
+        // get messages from editor
+        const { messagesWithRole: messagesWithRoleAndMessage, messages } =
+          this.editorService.getMessagesFromEditor(editor);
 
         if (frontmatter.system_commands) {
           const systemCommands = frontmatter.system_commands;
@@ -240,97 +56,86 @@ export default class ChatGPT_MD extends Plugin {
 
         // move cursor to end of file if generateAtCursor is false
         if (!this.settings.generateAtCursor) {
-          moveCursorToEndOfFile(editor);
+          this.editorService.moveCursorToEnd(editor);
         }
 
         if (Platform.isMobile) {
           new Notice("[ChatGPT MD] Calling API");
         }
 
-        this.callOpenAIAPI(
-          streamManager,
-          editor,
-          messagesWithRoleAndMessage,
-          frontmatter.model,
-          frontmatter.max_tokens,
-          frontmatter.temperature,
-          frontmatter.top_p,
-          frontmatter.presence_penalty,
-          frontmatter.frequency_penalty,
-          frontmatter.stream,
-          frontmatter.stop,
-          frontmatter.n,
-          frontmatter.logit_bias,
-          frontmatter.user,
-          frontmatter.url
-        )
-          .then((response) => {
-            let responseStr = response;
-            if (response.mode === "streaming") {
-              responseStr = response.fullstr;
-              const newLine = `\n\n${HORIZONTAL_LINE}\n\n${getHeadingPrefix(this.settings.headingLevel)}role::user\n\n`;
-              editor.replaceRange(newLine, editor.getCursor());
+        try {
+          const headingPrefix = getHeadingPrefix(this.settings.headingLevel);
+          const response = await this.openAIService.callOpenAIAPI(
+            this.settings.apiKey,
+            messagesWithRoleAndMessage,
+            frontmatter,
+            frontmatter.stream,
+            headingPrefix,
+            editor,
+            this.settings.generateAtCursor
+          );
 
-              // move cursor to end of completion
-              const cursor = editor.getCursor();
-              const newCursor = {
-                line: cursor.line,
-                ch: cursor.ch + newLine.length,
-              };
-              editor.setCursor(newCursor);
-            } else {
-              if (unfinishedCodeBlock(responseStr)) {
-                responseStr = responseStr + "\n```";
-              }
+          let responseStr = response;
+          if (response.mode === "streaming") {
+            responseStr = response.fullstr;
+            const newLine = `\n\n${HORIZONTAL_LINE}\n\n${headingPrefix}role::user\n\n`;
+            editor.replaceRange(newLine, editor.getCursor());
 
-              appendMessage(editor, "assistant", responseStr, getHeadingPrefix(this.settings.headingLevel));
+            // move cursor to end of completion
+            const cursor = editor.getCursor();
+            const newCursor = {
+              line: cursor.line,
+              ch: cursor.ch + newLine.length,
+            };
+            editor.setCursor(newCursor);
+          } else {
+            if (unfinishedCodeBlock(responseStr)) {
+              responseStr = responseStr + "\n```";
             }
 
-            if (this.settings.autoInferTitle) {
-              if (!view.file) {
-                throw new Error("No active file found");
-              }
-              const title = view.file.basename;
+            this.editorService.appendMessage(editor, "assistant", responseStr, this.settings.headingLevel);
+          }
 
-              let messagesWithResponse = messages.concat(responseStr);
-              messagesWithResponse = messagesWithResponse.map((message) => {
-                return removeCommentsFromMessages(message);
-              });
+          if (this.settings.autoInferTitle) {
+            if (!view.file) {
+              throw new Error("No active file found");
+            }
+            const title = view.file.basename;
+            let messagesWithResponse = messages.concat(responseStr);
 
-              if (isTitleTimestampFormat(title, this.settings.dateFormat) && messagesWithResponse.length >= 4) {
-                console.log("[ChatGPT MD] auto inferring title from messages");
+            messagesWithResponse = messagesWithResponse.map((message) => {
+              return removeCommentsFromMessages(message);
+            });
 
-                statusBarItemEl.setText("[ChatGPT MD] Calling API...");
-                this.inferTitleFromMessages(messagesWithResponse)
-                  .then(async (title) => {
-                    if (title) {
-                      console.log(`[ChatGPT MD] automatically inferred title: ${title}. Changing file name...`);
-                      statusBarItemEl.setText("");
+            if (isTitleTimestampFormat(title, this.settings.dateFormat) && messagesWithResponse.length >= 4) {
+              console.log("[ChatGPT MD] auto inferring title from messages");
 
-                      await writeInferredTitleToEditor(this.app, view, this.settings.chatFolder, title);
-                    } else {
-                      new Notice("[ChatGPT MD] Could not infer title", 5000);
-                    }
-                  })
-                  .catch((err) => {
-                    console.log(err);
-                    statusBarItemEl.setText("");
-                    if (Platform.isMobile) {
-                      new Notice("[ChatGPT MD] Error inferring title. " + err, 5000);
-                    }
-                  });
+              statusBarItemEl.setText("[ChatGPT MD] Calling API...");
+              const title = await this.openAIService.inferTitleFromMessages(
+                this.settings.apiKey,
+                messagesWithResponse,
+                50, // titleMaxTokens
+                0.0, //titleTemperature,
+                this.settings.inferTitleLanguage
+              );
+
+              if (title) {
+                console.log(`[ChatGPT MD] automatically inferred title: ${title}. Changing file name...`);
+                statusBarItemEl.setText("");
+                await this.editorService.writeInferredTitle(view, this.settings.chatFolder, title);
+              } else {
+                new Notice("[ChatGPT MD] Could not infer title", 5000);
               }
             }
-
-            statusBarItemEl.setText("");
-          })
-          .catch((err) => {
-            if (Platform.isMobile) {
-              new Notice("[ChatGPT MD Mobile] Full Error calling API. " + err, 9000);
-            }
-            statusBarItemEl.setText("");
-            console.log(err);
-          });
+          }
+          statusBarItemEl.setText("");
+        } catch (err) {
+          if (Platform.isMobile) {
+            new Notice("[ChatGPT MD Mobile] Full Error calling API. " + err, 9000);
+          }
+          statusBarItemEl.setText("");
+          console.log(err);
+        }
       },
     });
 
@@ -339,7 +144,7 @@ export default class ChatGPT_MD extends Plugin {
       name: "Add divider",
       icon: "minus",
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        addHorizontalRuleWithRole(editor, "user", getHeadingPrefix(this.settings.headingLevel));
+        this.editorService.addHorizontalRule(editor, "user", this.settings.headingLevel);
       },
     });
 
@@ -379,19 +184,20 @@ export default class ChatGPT_MD extends Plugin {
       name: "Infer title",
       icon: "subtitles",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        // get messages
-        const bodyWithoutYML = removeYAMLFrontMatter(editor.getValue());
-        let messages = splitMessages(bodyWithoutYML);
-        messages = messages.map((message) => {
-          return removeCommentsFromMessages(message);
-        });
+        const { messages } = this.editorService.getMessagesFromEditor(editor);
 
         statusBarItemEl.setText("[ChatGPT MD] Calling API...");
-        const title = await this.inferTitleFromMessages(messages);
+        const title = await this.openAIService.inferTitleFromMessages(
+          this.settings.apiKey,
+          messages,
+          50,
+          0,
+          this.settings.inferTitleLanguage
+        );
         statusBarItemEl.setText("");
 
         if (title) {
-          await writeInferredTitleToEditor(this.app, view, this.settings.chatFolder, title);
+          await this.editorService.writeInferredTitle(view, this.settings.chatFolder, title);
         }
       },
     });
@@ -403,34 +209,7 @@ export default class ChatGPT_MD extends Plugin {
       icon: "highlighter",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         try {
-          const selectedText = editor.getSelection();
-
-          if (!this.settings.chatFolder || this.settings.chatFolder.trim() === "") {
-            new Notice(`[ChatGPT MD] No chat folder value found. Please set one in settings.`);
-            return;
-          }
-
-          const chatFolderExists = await ensureFolderExists(this.app, this.settings.chatFolder, "chatFolder");
-          if (!chatFolderExists) {
-            return;
-          }
-
-          const newFile = await this.app.vault.create(
-            `${this.settings.chatFolder}/${getDate(new Date(), this.settings.dateFormat)}.md`,
-            `${this.settings.defaultChatFrontmatter}\n\n${selectedText}`
-          );
-
-          // open new file
-          await this.app.workspace.openLinkText(newFile.basename, "", true, { state: { mode: "source" } });
-          const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-
-          if (!activeView) {
-            new Notice("No active markdown editor found.");
-            return;
-          }
-
-          activeView.editor.focus();
-          moveCursorToEndOfFile(activeView.editor);
+          await this.editorService.createNewChatWithHighlightedText(editor, this.settings);
         } catch (err) {
           console.error(`[ChatGPT MD] Error in Create new chat with highlighted text`, err);
           new Notice(`[ChatGPT MD] Error in Create new chat with highlighted text, check console`);
@@ -443,31 +222,10 @@ export default class ChatGPT_MD extends Plugin {
       name: "Create new chat from template",
       icon: "layout-template",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        if (!this.settings.chatFolder || this.settings.chatFolder.trim() === "") {
-          new Notice(`[ChatGPT MD] No chat folder value found. Please set one in settings.`);
-          return;
-        }
-
-        const chatFolderExists = await ensureFolderExists(this.app, this.settings.chatFolder, "chatFolder");
-        if (!chatFolderExists) {
-          return;
-        }
-
-        if (!this.settings.chatTemplateFolder || this.settings.chatTemplateFolder.trim() === "") {
-          new Notice(`[ChatGPT MD] No chat template folder value found. Please set one in settings.`);
-          return;
-        }
-
-        const chatTemplateFolderExists = await ensureFolderExists(
-          this.app,
-          this.settings.chatTemplateFolder,
-          "chatTemplateFolder"
+        await this.editorService.createNewChatFromTemplate(
+          this.settings,
+          this.editorService.getDate(new Date(), this.settings.dateFormat)
         );
-        if (!chatTemplateFolderExists) {
-          return;
-        }
-
-        new ChatTemplates(this.app, this.settings, getDate(new Date(), this.settings.dateFormat)).open();
       },
     });
 
@@ -476,7 +234,7 @@ export default class ChatGPT_MD extends Plugin {
       name: "Clear chat (except frontmatter)",
       icon: "trash",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        clearConversationExceptFrontmatter(editor);
+        this.editorService.clearChat(editor);
       },
     });
 
