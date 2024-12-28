@@ -11,6 +11,7 @@ export interface ChatGPT_MDSettings {
   dateFormat: string;
   headingLevel: number;
   inferTitleLanguage: string;
+  system_commands?: string[] | null;
 }
 
 export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
