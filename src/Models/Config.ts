@@ -26,5 +26,3 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   headingLevel: 0,
   inferTitleLanguage: "English",
 };
-
-export const HORIZONTAL_LINE = '<hr class="__chatgpt_plugin">';

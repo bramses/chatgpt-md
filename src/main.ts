@@ -2,8 +2,7 @@ import { Editor, MarkdownView, Notice, Platform, Plugin } from "obsidian";
 
 import { StreamManager } from "src/stream";
 import { ChatGPT_MDSettingsTab } from "src/Views/ChatGPT_MDSettingsTab";
-import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
-import { ChatGPT_MDSettings, DEFAULT_SETTINGS, HORIZONTAL_LINE } from "src/Models/Config";
+import { ChatGPT_MDSettings, DEFAULT_SETTINGS } from "src/Models/Config";
 import { OpenAIService } from "src/Services/OpenAIService";
 import { EditorService } from "src/Services/EditorService";
 import {
@@ -12,8 +11,11 @@ import {
   CALL_CHATGPT_API_COMMAND_ID,
   CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
   CLEAR_CHAT_COMMAND_ID,
+  COMMENT_BLOCK_END,
+  COMMENT_BLOCK_START,
   INFER_TITLE_COMMAND_ID,
   MOVE_TO_CHAT_COMMAND_ID,
+  ROLE_USER,
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
 
@@ -21,9 +23,10 @@ export default class ChatGPT_MD extends Plugin {
   settings: ChatGPT_MDSettings;
   openAIService: OpenAIService;
   editorService: EditorService;
+  statusBarItemEl: HTMLElement;
 
   async onload() {
-    const statusBarItemEl = this.addStatusBarItem();
+    this.statusBarItemEl = this.addStatusBarItem();
 
     await this.loadSettings();
 
@@ -37,69 +40,48 @@ export default class ChatGPT_MD extends Plugin {
       name: "Chat",
       icon: "message-circle",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-        statusBarItemEl.setText("[ChatGPT MD] Calling API...");
-        // get frontmatter
-        const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
-
-        // get messages from editor
-        const { messagesWithRole: messagesWithRoleAndMessage, messages } = this.editorService.getMessagesFromEditor(
-          editor,
-          this.settings
-        );
-
-        // move cursor to end of file if generateAtCursor is false
-        if (!this.settings.generateAtCursor) {
-          this.editorService.moveCursorToEnd(editor);
-        }
-
-        if (Platform.isMobile) {
-          new Notice("[ChatGPT MD] Calling API");
-        }
+        this.updateStatusBar("Calling API...");
 
         try {
-          const headingPrefix = this.editorService.getHeadingPrefix(this.settings.headingLevel);
+          // get frontmatter
+          const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
+
+          // get messages from editor
+          const { messagesWithRole: messagesWithRoleAndMessage, messages } = this.editorService.getMessagesFromEditor(
+            editor,
+            this.settings
+          );
+
+          // move cursor to end of file if generateAtCursor is false
+          if (!this.settings.generateAtCursor) {
+            this.editorService.moveCursorToEnd(editor);
+          }
+
+          if (Platform.isMobile) {
+            new Notice("[ChatGPT MD] Calling API");
+          }
 
           const response = await this.openAIService.callOpenAIAPI(
             this.settings.apiKey,
             messagesWithRoleAndMessage,
             frontmatter,
             frontmatter.stream,
-            headingPrefix,
+            this.editorService.getHeadingPrefix(this.settings.headingLevel),
             editor,
             this.settings.generateAtCursor
           );
 
-          let responseStr = response;
-          if (response.mode === "streaming") {
-            responseStr = response.fullstr;
-            const newLine = `\n\n${HORIZONTAL_LINE}\n\n${headingPrefix}role::user\n\n`;
-            editor.replaceRange(newLine, editor.getCursor());
-
-            // move cursor to end of completion
-            const cursor = editor.getCursor();
-            const newCursor = {
-              line: cursor.line,
-              ch: cursor.ch + newLine.length,
-            };
-            editor.setCursor(newCursor);
-          } else {
-            if (unfinishedCodeBlock(responseStr)) {
-              responseStr = responseStr + "\n```";
-            }
-
-            this.editorService.appendMessage(editor, "assistant", responseStr, this.settings.headingLevel);
-          }
+          await this.editorService.processResponse(editor, response, this.settings);
 
           if (this.settings.autoInferTitle) {
             await this.editorService.inferTitle(editor, view, this.settings, this.settings.apiKey, messages);
           }
-          statusBarItemEl.setText("");
+          this.updateStatusBar("");
         } catch (err) {
           if (Platform.isMobile) {
             new Notice("[ChatGPT MD Mobile] Full Error calling API. " + err, 9000);
           }
-          statusBarItemEl.setText("");
+          this.updateStatusBar("");
           console.log(err);
         }
       },
@@ -110,7 +92,7 @@ export default class ChatGPT_MD extends Plugin {
       name: "Add divider",
       icon: "minus",
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        this.editorService.addHorizontalRule(editor, "user", this.settings.headingLevel);
+        this.editorService.addHorizontalRule(editor, ROLE_USER, this.settings.headingLevel);
       },
     });
 
@@ -124,7 +106,7 @@ export default class ChatGPT_MD extends Plugin {
         const line = cursor.line;
         const ch = cursor.ch;
 
-        const commentBlock = `=begin-chatgpt-md-comment\n\n=end-chatgpt-md-comment`;
+        const commentBlock = `${COMMENT_BLOCK_START}\n\n${COMMENT_BLOCK_END}`;
         editor.replaceRange(commentBlock, cursor);
 
         // move cursor to middle of comment block
@@ -150,11 +132,11 @@ export default class ChatGPT_MD extends Plugin {
       name: "Infer title",
       icon: "subtitles",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
+        this.updateStatusBar("Calling API...");
         const { messages } = this.editorService.getMessagesFromEditor(editor, this.settings);
 
-        statusBarItemEl.setText("[ChatGPT MD] Calling API...");
         await this.editorService.inferTitle(editor, view, this.settings, this.settings.apiKey, messages);
-        statusBarItemEl.setText("");
+        this.updateStatusBar("");
       },
     });
 
@@ -206,5 +188,9 @@ export default class ChatGPT_MD extends Plugin {
 
   async saveSettings() {
     await this.saveData(this.settings);
+  }
+
+  updateStatusBar(text: string) {
+    this.statusBarItemEl.setText(`[ChatGPT MD] ${text}`);
   }
 }

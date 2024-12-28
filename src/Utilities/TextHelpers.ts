@@ -1,4 +1,4 @@
-import { HORIZONTAL_LINE } from "src/Models/Config";
+import { HORIZONTAL_LINE_MD, ROLE_USER } from "src/Constants";
 
 export const unfinishedCodeBlock = (txt: string): boolean => {
   const codeBlockMatches = txt.match(/```/g) || [];
@@ -13,7 +13,7 @@ export const unfinishedCodeBlock = (txt: string): boolean => {
 
 export const splitMessages = (text: string) => {
   try {
-    return text.split(HORIZONTAL_LINE);
+    return text.split(HORIZONTAL_LINE_MD);
   } catch (err) {
     throw new Error("Error splitting messages" + err);
   }
@@ -39,7 +39,7 @@ export const extractRoleAndMessage = (message: string) => {
   try {
     if (!message.includes(ROLE_IDENTIFIER)) {
       return {
-        role: "user",
+        role: ROLE_USER,
         content: message,
       };
     }

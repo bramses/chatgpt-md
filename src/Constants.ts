@@ -5,7 +5,7 @@ export const CHAT_FOLDER_TYPE = "chatFolder";
 export const CHAT_TEMPLATE_FOLDER_TYPE = "chatTemplateFolder";
 export const TITLE_MAX_TOKENS = 50;
 export const INFER_TITLE_MIN_MESSAGES = 4;
-export const HORIZONTAL_LINE_MD = '<hr class="__chatgpt_plugin">';
+export const HORIZONTAL_LINE_MD = `<hr class="${HORIZONTAL_RULE_CLASS}">`;
 export const COMMENT_BLOCK_START = `=begin-chatgpt-md-comment\n\n`;
 export const COMMENT_BLOCK_END = `=end-chatgpt-md-comment`;
 export const DEFAULT_HEADING_LEVEL = 0;

@@ -3,6 +3,7 @@ import { Editor, Notice, requestUrl } from "obsidian";
 import { DEFAULT_OPENAI_CONFIG, OpenAIConfig } from "src/Models/OpenAIConfig";
 import { StreamManager } from "src/stream";
 import { Message } from "src/Models/Message";
+import { ROLE_USER } from "src/Constants";
 
 export class OpenAIService {
   async callOpenAIAPI(
@@ -164,7 +165,7 @@ export class OpenAIService {
 
       const titleMessage = [
         {
-          role: "user",
+          role: ROLE_USER,
           content: prompt,
         },
       ];

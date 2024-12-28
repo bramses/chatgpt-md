@@ -7,6 +7,7 @@ import {
   removeCommentsFromMessages,
   removeYAMLFrontMatter,
   splitMessages,
+  unfinishedCodeBlock,
 } from "src/Utilities/TextHelpers";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ChatTemplates } from "src/Views/ChatTemplates";
@@ -14,10 +15,13 @@ import { DEFAULT_OPENAI_CONFIG } from "src/Models/OpenAIConfig";
 import {
   CHAT_FOLDER_TYPE,
   CHAT_TEMPLATE_FOLDER_TYPE,
+  DEFAULT_HEADING_LEVEL,
   DEFAULT_TITLE_TEMPERATURE,
   HORIZONTAL_LINE_MD,
   HORIZONTAL_RULE_CLASS,
   INFER_TITLE_MIN_MESSAGES,
+  ROLE_ASSISTANT,
+  ROLE_USER,
   TITLE_MAX_TOKENS,
 } from "src/Constants";
 
@@ -301,7 +305,7 @@ export class EditorService {
   }
 
   getHeadingPrefix(headingLevel: number): string {
-    if (headingLevel === 0) {
+    if (headingLevel === DEFAULT_HEADING_LEVEL) {
       return "";
     } else if (headingLevel > 6) {
       return "#".repeat(6) + " ";
@@ -334,6 +338,29 @@ export class EditorService {
     }
   }
 
+  async processResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings) {
+    let responseStr = response;
+    if (response.mode === "streaming") {
+      responseStr = response.fullstr;
+      const newLine = `\n\n${HORIZONTAL_LINE_MD}\n\n${this.getHeadingPrefix(settings.headingLevel)}role::user\n\n`;
+      editor.replaceRange(newLine, editor.getCursor());
+
+      // move cursor to end of completion
+      const cursor = editor.getCursor();
+      const newCursor = {
+        line: cursor.line,
+        ch: cursor.ch + newLine.length,
+      };
+      editor.setCursor(newCursor);
+    } else {
+      if (unfinishedCodeBlock(responseStr)) {
+        responseStr = responseStr + "\n```";
+      }
+
+      this.appendMessage(editor, ROLE_ASSISTANT, responseStr, settings.headingLevel);
+    }
+  }
+
   private async inferTitleFromMessages(
     apiKey: string,
     messages: string[],
@@ -351,7 +378,7 @@ export class EditorService {
 
       const titleMessage = [
         {
-          role: "user",
+          role: ROLE_USER,
           content: prompt,
         },
       ];
