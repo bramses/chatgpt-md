@@ -1,34 +1,40 @@
 export interface OpenAIConfig {
-  url: string;
-  model: string;
+  frequencyPenalty: number;
+  logitBias: string | null;
   maxTokens: number;
-  titleMaxTokens: number;
+  model: string;
+  n: number;
+  presencePenalty: number;
+  stop: string[] | null;
+  stream: boolean;
+  system_commands: string[] | null;
+  tags: string[] | null;
   temperature: number;
+  title: string;
+  titleMaxTokens: number;
   titleTemperature: number;
   topP: number;
-  presencePenalty: number;
-  frequencyPenalty: number;
-  stream: boolean;
-  stop: string[] | null;
-  n: number;
-  logitBias: string | null;
+  url: string;
   user: string | null;
 }
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
-  url: "https://api.openai.com/v1/chat/completions",
-  model: "gpt-3.5-turbo",
+  frequencyPenalty: 0.5,
+  logitBias: null,
   maxTokens: 250,
-  titleMaxTokens: 50,
+  model: "gpt-3.5-turbo",
+  n: 1,
+  presencePenalty: 0.5,
+  stop: null,
+  stream: true,
+  system_commands: null,
+  tags: [],
   temperature: 0.3,
+  title: "Untitled",
+  titleMaxTokens: 50,
   titleTemperature: 0.0,
   topP: 1,
-  presencePenalty: 0.5,
-  frequencyPenalty: 0.5,
-  stream: true,
-  stop: null,
-  n: 1,
-  logitBias: null,
+  url: "https://api.openai.com/v1/chat/completions",
   user: null,
 };
 

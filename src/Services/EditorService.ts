@@ -274,33 +274,13 @@ export class EditorService {
       throw new Error("No active file found");
     }
 
-    const metaMatter = app.metadataCache.getFileCache(activeFile)?.frontmatter;
-    if (!metaMatter) {
-      throw new Error("No frontmatter found in the active file");
-    }
-
-    const determineStreamSetting = (): boolean => {
-      if (metaMatter.stream !== undefined) return metaMatter.stream;
-      if (settings.stream !== undefined) return settings.stream;
-      return true;
-    };
+    const metaMatter = app.metadataCache.getFileCache(activeFile)?.frontmatter || {};
 
     return {
-      title: metaMatter.title ?? view?.file?.basename ?? "Untitled",
-      tags: metaMatter.tags ?? [],
-      model: metaMatter.model ?? DEFAULT_OPENAI_CONFIG.model,
-      temperature: metaMatter.temperature ?? DEFAULT_OPENAI_CONFIG.temperature,
-      top_p: metaMatter.top_p ?? DEFAULT_OPENAI_CONFIG.topP,
-      presence_penalty: metaMatter.presence_penalty ?? DEFAULT_OPENAI_CONFIG.presencePenalty,
-      frequency_penalty: metaMatter.frequency_penalty ?? DEFAULT_OPENAI_CONFIG.frequencyPenalty,
-      stream: determineStreamSetting(),
-      max_tokens: metaMatter.max_tokens ?? DEFAULT_OPENAI_CONFIG.maxTokens,
-      stop: metaMatter.stop ?? null,
-      n: metaMatter.n ?? DEFAULT_OPENAI_CONFIG.n,
-      logit_bias: metaMatter.logit_bias ?? null,
-      user: metaMatter.user ?? null,
-      system_commands: metaMatter.system_commands ?? null,
-      url: metaMatter.url ?? DEFAULT_OPENAI_CONFIG.url,
+      ...DEFAULT_OPENAI_CONFIG,
+      ...metaMatter,
+      stream: metaMatter.stream ?? settings.stream ?? DEFAULT_OPENAI_CONFIG.stream,
+      title: view?.file?.basename ?? DEFAULT_OPENAI_CONFIG.title,
     };
   }
 
