@@ -1,4 +1,12 @@
-import { App, FileManager, MarkdownView, Modal, Notice, Setting, Vault } from "obsidian";
+import {
+	App,
+	FileManager,
+	MarkdownView,
+	Modal,
+	Notice,
+	Setting,
+	Vault,
+} from "obsidian";
 
 // check for unclosed code block in MD (three backticks), string should contain three backticks in a row
 export const unfinishedCodeBlock = (txt: string) => {
@@ -23,6 +31,10 @@ export const writeInferredTitleToEditor = async (
 	try {
 		// set title of file
 		const file = view.file;
+		if (!file) {
+			throw new Error("No file is currently open");
+		}
+
 		// replace trailing / if it exists
 		const folder = chatFolder.replace(/\/$/, "");
 
