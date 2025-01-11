@@ -212,14 +212,14 @@ export default class ChatGPT_MD extends Plugin {
 	getFrontmatter(view: MarkdownView): Chat_MD_FrontMatter {
 		try {
 			// get frontmatter
-			const noteFile = app.workspace.getActiveFile();
+			const noteFile = this.app.workspace.getActiveFile();
 
 			if (!noteFile) {
 				throw new Error("no active file");
 			}
 
 			const metaMatter =
-				app.metadataCache.getFileCache(noteFile)?.frontmatter;
+				this.app.metadataCache.getFileCache(noteFile)?.frontmatter;
 
 			const shouldStream =
 				metaMatter?.stream !== undefined
