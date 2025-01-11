@@ -3,9 +3,6 @@
 
 # ChatGPT-MD
 
-# --> APRIL 2024 LOOKING FOR NEW MAINTANERS [(SEE HERE)](https://github.com/bramses/chatgpt-md/pull/100#issuecomment-2085337331). DM ME IF THAT'S YOU! <-- 
-
-
 A (nearly) seamless integration of ChatGPT into Obsidian.
 
 ## Demo
