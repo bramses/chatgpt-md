@@ -87,7 +87,7 @@ export default class ChatGPT_MD extends Plugin {
 		url = DEFAULT_URL
 	) {
 		try {
-			console.log("calling openai api");
+			console.log(`[ChatGPT MD] Calling ${model}`);
 
 			if (stream) {
 				const options = {
@@ -187,12 +187,9 @@ export default class ChatGPT_MD extends Plugin {
 				}
 			}
 
-			new Notice(
-				"issue calling OpenAI API, see console for more details"
-			);
-			throw new Error(
-				"issue calling OpenAI API, see error for more details: " + err
-			);
+			const infoString = `issue calling ${model}, see console for more details`;
+			new Notice(infoString);
+			throw new Error(infoString + ": " + err);
 		}
 	}
 
@@ -382,7 +379,10 @@ export default class ChatGPT_MD extends Plugin {
 		}
 	}
 
-	async inferTitleFromMessages(messages: string[]) {
+	async inferTitleFromMessages(
+		messages: string[],
+		frontmatter: Chat_MD_FrontMatter
+	) {
 		console.log("[ChtGPT MD] Inferring Title");
 		new Notice("[ChatGPT] Inferring title from messages...");
 
@@ -414,7 +414,7 @@ export default class ChatGPT_MD extends Plugin {
 				},
 				contentType: "application/json",
 				body: JSON.stringify({
-					model: "gpt-3.5-turbo",
+					model: frontmatter.model,
 					messages: titleMessage,
 					max_tokens: 50,
 					temperature: 0.0,
@@ -501,10 +501,12 @@ export default class ChatGPT_MD extends Plugin {
 			name: "Chat",
 			icon: "message-circle",
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-				statusBarItemEl.setText("[ChatGPT MD] Calling API...");
 				// get frontmatter
 				const frontmatter = this.getFrontmatter(view);
+				// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
+				statusBarItemEl.setText(
+					`[ChatGPT MD] Calling ${frontmatter.model}...`
+				);
 
 				// get messages
 				const bodyWithoutYML = this.removeYMLFromMessage(
@@ -538,7 +540,7 @@ export default class ChatGPT_MD extends Plugin {
 				}
 
 				if (Platform.isMobile) {
-					new Notice("[ChatGPT MD] Calling API");
+					new Notice(`[ChatGPT MD] Calling ${frontmatter.model}`);
 				}
 
 				this.callOpenAIAPI(
@@ -610,10 +612,11 @@ export default class ChatGPT_MD extends Plugin {
 								);
 
 								statusBarItemEl.setText(
-									"[ChatGPT MD] Calling API..."
+									`[ChatGPT MD] Calling ${frontmatter.model}...`
 								);
 								this.inferTitleFromMessages(
-									messagesWithResponse
+									messagesWithResponse,
+									frontmatter
 								)
 									.then(async (title) => {
 										if (title) {
@@ -655,7 +658,7 @@ export default class ChatGPT_MD extends Plugin {
 					.catch((err) => {
 						if (Platform.isMobile) {
 							new Notice(
-								"[ChatGPT MD Mobile] Full Error calling API. " +
+								`[ChatGPT MD Mobile] Full Error calling ${frontmatter.model}. ` +
 									err,
 								9000
 							);
@@ -720,8 +723,14 @@ export default class ChatGPT_MD extends Plugin {
 					return this.removeCommentsFromMessages(message);
 				});
 
-				statusBarItemEl.setText("[ChatGPT MD] Calling API...");
-				const title = await this.inferTitleFromMessages(messages);
+				const frontmatter = this.getFrontmatter(view);
+				statusBarItemEl.setText(
+					`[ChatGPT MD] Calling ${frontmatter.model}...`
+				);
+				const title = await this.inferTitleFromMessages(
+					messages,
+					frontmatter
+				);
 				statusBarItemEl.setText("");
 
 				if (title) {
@@ -775,10 +784,7 @@ export default class ChatGPT_MD extends Plugin {
 					}
 
 					const newFile = await this.app.vault.create(
-						`${this.settings.chatFolder}/${this.getDate(
-							new Date(),
-							this.settings.dateFormat
-						)}.md`,
+						`${this.settings.chatFolder}/${this.getDate(new Date(), this.settings.dateFormat)}.md`,
 						`${this.settings.defaultChatFrontmatter}\n\n${selectedText}`
 					);
 
