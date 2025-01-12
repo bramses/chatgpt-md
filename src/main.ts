@@ -40,11 +40,11 @@ export default class ChatGPT_MD extends Plugin {
       name: "Chat",
       icon: "message-circle",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        this.updateStatusBar("Calling API...");
+        // get frontmatter
+        const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
 
         try {
-          // get frontmatter
-          const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
+          this.updateStatusBar(`[ChatGPT MD] Calling ${frontmatter.model}`);
 
           // get messages from editor
           const { messagesWithRole: messagesWithRoleAndMessage, messages } = this.editorService.getMessagesFromEditor(
@@ -58,7 +58,7 @@ export default class ChatGPT_MD extends Plugin {
           }
 
           if (Platform.isMobile) {
-            new Notice("[ChatGPT MD] Calling API");
+            new Notice(`[ChatGPT MD] Calling ${frontmatter.model}`);
           }
 
           const response = await this.openAIService.callOpenAIAPI(
@@ -79,7 +79,7 @@ export default class ChatGPT_MD extends Plugin {
           this.updateStatusBar("");
         } catch (err) {
           if (Platform.isMobile) {
-            new Notice("[ChatGPT MD Mobile] Full Error calling API. " + err, 9000);
+            new Notice(`[ChatGPT MD] Calling ${frontmatter.model}. ` + err, 9000);
           }
           this.updateStatusBar("");
           console.log(err);
@@ -132,7 +132,9 @@ export default class ChatGPT_MD extends Plugin {
       name: "Infer title",
       icon: "subtitles",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        this.updateStatusBar("Calling API...");
+        // get frontmatter
+        const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
+        this.updateStatusBar(`[ChatGPT MD] Calling ${frontmatter.model}`);
         const { messages } = this.editorService.getMessagesFromEditor(editor, this.settings);
 
         await this.editorService.inferTitle(editor, view, this.settings, this.settings.apiKey, messages);
@@ -159,7 +161,7 @@ export default class ChatGPT_MD extends Plugin {
       id: CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
       name: "Create new chat from template",
       icon: "layout-template",
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
+      callback: async () => {
         await this.editorService.createNewChatFromTemplate(
           this.settings,
           this.editorService.getDate(new Date(), this.settings.dateFormat)
