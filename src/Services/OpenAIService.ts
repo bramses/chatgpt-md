@@ -76,7 +76,7 @@ export class OpenAIService {
         }
       }
 
-      new Notice("issue calling OpenAI API, see console for more details");
+      new Notice(`issue calling ${config.model}, see console for more details`);
       throw new Error("issue calling OpenAI API, see error for more details: " + err);
     }
   }
@@ -141,7 +141,7 @@ export class OpenAIService {
           }
         }
       }
-      new Notice("issue calling OpenAI API, see console for more details");
+      new Notice(`issue calling ${config.model}, see console for more details`);
       throw new Error("issue calling OpenAI API, see error for more details: " + err);
     }
   }
