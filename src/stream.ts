@@ -2,23 +2,8 @@ import { Editor, Notice, Platform } from "obsidian";
 import { SSE } from "sse";
 
 import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
-import { Message } from "src/Models/Message";
 import { HORIZONTAL_LINE_MD } from "src/Constants";
-
-export interface OpenAIStreamPayload {
-  model: string;
-  messages: Array<Message>;
-  temperature: number;
-  top_p: number;
-  presence_penalty: number;
-  frequency_penalty: number;
-  stop: string[] | null;
-  n: number;
-  logit_bias?: any | null;
-  user?: string | null;
-  max_tokens: number;
-  stream: boolean;
-}
+import { OpenAIStreamPayload } from "src/Services/OpenAIService";
 
 export class StreamManager {
   sse: any | null = null;
