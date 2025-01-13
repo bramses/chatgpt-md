@@ -34,8 +34,8 @@ export interface OpenAIConfig {
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   frequency_penalty: 0.5,
-  max_tokens: 250,
-  model: "gpt-3.5-turbo",
+  max_tokens: 300,
+  model: "gpt-4o-mini",
   n: 1,
   presence_penalty: 0.5,
   stop: null,
