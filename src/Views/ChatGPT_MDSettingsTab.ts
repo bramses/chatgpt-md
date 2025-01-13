@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import ChatGPT_MD from "src/main";
-import { DEFAULT_CHAT_FRONT_MATTER } from "src/Models/OpenAIConfig";
+import { DEFAULT_CHAT_FRONT_MATTER } from "src/Models/Config";
 
 export class ChatGPT_MDSettingsTab extends PluginSettingTab {
   plugin: ChatGPT_MD;

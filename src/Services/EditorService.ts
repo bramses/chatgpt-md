@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Notice, requestUrl } from "obsidian";
+import { App, Editor, MarkdownView, Notice } from "obsidian";
 import { createFolderModal } from "src/Utilities/ModalHelpers";
 import {
   extractRoleAndMessage,
@@ -11,18 +11,15 @@ import {
 } from "src/Utilities/TextHelpers";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ChatTemplates } from "src/Views/ChatTemplates";
-import { DEFAULT_OPENAI_CONFIG } from "src/Models/OpenAIConfig";
+import { DEFAULT_OPENAI_CONFIG, inferTitleFromMessages } from "src/Services/OpenAIService";
 import {
   CHAT_FOLDER_TYPE,
   CHAT_TEMPLATE_FOLDER_TYPE,
   DEFAULT_HEADING_LEVEL,
-  DEFAULT_TITLE_TEMPERATURE,
   HORIZONTAL_LINE_MD,
   HORIZONTAL_RULE_CLASS,
   INFER_TITLE_MIN_MESSAGES,
   ROLE_ASSISTANT,
-  ROLE_USER,
-  TITLE_MAX_TOKENS,
 } from "src/Constants";
 
 export class EditorService {
@@ -308,7 +305,7 @@ export class EditorService {
     if (isTitleTimestampFormat(title, settings.dateFormat) && messages.length >= INFER_TITLE_MIN_MESSAGES) {
       console.log("[ChatGPT MD] auto inferring title from messages");
 
-      const inferredTitle = await this.inferTitleFromMessages(apiKey, messages, settings.inferTitleLanguage);
+      const inferredTitle = await inferTitleFromMessages(apiKey, messages, settings.inferTitleLanguage);
       if (inferredTitle) {
         console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
         await this.writeInferredTitle(view, settings.chatFolder, inferredTitle);
@@ -338,58 +335,6 @@ export class EditorService {
       }
 
       this.appendMessage(editor, ROLE_ASSISTANT, responseStr, settings.headingLevel);
-    }
-  }
-
-  private async inferTitleFromMessages(
-    apiKey: string,
-    messages: string[],
-    inferTitleLanguage: string
-  ): Promise<string | undefined> {
-    try {
-      if (messages.length < 2) {
-        new Notice("Not enough messages to infer title. Minimum 2 messages.");
-        return undefined;
-      }
-
-      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${
-        inferTitleLanguage
-      }. \nMessages:\n\n${JSON.stringify(messages)}`;
-
-      const titleMessage = [
-        {
-          role: ROLE_USER,
-          content: prompt,
-        },
-      ];
-
-      const responseUrl = await requestUrl({
-        url: DEFAULT_OPENAI_CONFIG.url,
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        contentType: "application/json",
-        body: JSON.stringify({
-          model: DEFAULT_OPENAI_CONFIG.model,
-          messages: titleMessage,
-          max_tokens: TITLE_MAX_TOKENS,
-          temperature: DEFAULT_TITLE_TEMPERATURE,
-        }),
-        throw: false,
-      });
-
-      const response = responseUrl.text;
-      const responseJSON = JSON.parse(response);
-      return responseJSON.choices[0].message.content
-        .replace(/[:/\\]/g, "")
-        .replace("Title", "")
-        .replace("title", "")
-        .trim();
-    } catch (err) {
-      new Notice("[ChatGPT MD] Error inferring title from messages");
-      throw new Error("[ChatGPT MD] Error inferring title from messages" + err);
     }
   }
 }
