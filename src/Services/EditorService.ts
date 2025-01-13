@@ -3,6 +3,7 @@ import { createFolderModal } from "src/Utilities/ModalHelpers";
 import {
   extractRoleAndMessage,
   getHeadingPrefix,
+  parseSettingsFrontmatter,
   removeCommentsFromMessages,
   removeYAMLFrontMatter,
   splitMessages,
@@ -269,7 +270,13 @@ export class EditorService {
       throw new Error("No active file found");
     }
 
-    const metaMatter = app.metadataCache.getFileCache(activeFile)?.frontmatter || {};
+    // get the settings frontmatter
+    const settingsFrontmatter = parseSettingsFrontmatter(settings.defaultChatFrontmatter);
+    // merge with frontmatter from current file
+    const metaMatter = {
+      ...settingsFrontmatter,
+      ...(app.metadataCache.getFileCache(activeFile)?.frontmatter || {}),
+    };
 
     return {
       ...DEFAULT_OPENAI_CONFIG,
