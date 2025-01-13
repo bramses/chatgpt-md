@@ -3,7 +3,6 @@ import { createFolderModal } from "src/Utilities/ModalHelpers";
 import {
   extractRoleAndMessage,
   getHeadingPrefix,
-  isTitleTimestampFormat,
   removeCommentsFromMessages,
   removeYAMLFrontMatter,
   splitMessages,
@@ -18,7 +17,6 @@ import {
   DEFAULT_HEADING_LEVEL,
   HORIZONTAL_LINE_MD,
   HORIZONTAL_RULE_CLASS,
-  INFER_TITLE_MIN_MESSAGES,
   ROLE_ASSISTANT,
 } from "src/Constants";
 
@@ -300,18 +298,15 @@ export class EditorService {
     if (!view.file) {
       throw new Error("No active file found");
     }
-    const title = view.file.basename;
 
-    if (isTitleTimestampFormat(title, settings.dateFormat) && messages.length >= INFER_TITLE_MIN_MESSAGES) {
-      console.log("[ChatGPT MD] auto inferring title from messages");
+    console.log("[ChatGPT MD] auto inferring title from messages");
 
-      const inferredTitle = await inferTitleFromMessages(apiKey, messages, settings.inferTitleLanguage);
-      if (inferredTitle) {
-        console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
-        await this.writeInferredTitle(view, settings.chatFolder, inferredTitle);
-      } else {
-        new Notice("[ChatGPT MD] Could not infer title", 5000);
-      }
+    const inferredTitle = await inferTitleFromMessages(apiKey, messages, settings.inferTitleLanguage);
+    if (inferredTitle) {
+      console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
+      await this.writeInferredTitle(view, settings.chatFolder, inferredTitle);
+    } else {
+      new Notice("[ChatGPT MD] Could not infer title", 5000);
     }
   }
 

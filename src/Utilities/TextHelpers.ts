@@ -82,11 +82,11 @@ const generateDatePattern = (format: string) => {
   return new RegExp(`^${pattern}$`);
 };
 
-export const isTitleTimestampFormat = (title: string, dateFormat: string) => {
+export const isTitleTimestampFormat = (title: string | undefined, dateFormat: string) => {
   try {
     const pattern = generateDatePattern(dateFormat);
 
-    return title.length == dateFormat.length && pattern.test(title);
+    return title?.length == dateFormat.length && pattern.test(title);
   } catch (err) {
     throw new Error("Error checking if title is in timestamp format" + err);
   }
