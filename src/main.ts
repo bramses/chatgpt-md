@@ -18,6 +18,7 @@ import {
   ROLE_USER,
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
+import { isTitleTimestampFormat } from "./Utilities/TextHelpers";
 
 export default class ChatGPT_MD extends Plugin {
   settings: ChatGPT_MDSettings;
@@ -73,9 +74,14 @@ export default class ChatGPT_MD extends Plugin {
 
           await this.editorService.processResponse(editor, response, this.settings);
 
-          if (this.settings.autoInferTitle) {
+          if (
+            this.settings.autoInferTitle &&
+            isTitleTimestampFormat(view?.file?.basename, this.settings.dateFormat) &&
+            messagesWithRoleAndMessage.length > 4
+          ) {
             await this.editorService.inferTitle(editor, view, this.settings, this.settings.apiKey, messages);
           }
+
           this.updateStatusBar("");
         } catch (err) {
           if (Platform.isMobile) {
