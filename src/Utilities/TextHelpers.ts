@@ -100,3 +100,47 @@ export const getHeadingPrefix = (headingLevel: number) => {
   }
   return "#".repeat(headingLevel) + " ";
 };
+
+export const parseSettingsFrontmatter = (yamlString: string): Record<string, any> => {
+  // Remove the --- markers and split into lines
+  const content = yamlString.replace(/^---\n/, "").replace(/\n---$/, "");
+  const lines = content.split("\n");
+  const result: Record<string, any> = {};
+
+  for (const line of lines) {
+    // Skip empty lines
+    if (!line.trim()) continue;
+
+    // Split on first colon
+    const [key, ...valueParts] = line.split(":");
+    const value = valueParts.join(":").trim();
+
+    // Parse the value
+    if (value.startsWith("[") && value.endsWith("]")) {
+      // Handle arrays
+      result[key.trim()] = value
+        .slice(1, -1)
+        .split(",")
+        .map((item) => {
+          const trimmed = item.trim();
+          // Handle quoted strings in arrays
+          if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
+            return trimmed.slice(1, -1);
+          }
+          return trimmed;
+        });
+    } else if (value === "true") {
+      result[key.trim()] = true;
+    } else if (value === "false") {
+      result[key.trim()] = false;
+    } else if (value === "null") {
+      result[key.trim()] = null;
+    } else if (!isNaN(Number(value))) {
+      result[key.trim()] = Number(value);
+    } else {
+      result[key.trim()] = value;
+    }
+  }
+
+  return result;
+};
