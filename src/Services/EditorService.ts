@@ -196,8 +196,8 @@ export class EditorService {
     });
 
     const frontmatter = this.getFrontmatter(null, settings, this.app);
-    if (frontmatter.developer) {
-      const systemCommands = frontmatter.developer;
+    if (frontmatter.system_commands) {
+      const systemCommands = frontmatter.system_commands;
       messagesWithRole.unshift(
         ...systemCommands.map((command: string) => {
           return {

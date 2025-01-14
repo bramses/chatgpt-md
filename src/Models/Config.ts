@@ -1,7 +1,7 @@
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAIService";
 
 export const DEFAULT_CHAT_FRONT_MATTER = `---
-developer: ['I am a helpful assistant.']
+system_commands: ['I am a helpful assistant.']
 temperature: ${DEFAULT_OPENAI_CONFIG.temperature}
 top_p: ${DEFAULT_OPENAI_CONFIG.top_p}
 max_completion_tokens: ${DEFAULT_OPENAI_CONFIG.max_completion_tokens}
@@ -24,7 +24,7 @@ export interface ChatGPT_MDSettings {
   dateFormat: string;
   headingLevel: number;
   inferTitleLanguage: string;
-  developer?: string[] | null;
+  system_commands?: string[] | null;
 }
 
 export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {

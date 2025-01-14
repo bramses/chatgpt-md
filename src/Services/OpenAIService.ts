@@ -24,7 +24,7 @@ export interface OpenAIConfig {
   presence_penalty: number;
   stop: string[] | null;
   stream: boolean;
-  developer: string[] | null;
+  system_commands: string[] | null;
   tags: string[] | null;
   temperature: number;
   title: string;
@@ -40,7 +40,7 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   presence_penalty: 0.5,
   stop: null,
   stream: true,
-  developer: null,
+  system_commands: null,
   tags: [],
   temperature: 0.3,
   title: "Untitled",
