@@ -201,7 +201,7 @@ export class EditorService {
       messagesWithRole.unshift(
         ...systemCommands.map((command: string) => {
           return {
-            role: "system",
+            role: "developer",
             content: command,
           };
         })
