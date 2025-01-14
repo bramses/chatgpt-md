@@ -13,7 +13,7 @@ export interface OpenAIStreamPayload {
   frequency_penalty: number;
   stop: string[] | null;
   n: number;
-  max_tokens: number;
+  max_completion_tokens: number;
   stream: boolean;
 }
 export interface OpenAIConfig {
@@ -88,7 +88,7 @@ export class OpenAIService {
         {
           model: config.model,
           messages: messages,
-          max_tokens: config.max_tokens,
+          max_completion_tokens: config.max_tokens,
           temperature: config.temperature,
           top_p: config.top_p,
           presence_penalty: config.presence_penalty,
@@ -135,7 +135,7 @@ export class OpenAIService {
         body: JSON.stringify({
           model: config.model,
           messages: messages,
-          max_tokens: config.max_tokens,
+          max_completion_tokens: config.max_tokens,
           temperature: config.temperature,
           top_p: config.top_p,
           presence_penalty: config.presence_penalty,
