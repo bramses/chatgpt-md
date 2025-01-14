@@ -93,7 +93,7 @@ Go to Community Plugins and search `ChatGPT MD`
 
 ### Q: The chat seems to be getting cut off halfway through
 
-To address this, first try to increase your `max_completion_tokens` (default is set to 300). You may also want to update it more permanently in the default frontmatter settings. See pics below:
+To address this, first try to increase your `max_tokens` (default is set to 300). You may also want to update it more permanently in the default frontmatter settings. See pics below:
 
 ![Screenshot 2023-03-12 16-14-35](https://user-images.githubusercontent.com/3282661/224571118-080ca393-6f94-4a20-ba98-27bc8b8b6ad2.png)
 ![Screenshot 2023-03-12 16-15-01](https://user-images.githubusercontent.com/3282661/224571119-cba1be45-3ab1-4b86-b056-ba596bacd918.png)

@@ -13,12 +13,12 @@ export interface OpenAIStreamPayload {
   frequency_penalty: number;
   stop: string[] | null;
   n: number;
-  max_completion_tokens: number;
+  max_tokens: number;
   stream: boolean;
 }
 export interface OpenAIConfig {
   frequency_penalty: number;
-  max_completion_tokens: number;
+  max_tokens: number;
   model: string;
   n: number;
   presence_penalty: number;
@@ -34,7 +34,7 @@ export interface OpenAIConfig {
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   frequency_penalty: 0.5,
-  max_completion_tokens: 300,
+  max_tokens: 300,
   model: "gpt-4o-mini",
   n: 1,
   presence_penalty: 0.5,
@@ -88,7 +88,7 @@ export class OpenAIService {
         {
           model: config.model,
           messages: messages,
-          max_completion_tokens: config.max_completion_tokens,
+          max_tokens: config.max_tokens,
           temperature: config.temperature,
           top_p: config.top_p,
           presence_penalty: config.presence_penalty,
@@ -135,7 +135,7 @@ export class OpenAIService {
         body: JSON.stringify({
           model: config.model,
           messages: messages,
-          max_completion_tokens: config.max_completion_tokens,
+          max_tokens: config.max_tokens,
           temperature: config.temperature,
           top_p: config.top_p,
           presence_penalty: config.presence_penalty,

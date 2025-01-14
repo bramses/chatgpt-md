@@ -4,7 +4,7 @@ export const DEFAULT_CHAT_FRONT_MATTER = `---
 system_commands: ['I am a helpful assistant.']
 temperature: ${DEFAULT_OPENAI_CONFIG.temperature}
 top_p: ${DEFAULT_OPENAI_CONFIG.top_p}
-max_completion_tokens: ${DEFAULT_OPENAI_CONFIG.max_completion_tokens}
+max_tokens: ${DEFAULT_OPENAI_CONFIG.max_tokens}
 presence_penalty: ${DEFAULT_OPENAI_CONFIG.presence_penalty}
 frequency_penalty: ${DEFAULT_OPENAI_CONFIG.frequency_penalty}
 stream: ${DEFAULT_OPENAI_CONFIG.stream}
