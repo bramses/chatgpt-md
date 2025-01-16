@@ -81,9 +81,8 @@ export class OpenAIService {
     setAtCursor: boolean = false
   ): Promise<any> {
     try {
-      const response = await this.streamManager.streamSSE(
+      const response = await this.streamManager.stream(
         editor,
-        apiKey,
         config.url,
         {
           model: config.model,
@@ -97,9 +96,15 @@ export class OpenAIService {
           stop: config.stop,
           n: config.n,
         },
+        {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        true,
         setAtCursor,
         headingPrefix
       );
+
       return { fullstr: response, mode: "streaming" };
     } catch (err) {
       if (err instanceof Object) {

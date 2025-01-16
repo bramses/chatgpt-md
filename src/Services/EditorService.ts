@@ -204,7 +204,7 @@ export class EditorService {
       messagesWithRole.unshift(
         ...systemCommands.map((command: string) => {
           return {
-            role: ROLE_DEVELOPER,
+            role: frontmatter.model != "gemma2" ? ROLE_DEVELOPER : "system",
             content: command,
           };
         })
