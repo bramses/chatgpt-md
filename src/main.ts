@@ -19,10 +19,12 @@ import {
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
 import { isTitleTimestampFormat } from "./Utilities/TextHelpers";
+import { OllamaService } from "./Services/OllamaService";
 
 export default class ChatGPT_MD extends Plugin {
   settings: ChatGPT_MDSettings;
   openAIService: OpenAIService;
+  ollamaService: OllamaService;
   editorService: EditorService;
   statusBarItemEl: HTMLElement;
 
@@ -33,6 +35,7 @@ export default class ChatGPT_MD extends Plugin {
 
     const streamManager = new StreamManager();
     this.openAIService = new OpenAIService(streamManager);
+    this.ollamaService = new OllamaService(streamManager);
     this.editorService = new EditorService(this.app);
 
     // This adds an editor command that can perform some operation on the current editor instance
@@ -62,16 +65,29 @@ export default class ChatGPT_MD extends Plugin {
             new Notice(`[ChatGPT MD] Calling ${frontmatter.model}`);
           }
 
-          const response = await this.openAIService.callOpenAIAPI(
-            this.settings.apiKey,
-            messagesWithRoleAndMessage,
-            frontmatter,
-            frontmatter.stream,
-            this.editorService.getHeadingPrefix(this.settings.headingLevel),
-            editor,
-            this.settings.generateAtCursor
-          );
+          let response;
 
+          if (frontmatter.model == "gemma2") {
+            response = await this.ollamaService.callOllamaAPI(
+              this.settings.apiKey,
+              messagesWithRoleAndMessage,
+              frontmatter,
+              frontmatter.stream,
+              editor,
+              this.editorService.getHeadingPrefix(this.settings.headingLevel),
+              this.settings.generateAtCursor
+            );
+          } else {
+            response = await this.openAIService.callOpenAIAPI(
+              this.settings.apiKey,
+              messagesWithRoleAndMessage,
+              frontmatter,
+              frontmatter.stream,
+              this.editorService.getHeadingPrefix(this.settings.headingLevel),
+              editor,
+              this.settings.generateAtCursor
+            );
+          }
           await this.editorService.processResponse(editor, response, this.settings);
 
           if (
