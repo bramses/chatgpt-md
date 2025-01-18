@@ -21,6 +21,7 @@ import {
   ROLE_DEVELOPER,
   ROLE_HEADER,
   ROLE_IDENTIFIER,
+  ROLE_SYSTEM,
   ROLE_USER,
 } from "src/Constants";
 
@@ -204,7 +205,7 @@ export class EditorService {
       messagesWithRole.unshift(
         ...systemCommands.map((command: string) => {
           return {
-            role: frontmatter.model != "gemma2" ? ROLE_DEVELOPER : "system",
+            role: frontmatter.model != "gemma2" ? ROLE_DEVELOPER : ROLE_SYSTEM,
             content: command,
           };
         })
