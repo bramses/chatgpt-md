@@ -1,6 +1,8 @@
 export const HORIZONTAL_RULE_CLASS = "__chatgpt_plugin";
 export const ROLE_USER = "user";
 export const ROLE_ASSISTANT = "assistant";
+export const ROLE_DEVELOPER = "developer";
+export const ROLE_SYSTEM = "system";
 export const CHAT_FOLDER_TYPE = "chatFolder";
 export const CHAT_TEMPLATE_FOLDER_TYPE = "chatTemplateFolder";
 export const HORIZONTAL_LINE_MD = `<hr class="${HORIZONTAL_RULE_CLASS}">`;
@@ -16,3 +18,6 @@ export const MOVE_TO_CHAT_COMMAND_ID = "move-to-chat";
 export const CHOOSE_CHAT_TEMPLATE_COMMAND_ID = "choose-chat-template";
 export const CLEAR_CHAT_COMMAND_ID = "clear-chat";
 export const ROLE_IDENTIFIER = "role::";
+
+export const ROLE_HEADER = (headingPrefix: string, role: string) =>
+  `\n\n${HORIZONTAL_LINE_MD}\n\n${headingPrefix}${ROLE_IDENTIFIER}${role}\n\n`;

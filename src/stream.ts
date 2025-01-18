@@ -2,11 +2,8 @@ import { Editor, Notice, Platform } from "obsidian";
 import { SSE } from "sse";
 
 import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
-import { HORIZONTAL_LINE_MD, ROLE_ASSISTANT, ROLE_IDENTIFIER } from "src/Constants";
+import { ROLE_ASSISTANT, ROLE_HEADER } from "src/Constants";
 import { OpenAIStreamPayload } from "src/Services/OpenAIService";
-
-const ASSISTANT_HEADER = (headingPrefix: string) =>
-  `\n\n${HORIZONTAL_LINE_MD}\n\n${headingPrefix}${ROLE_IDENTIFIER}${ROLE_ASSISTANT}\n\n`;
 
 export class StreamManager {
   sse: any | null = null;
@@ -57,14 +54,14 @@ export class StreamManager {
         source.addEventListener("open", (e: any) => {
           console.log("[ChatGPT MD] SSE Opened");
 
-          const newLine = `\n\n${HORIZONTAL_LINE_MD}\n\n${headingPrefix}role::assistant\n\n`;
-          editor.replaceRange(newLine, editor.getCursor());
+          const assistantHeader = ROLE_HEADER(headingPrefix, ROLE_ASSISTANT);
+          editor.replaceRange(assistantHeader, editor.getCursor());
 
           // move cursor to end of line
           const cursor = editor.getCursor();
           const newCursor = {
             line: cursor.line,
-            ch: cursor.ch + newLine.length,
+            ch: cursor.ch + assistantHeader.length,
           };
           editor.setCursor(newCursor);
 

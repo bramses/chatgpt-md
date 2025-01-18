@@ -1,4 +1,4 @@
-import { HORIZONTAL_LINE_MD, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
+import { HORIZONTAL_LINE_MD, ROLE_ASSISTANT, ROLE_DEVELOPER, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 
 export const unfinishedCodeBlock = (txt: string): boolean => {
   const codeBlockMatches = txt.match(/```/g) || [];
@@ -33,6 +33,20 @@ export const removeYAMLFrontMatter = (message: string) => {
   }
 };
 
+const cleanupRole = (role: string): string => {
+  const trimmedRole = role.trim().toLowerCase();
+
+  const roles = [ROLE_USER, ROLE_ASSISTANT, ROLE_DEVELOPER];
+
+  const foundRole = roles.find((r) => trimmedRole.includes(r));
+
+  if (foundRole) {
+    return foundRole;
+  }
+
+  throw new Error(`Failed to extract role from input: "${role}"`);
+};
+
 export const extractRoleAndMessage = (message: string) => {
   try {
     if (!message.includes(ROLE_IDENTIFIER)) {
@@ -44,8 +58,10 @@ export const extractRoleAndMessage = (message: string) => {
 
     const [roleSection, ...contentSections] = message.split(ROLE_IDENTIFIER)[1].split("\n");
 
+    const cleanedRole = cleanupRole(roleSection);
+
     return {
-      role: roleSection.trim(),
+      role: cleanedRole,
       content: contentSections.join("\n").trim(),
     };
   } catch (error) {
