@@ -1,10 +1,11 @@
 import { Editor, Notice, Platform } from "obsidian";
 import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
-import { HORIZONTAL_LINE_MD } from "src/Constants";
+import { HORIZONTAL_LINE_MD, ROLE_ASSISTANT, ROLE_IDENTIFIER } from "src/Constants";
 import { OpenAIStreamPayload } from "src/Services/OpenAIService";
 import { OllamaStreamPayload } from "src/Services/OllamaService";
 
-const ASSISTANT_HEADER = (headingPrefix: string) => `\n\n${HORIZONTAL_LINE_MD}\n\n${headingPrefix}role::assistant\n\n`;
+const ASSISTANT_HEADER = (headingPrefix: string) =>
+  `\n\n${HORIZONTAL_LINE_MD}\n\n${headingPrefix}${ROLE_IDENTIFIER}${ROLE_ASSISTANT}\n\n`;
 
 export class StreamManager {
   private abortController: AbortController | null = null;
