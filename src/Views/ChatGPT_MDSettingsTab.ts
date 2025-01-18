@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import ChatGPT_MD from "src/main";
 import { DEFAULT_CHAT_FRONT_MATTER } from "src/Models/Config";
+import { ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 
 export class ChatGPT_MDSettingsTab extends PluginSettingTab {
   plugin: ChatGPT_MD;
@@ -129,7 +130,7 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Heading Level")
       .setDesc(
-        "Heading level for messages (example for heading level 2: '## role::user'). Valid heading levels are 0, 1, 2, 3, 4, 5, 6"
+        `Heading level for messages (example for heading level 2: '## ${ROLE_IDENTIFIER}${ROLE_USER}'). Valid heading levels are 0, 1, 2, 3, 4, 5, 6`
       )
       .addText((text) =>
         text.setValue(this.plugin.settings.headingLevel.toString()).onChange(async (value) => {

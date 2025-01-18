@@ -1,4 +1,4 @@
-import { HORIZONTAL_LINE_MD, ROLE_USER } from "src/Constants";
+import { HORIZONTAL_LINE_MD, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 
 export const unfinishedCodeBlock = (txt: string): boolean => {
   const codeBlockMatches = txt.match(/```/g) || [];
@@ -34,8 +34,6 @@ export const removeYAMLFrontMatter = (message: string) => {
 };
 
 export const extractRoleAndMessage = (message: string) => {
-  const ROLE_IDENTIFIER = "role::";
-
   try {
     if (!message.includes(ROLE_IDENTIFIER)) {
       return {
