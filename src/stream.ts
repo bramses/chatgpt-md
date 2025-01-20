@@ -8,26 +8,27 @@ export class StreamManager {
   private abortController: AbortController | null = null;
   private manualClose = false;
 
-  private handleEditorTextUpdate(editor: Editor, text: string, cursorPos: { line: number; ch: number }) {
-    const convPos = editor.posToOffset(cursorPos);
+  private handleEditorTextUpdate(editor: Editor, newText: string, cursorPosition: { line: number; ch: number }) {
+    const updatedPosition = editor.posToOffset(cursorPosition);
+
     // @ts-ignore
-    const cm6 = editor.cm;
-    cm6.dispatch(
-      cm6.state.update({
+    const codeMirrorInstance = editor.cm;
+    codeMirrorInstance.dispatch(
+      codeMirrorInstance.state.update({
         changes: {
-          from: convPos,
-          to: convPos,
-          insert: text,
+          from: updatedPosition,
+          to: updatedPosition,
+          insert: newText,
         },
       })
     );
 
-    const newCursor = {
-      line: cursorPos.line,
-      ch: cursorPos.ch + text.length,
+    const newCursorPosition = {
+      line: cursorPosition.line,
+      ch: cursorPosition.ch + newText.length,
     };
-    editor.setCursor(newCursor);
-    return newCursor;
+    editor.setCursor(newCursorPosition);
+    return newCursorPosition;
   }
 
   private insertAssistantHeader(editor: Editor, headingPrefix: string) {
