@@ -16,9 +16,12 @@ import {
   CHAT_FOLDER_TYPE,
   CHAT_TEMPLATE_FOLDER_TYPE,
   DEFAULT_HEADING_LEVEL,
-  HORIZONTAL_LINE_MD,
   HORIZONTAL_RULE_CLASS,
   ROLE_ASSISTANT,
+  ROLE_DEVELOPER,
+  ROLE_HEADER,
+  ROLE_IDENTIFIER,
+  ROLE_USER,
 } from "src/Constants";
 
 export class EditorService {
@@ -74,7 +77,7 @@ export class EditorService {
       NEWLINE,
       `<hr class="${HORIZONTAL_RULE_CLASS}">`,
       NEWLINE,
-      `${getHeadingPrefix(headingLevel)}role::${role}`,
+      `${getHeadingPrefix(headingLevel)}${ROLE_IDENTIFIER}${role}`,
       NEWLINE,
     ].join("");
 
@@ -129,7 +132,7 @@ export class EditorService {
   }
 
   appendMessage(editor: Editor, role: string, message: string, headingLevel: number): void {
-    const newLine = `\n\n${HORIZONTAL_LINE_MD}\n\n${getHeadingPrefix(headingLevel)}role::${role}\n\n${message}\n\n${HORIZONTAL_LINE_MD}\n\n${getHeadingPrefix(headingLevel)}role::user\n\n`;
+    const newLine = `${ROLE_HEADER(getHeadingPrefix(headingLevel), role)}${message}${ROLE_HEADER(getHeadingPrefix(headingLevel), ROLE_USER)}`;
     editor.replaceRange(newLine, editor.getCursor());
   }
 
@@ -201,7 +204,7 @@ export class EditorService {
       messagesWithRole.unshift(
         ...systemCommands.map((command: string) => {
           return {
-            role: "developer",
+            role: ROLE_DEVELOPER,
             content: command,
           };
         })
@@ -321,7 +324,7 @@ export class EditorService {
     let responseStr = response;
     if (response.mode === "streaming") {
       responseStr = response.fullstr;
-      const newLine = `\n\n${HORIZONTAL_LINE_MD}\n\n${this.getHeadingPrefix(settings.headingLevel)}role::user\n\n`;
+      const newLine = ROLE_HEADER(this.getHeadingPrefix(settings.headingLevel), ROLE_USER);
       editor.replaceRange(newLine, editor.getCursor());
 
       // move cursor to end of completion
