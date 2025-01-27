@@ -1,5 +1,4 @@
 import { Editor, Notice, requestUrl } from "obsidian";
-
 import { StreamManager } from "src/stream";
 import { Message } from "src/Models/Message";
 import { ROLE_USER } from "src/Constants";
@@ -16,6 +15,7 @@ export interface OpenAIStreamPayload {
   max_completion_tokens: number;
   stream: boolean;
 }
+
 export interface OpenAIConfig {
   frequency_penalty: number;
   max_tokens: number;
@@ -49,6 +49,40 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
 };
 
 export class OpenAIService {
+  constructor(private streamManager: StreamManager) {}
+
+  private handleAPIError(err: any, config: OpenAIConfig, prefix: string) {
+    if (err instanceof Object) {
+      if (err.error) {
+        new Notice(`${prefix} :: ${err.error.message}`);
+        throw new Error(JSON.stringify(err.error));
+      }
+      if (config.url !== DEFAULT_OPENAI_CONFIG.url) {
+        new Notice(`${prefix} calling specified url: ${config.url}`);
+        throw new Error(`${prefix} calling specified url: ${config.url}`);
+      }
+      new Notice(`${prefix} :: ${JSON.stringify(err)}`);
+      throw new Error(JSON.stringify(err));
+    }
+    new Notice(`${prefix} calling ${config.model}, see console for details`);
+    throw new Error(`${prefix} see error: ${err}`);
+  }
+
+  private createPayload(config: OpenAIConfig, messages: Message[]): OpenAIStreamPayload {
+    return {
+      model: config.model,
+      messages,
+      max_completion_tokens: config.max_tokens,
+      temperature: config.temperature,
+      top_p: config.top_p,
+      presence_penalty: config.presence_penalty,
+      frequency_penalty: config.frequency_penalty,
+      stream: config.stream,
+      stop: config.stop,
+      n: config.n,
+    };
+  }
+
   async callOpenAIAPI(
     apiKey: string,
     messages: Message[],
@@ -58,19 +92,11 @@ export class OpenAIService {
     editor?: Editor,
     setAtCursor?: boolean
   ): Promise<any> {
-    const config: OpenAIConfig = {
-      ...DEFAULT_OPENAI_CONFIG,
-      ...options,
-    };
-
-    if (stream && editor) {
-      return this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor);
-    } else {
-      return this.callNonStreamingAPI(apiKey, messages, config);
-    }
+    const config: OpenAIConfig = { ...DEFAULT_OPENAI_CONFIG, ...options };
+    return stream && editor
+      ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor)
+      : this.callNonStreamingAPI(apiKey, messages, config);
   }
-
-  constructor(private streamManager: StreamManager) {}
 
   private async callStreamingAPI(
     apiKey: string,
@@ -81,21 +107,11 @@ export class OpenAIService {
     setAtCursor: boolean = false
   ): Promise<any> {
     try {
+      const payload = this.createPayload(config, messages);
       const response = await this.streamManager.stream(
         editor,
         config.url,
-        {
-          model: config.model,
-          messages: messages,
-          max_completion_tokens: config.max_tokens,
-          temperature: config.temperature,
-          top_p: config.top_p,
-          presence_penalty: config.presence_penalty,
-          frequency_penalty: config.frequency_penalty,
-          stream: config.stream,
-          stop: config.stop,
-          n: config.n,
-        },
+        payload,
         {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
@@ -104,26 +120,9 @@ export class OpenAIService {
         setAtCursor,
         headingPrefix
       );
-
       return { fullstr: response, mode: "streaming" };
     } catch (err) {
-      if (err instanceof Object) {
-        if (err.error) {
-          new Notice(`[ChatGPT MD] Stream = True Error :: ${err.error.message}`);
-          throw new Error(JSON.stringify(err.error));
-        } else {
-          if (config.url !== DEFAULT_OPENAI_CONFIG.url) {
-            new Notice("[ChatGPT MD] Issue calling specified url: " + config.url);
-            throw new Error("[ChatGPT MD] Issue calling specified url: " + config.url);
-          } else {
-            new Notice(`[ChatGPT MD] Error :: ${JSON.stringify(err)}`);
-            throw new Error(JSON.stringify(err));
-          }
-        }
-      }
-
-      new Notice(`issue calling ${config.model}, see console for more details`);
-      throw new Error("issue calling OpenAI API, see error for more details: " + err);
+      this.handleAPIError(err, config, "[ChatGPT MD] Stream = True Error");
     }
   }
 
@@ -131,6 +130,7 @@ export class OpenAIService {
     try {
       console.log(`[ChatGPT MD] "stream"`, config);
 
+      const payload = this.createPayload(config, messages);
       const responseUrl = await requestUrl({
         url: config.url,
         method: "POST",
@@ -139,77 +139,30 @@ export class OpenAIService {
           "Content-Type": "application/json",
         },
         contentType: "application/json",
-        body: JSON.stringify({
-          model: config.model,
-          messages: messages,
-          max_completion_tokens: config.max_tokens,
-          temperature: config.temperature,
-          top_p: config.top_p,
-          presence_penalty: config.presence_penalty,
-          frequency_penalty: config.frequency_penalty,
-          stream: config.stream,
-          stop: config.stop,
-          n: config.n,
-        }),
+        body: JSON.stringify(payload),
         throw: false,
       });
-
-      try {
-        const json = responseUrl.json;
-        if (json && json.error) {
-          new Notice(`[ChatGPT MD] Stream = False Error :: ${json.error.message}`);
-          throw new Error(JSON.stringify(json.error));
-        }
-      } catch (err) {
-        // continue we got a valid str back
-        if (err instanceof SyntaxError) {
-          // continue
-        } else {
-          throw new Error(err as string);
-        }
+      const data = responseUrl.json;
+      if (data?.error) {
+        new Notice(`[ChatGPT MD] Stream = False Error :: ${data.error.message}`);
+        throw new Error(JSON.stringify(data.error));
       }
-
-      const response = responseUrl.text;
-      const responseJSON = JSON.parse(response);
-      return responseJSON.choices[0].message.content;
+      return data.choices[0].message.content;
     } catch (err) {
-      if (err instanceof Object) {
-        if (err.error) {
-          new Notice(`[ChatGPT MD] Error :: ${err.error.message}`);
-          throw new Error(JSON.stringify(err.error));
-        } else {
-          if (config.url !== DEFAULT_OPENAI_CONFIG.url) {
-            new Notice("[ChatGPT MD] Issue calling specified url: " + config.url);
-            throw new Error("[ChatGPT MD] Issue calling specified url: " + config.url);
-          } else {
-            new Notice(`[ChatGPT MD] Error :: ${JSON.stringify(err)}`);
-            throw new Error(JSON.stringify(err));
-          }
-        }
-      }
-      new Notice(`issue calling ${config.model}, see console for more details`);
-      throw new Error("issue calling OpenAI API, see error for more details: " + err);
+      this.handleAPIError(err, config, "[ChatGPT MD] Error");
     }
   }
 }
+
 export const inferTitleFromMessages = async (apiKey: string, messages: string[], inferTitleLanguage: string) => {
   try {
     if (messages.length < 2) {
       new Notice("Not enough messages to infer title. Minimum 2 messages.");
       return "";
     }
-
-    const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${
-      inferTitleLanguage
-    }. \nMessages:\n\n${JSON.stringify(messages)}`;
-
-    const titleMessage = [
-      {
-        role: ROLE_USER,
-        content: prompt,
-      },
-    ];
-
+    const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${inferTitleLanguage}. \nMessages:\n\n${JSON.stringify(
+      messages
+    )}`;
     const responseUrl = await requestUrl({
       url: DEFAULT_OPENAI_CONFIG.url,
       method: "POST",
@@ -220,17 +173,14 @@ export const inferTitleFromMessages = async (apiKey: string, messages: string[],
       contentType: "application/json",
       body: JSON.stringify({
         model: DEFAULT_OPENAI_CONFIG.model,
-        messages: titleMessage,
+        messages: [{ role: ROLE_USER, content: prompt }],
       }),
       throw: false,
     });
-
-    const response = responseUrl.text;
-    const responseJSON = JSON.parse(response);
-    return responseJSON.choices[0].message.content
+    const data = responseUrl.json;
+    return data.choices[0].message.content
       .replace(/[:/\\]/g, "")
-      .replace("Title", "")
-      .replace("title", "")
+      .replace(/title/i, "")
       .trim();
   } catch (err) {
     new Notice("[ChatGPT MD] Error inferring title from messages");
