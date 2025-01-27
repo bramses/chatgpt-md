@@ -45,7 +45,7 @@ export class OllamaService {
       const response = await this.streamManager.stream(
         editor,
         `${config.url}/api/chat`,
-        { model: config.model, messages },
+        { model: config.model, messages, stream: true },
         { "Content-Type": "application/json" },
         false,
         setAtCursor,
@@ -69,11 +69,8 @@ export class OllamaService {
         contentType: "application/json",
         body: JSON.stringify({ model: config.model, messages, stream: false }),
       });
-
       const responseJSON = JSON.parse(responseUrl.text);
-
       if (responseJSON.error) throw new Error(JSON.stringify(responseJSON.error));
-
       return responseJSON.message.content;
     } catch (err) {
       this.handleError(err, config.model);
@@ -82,7 +79,10 @@ export class OllamaService {
   }
 
   private handleError(err: any, model: string) {
-    if (err instanceof Object && err.error) new Notice(`[Custom API] Error :: ${err.error.message}`);
-    else new Notice(`Issue calling ${model}, see console for more details`);
+    if (err instanceof Object && err.error) {
+      new Notice(`[Custom API] Error :: ${err.error.message}`);
+    } else {
+      new Notice(`Issue calling ${model}, see console for more details`);
+    }
   }
 }
