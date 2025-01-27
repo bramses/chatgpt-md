@@ -45,7 +45,7 @@ export default class ChatGPT_MD extends Plugin {
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
 
         try {
-          this.updateStatusBar(`[ChatGPT MD] Calling ${frontmatter.model}`);
+          this.updateStatusBar(`Calling ${frontmatter.model}`);
 
           // get messages from editor
           const { messagesWithRole: messagesWithRoleAndMessage, messages } = this.editorService.getMessagesFromEditor(
@@ -140,7 +140,7 @@ export default class ChatGPT_MD extends Plugin {
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         // get frontmatter
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
-        this.updateStatusBar(`[ChatGPT MD] Calling ${frontmatter.model}`);
+        this.updateStatusBar(`Calling ${frontmatter.model}`);
         const { messages } = this.editorService.getMessagesFromEditor(editor, this.settings);
 
         await this.editorService.inferTitle(editor, view, this.settings, this.settings.apiKey, messages);
