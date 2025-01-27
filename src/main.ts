@@ -18,8 +18,8 @@ import {
   ROLE_USER,
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
-import { isTitleTimestampFormat } from "./Utilities/TextHelpers";
-import { OllamaService } from "./Services/OllamaService";
+import { isTitleTimestampFormat } from "src/Utilities/TextHelpers";
+import { OllamaService } from "src/Services/OllamaService";
 
 export default class ChatGPT_MD extends Plugin {
   settings: ChatGPT_MDSettings;
@@ -69,7 +69,6 @@ export default class ChatGPT_MD extends Plugin {
 
           if (frontmatter.model == "gemma2") {
             response = await this.ollamaService.callOllamaAPI(
-              this.settings.apiKey,
               messagesWithRoleAndMessage,
               frontmatter,
               frontmatter.stream,
@@ -88,6 +87,7 @@ export default class ChatGPT_MD extends Plugin {
               this.settings.generateAtCursor
             );
           }
+
           await this.editorService.processResponse(editor, response, this.settings);
 
           if (
@@ -97,15 +97,13 @@ export default class ChatGPT_MD extends Plugin {
           ) {
             await this.editorService.inferTitle(editor, view, this.settings, this.settings.apiKey, messages);
           }
-
-          this.updateStatusBar("");
         } catch (err) {
           if (Platform.isMobile) {
             new Notice(`[ChatGPT MD] Calling ${frontmatter.model}. ` + err, 9000);
           }
-          this.updateStatusBar("");
           console.log(err);
         }
+        this.updateStatusBar("");
       },
     });
 

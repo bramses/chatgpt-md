@@ -4,8 +4,7 @@ import { Message } from "src/Models/Message";
 
 export interface OllamaStreamPayload {
   model: string;
-  messages: Array<Message>;
-  stream: boolean;
+  messages: Message[];
 }
 
 export interface OllamaConfig {
@@ -15,100 +14,75 @@ export interface OllamaConfig {
 
 export const DEFAULT_CUSTOM_API_CONFIG: OllamaConfig = {
   model: "gemma2",
-  url: "http://localhost:11434/api/chat",
+  url: "http://localhost:11434",
 };
 
 export class OllamaService {
   constructor(private streamManager: StreamManager) {}
 
   async callOllamaAPI(
-    apiKey: string,
     messages: Message[],
     options: Partial<OllamaConfig> = {},
-    stream: boolean = false,
-    editor: Editor,
+    stream = false,
+    editor?: Editor,
     headingPrefix?: string,
     setAtCursor?: boolean
   ): Promise<any> {
-    const config: OllamaConfig = {
-      ...DEFAULT_CUSTOM_API_CONFIG,
-      ...options,
-    };
-
-    return this.callStreamingAPI(messages, config, stream, headingPrefix, editor, setAtCursor);
+    const config = { ...DEFAULT_CUSTOM_API_CONFIG, ...options };
+    return stream
+      ? this.callStreamingAPI(messages, config, headingPrefix, editor!, setAtCursor)
+      : this.callNonStreamingAPI(messages, config);
   }
 
   private async callStreamingAPI(
     messages: Message[],
     config: OllamaConfig,
-    stream: boolean,
-    headingPrefix: string | undefined,
+    headingPrefix = "",
     editor: Editor,
-    setAtCursor: boolean | undefined
+    setAtCursor = false
   ): Promise<any> {
     try {
       const response = await this.streamManager.stream(
         editor,
-        config.url + "/api/chat",
-        {
-          model: config.model,
-          messages,
-          stream,
-        },
+        `${config.url}/api/chat`,
+        { model: config.model, messages },
         { "Content-Type": "application/json" },
         false,
-        !!setAtCursor,
-        headingPrefix || ""
+        setAtCursor,
+        headingPrefix
       );
-
       return { fullstr: response, mode: "streaming" };
     } catch (err) {
-      if (err instanceof Object) {
-        if (err.error) {
-          new Notice(`[Custom API] Stream Error :: ${err.error.message}`);
-          throw new Error(JSON.stringify(err.error));
-        }
-      }
-      new Notice(`Issue calling ${config.model}, see console for more details`);
-      throw new Error("Issue calling custom API with streaming enabled:" + err);
+      this.handleError(err, config.model);
+      throw new Error(`Issue calling custom API with streaming enabled:${err}`);
     }
   }
 
-  private async callNonStreamingAPI(apiKey: string, messages: Message[], config: OllamaConfig): Promise<any> {
+  private async callNonStreamingAPI(messages: Message[], config: OllamaConfig): Promise<any> {
     try {
+      console.log(`[ChatGPT MD] "stream"`, config);
+
       const responseUrl = await requestUrl({
-        url: config.url,
+        url: `${config.url}/api/chat`,
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`, // Include if needed by your custom API
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         contentType: "application/json",
-        body: JSON.stringify({
-          model: config.model,
-          messages: messages,
-        }),
-        throw: false,
+        body: JSON.stringify({ model: config.model, messages, stream: false }),
       });
 
-      const response = responseUrl.text;
-      const responseJSON = JSON.parse(response);
+      const responseJSON = JSON.parse(responseUrl.text);
 
-      if (responseJSON.error) {
-        new Notice(`[Custom API] Error :: ${responseJSON.error.message}`);
-        throw new Error(JSON.stringify(responseJSON.error));
-      }
+      if (responseJSON.error) throw new Error(JSON.stringify(responseJSON.error));
 
-      return responseJSON.choices[0].message.content;
+      return responseJSON.message.content;
     } catch (err) {
-      if (err instanceof Object) {
-        if (err.error) {
-          new Notice(`[Custom API] Error :: ${err.error.message}`);
-          throw new Error(JSON.stringify(err.error));
-        }
-      }
-      new Notice(`Issue calling ${config.model}, see console for more details`);
-      throw new Error("Issue calling custom API with non-streaming enabled:" + err);
+      this.handleError(err, config.model);
+      throw new Error(`Issue calling custom API with non-streaming enabled:${err}`);
     }
+  }
+
+  private handleError(err: any, model: string) {
+    if (err instanceof Object && err.error) new Notice(`[Custom API] Error :: ${err.error.message}`);
+    else new Notice(`Issue calling ${model}, see console for more details`);
   }
 }
