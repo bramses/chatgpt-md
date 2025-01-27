@@ -71,13 +71,10 @@ export const extractRoleAndMessage = (message: string) => {
 
 export const removeCommentsFromMessages = (message: string) => {
   try {
-    // comment block in form of =begin-chatgpt-md-comment and =end-chatgpt-md-comment
     const commentBlock = /=begin-chatgpt-md-comment[\s\S]*?=end-chatgpt-md-comment/g;
 
     // remove comment block
-    const newMessage = message.replace(commentBlock, "");
-
-    return newMessage;
+    return message.replace(commentBlock, "");
   } catch (err) {
     throw new Error("Error removing comments from messages" + err);
   }

@@ -129,6 +129,8 @@ export class OpenAIService {
 
   private async callNonStreamingAPI(apiKey: string, messages: Message[], config: OpenAIConfig): Promise<any> {
     try {
+      console.log(`[ChatGPT MD] "stream"`, config);
+
       const responseUrl = await requestUrl({
         url: config.url,
         method: "POST",
