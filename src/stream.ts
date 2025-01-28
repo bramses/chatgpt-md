@@ -1,6 +1,6 @@
 import { Editor, Notice, Platform } from "obsidian";
 import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
-import { ROLE_ASSISTANT, ROLE_HEADER } from "src/Constants";
+import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, ROLE_ASSISTANT, ROLE_HEADER } from "src/Constants";
 import { OpenAIStreamPayload } from "src/Services/OpenAIService";
 import { OllamaStreamPayload } from "src/Services/OllamaService";
 
@@ -82,7 +82,7 @@ export class StreamManager {
     url: string,
     options: OpenAIStreamPayload | OllamaStreamPayload,
     headers: Record<string, string>,
-    isOpenAI: boolean,
+    aiService: string,
     setAtCursor: boolean,
     headingPrefix: string
   ) {
@@ -118,7 +118,7 @@ export class StreamManager {
         for (const line of lines) {
           if (!line.trim()) continue;
 
-          if (isOpenAI) {
+          if (aiService == AI_SERVICE_OPENAI) {
             if (!line.startsWith("data: ")) continue;
             const data = line.slice(6); // Remove "data: " prefix
 
@@ -137,7 +137,7 @@ export class StreamManager {
             } catch (error) {
               console.error("Error parsing OpenAI JSON:", error);
             }
-          } else {
+          } else if (aiService == AI_SERVICE_OLLAMA) {
             try {
               const jsonData = JSON.parse(line);
               if (!jsonData.done) {

@@ -13,6 +13,8 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ChatTemplates } from "src/Views/ChatTemplates";
 import { DEFAULT_OPENAI_CONFIG, inferTitleFromMessages } from "src/Services/OpenAIService";
 import {
+  AI_SERVICE_OLLAMA,
+  AI_SERVICE_OPENAI,
   CHAT_FOLDER_TYPE,
   CHAT_TEMPLATE_FOLDER_TYPE,
   DEFAULT_HEADING_LEVEL,
@@ -24,6 +26,7 @@ import {
   ROLE_SYSTEM,
   ROLE_USER,
 } from "src/Constants";
+import { DEFAULT_OLLAMA_API_CONFIG } from "./OllamaService";
 
 export class EditorService {
   constructor(private app: App) {}
@@ -205,7 +208,7 @@ export class EditorService {
       messagesWithRole.unshift(
         ...systemCommands.map((command: string) => {
           return {
-            role: frontmatter.model != "gemma2" ? ROLE_DEVELOPER : ROLE_SYSTEM,
+            role: frontmatter.aiService == AI_SERVICE_OPENAI ? ROLE_DEVELOPER : ROLE_SYSTEM,
             content: command,
           };
         })
@@ -268,6 +271,23 @@ export class EditorService {
       .replace("ss", paddedSecond);
   }
 
+  aiProviderFromUrl(url?: string, model?: string): string {
+    const trimmedUrl = (url ?? "").trim().toLowerCase();
+    const trimmedModel = (model ?? "").trim().toLowerCase();
+
+    if (trimmedModel.includes("@")) {
+      const provider = trimmedModel.split("@")[0];
+      if (["local", AI_SERVICE_OLLAMA].includes(provider)) return AI_SERVICE_OLLAMA;
+      if (provider === AI_SERVICE_OPENAI) return AI_SERVICE_OPENAI;
+    }
+
+    if (trimmedUrl.startsWith("http://localhost") || trimmedUrl.startsWith("http://127.0.0.1")) {
+      return AI_SERVICE_OLLAMA;
+    }
+
+    return AI_SERVICE_OPENAI;
+  }
+
   getFrontmatter(view: MarkdownView | null, settings: ChatGPT_MDSettings, app: App) {
     const activeFile = view?.file || app.workspace.getActiveFile();
     if (!activeFile) {
@@ -277,16 +297,27 @@ export class EditorService {
     // get the settings frontmatter
     const settingsFrontmatter = parseSettingsFrontmatter(settings.defaultChatFrontmatter);
     // merge with frontmatter from current file
+    const noteFrontmatter = app.metadataCache.getFileCache(activeFile)?.frontmatter || {};
     const metaMatter = {
       ...settingsFrontmatter,
-      ...(app.metadataCache.getFileCache(activeFile)?.frontmatter || {}),
+      ...noteFrontmatter,
     };
 
+    if (!noteFrontmatter.url) {
+      delete metaMatter.url;
+    }
+
+    const aiService = this.aiProviderFromUrl(metaMatter.url, metaMatter.model);
+
+    const defaultConfig = aiService == AI_SERVICE_OPENAI ? DEFAULT_OPENAI_CONFIG : DEFAULT_OLLAMA_API_CONFIG;
+
     return {
-      ...DEFAULT_OPENAI_CONFIG,
+      ...defaultConfig,
       ...metaMatter,
-      stream: metaMatter.stream ?? settings.stream ?? DEFAULT_OPENAI_CONFIG.stream,
-      title: view?.file?.basename ?? DEFAULT_OPENAI_CONFIG.title,
+      model: metaMatter.model.split("@")[1] || metaMatter.model,
+      aiService: aiService,
+      stream: metaMatter.stream ?? settings.stream ?? defaultConfig.stream,
+      title: view?.file?.basename ?? defaultConfig.title,
     };
   }
 

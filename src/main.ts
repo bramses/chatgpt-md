@@ -8,6 +8,7 @@ import { EditorService } from "src/Services/EditorService";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
+  AI_SERVICE_OPENAI,
   CALL_CHATGPT_API_COMMAND_ID,
   CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
   CLEAR_CHAT_COMMAND_ID,
@@ -67,23 +68,21 @@ export default class ChatGPT_MD extends Plugin {
 
           let response;
 
-          if (frontmatter.model == "gemma2") {
-            response = await this.ollamaService.callOllamaAPI(
-              messagesWithRoleAndMessage,
-              frontmatter,
-              frontmatter.stream,
-              editor,
-              this.editorService.getHeadingPrefix(this.settings.headingLevel),
-              this.settings.generateAtCursor
-            );
-          } else {
+          if (frontmatter.aiService == AI_SERVICE_OPENAI) {
             response = await this.openAIService.callOpenAIAPI(
               this.settings.apiKey,
               messagesWithRoleAndMessage,
               frontmatter,
-              frontmatter.stream,
               this.editorService.getHeadingPrefix(this.settings.headingLevel),
               editor,
+              this.settings.generateAtCursor
+            );
+          } else {
+            response = await this.ollamaService.callOllamaAPI(
+              messagesWithRoleAndMessage,
+              frontmatter,
+              editor,
+              this.editorService.getHeadingPrefix(this.settings.headingLevel),
               this.settings.generateAtCursor
             );
           }

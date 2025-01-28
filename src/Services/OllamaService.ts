@@ -1,6 +1,7 @@
 import { Editor, Notice, requestUrl } from "obsidian";
 import { StreamManager } from "src/stream";
 import { Message } from "src/Models/Message";
+import { AI_SERVICE_OLLAMA } from "../Constants";
 
 export interface OllamaStreamPayload {
   model: string;
@@ -8,13 +9,19 @@ export interface OllamaStreamPayload {
 }
 
 export interface OllamaConfig {
+  aiService: string;
   model: string;
   url: string;
+  stream: boolean;
+  title?: string;
+  system_commands?: string[] | null;
 }
 
-export const DEFAULT_CUSTOM_API_CONFIG: OllamaConfig = {
+export const DEFAULT_OLLAMA_API_CONFIG: OllamaConfig = {
   model: "gemma2",
+  aiService: AI_SERVICE_OLLAMA,
   url: "http://localhost:11434",
+  stream: true,
 };
 
 export class OllamaService {
@@ -23,13 +30,13 @@ export class OllamaService {
   async callOllamaAPI(
     messages: Message[],
     options: Partial<OllamaConfig> = {},
-    stream = false,
     editor?: Editor,
     headingPrefix?: string,
     setAtCursor?: boolean
   ): Promise<any> {
-    const config = { ...DEFAULT_CUSTOM_API_CONFIG, ...options };
-    return stream
+    const config = { ...DEFAULT_OLLAMA_API_CONFIG, ...options };
+
+    return options.stream
       ? this.callStreamingAPI(messages, config, headingPrefix, editor!, setAtCursor)
       : this.callNonStreamingAPI(messages, config);
   }
@@ -47,7 +54,7 @@ export class OllamaService {
         `${config.url}/api/chat`,
         { model: config.model, messages, stream: true },
         { "Content-Type": "application/json" },
-        false,
+        config.aiService,
         setAtCursor,
         headingPrefix
       );
