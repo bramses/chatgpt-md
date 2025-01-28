@@ -1,7 +1,7 @@
 import { Editor, Notice, requestUrl } from "obsidian";
 import { StreamManager } from "src/stream";
 import { Message } from "src/Models/Message";
-import { ROLE_USER } from "src/Constants";
+import { AI_SERVICE_OPENAI, ROLE_USER } from "src/Constants";
 
 export interface OpenAIStreamPayload {
   model: string;
@@ -17,6 +17,7 @@ export interface OpenAIStreamPayload {
 }
 
 export interface OpenAIConfig {
+  aiService: string;
   frequency_penalty: number;
   max_tokens: number;
   model: string;
@@ -33,6 +34,7 @@ export interface OpenAIConfig {
 }
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
+  aiService: AI_SERVICE_OPENAI,
   frequency_penalty: 0.5,
   max_tokens: 300,
   model: "gpt-4o-mini",
@@ -87,13 +89,12 @@ export class OpenAIService {
     apiKey: string,
     messages: Message[],
     options: Partial<OpenAIConfig> = {},
-    stream: boolean = DEFAULT_OPENAI_CONFIG.stream,
     headingPrefix: string,
     editor?: Editor,
     setAtCursor?: boolean
   ): Promise<any> {
     const config: OpenAIConfig = { ...DEFAULT_OPENAI_CONFIG, ...options };
-    return stream && editor
+    return options.stream && editor
       ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor)
       : this.callNonStreamingAPI(apiKey, messages, config);
   }
@@ -116,7 +117,7 @@ export class OpenAIService {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
-        true,
+        config.aiService,
         setAtCursor,
         headingPrefix
       );
