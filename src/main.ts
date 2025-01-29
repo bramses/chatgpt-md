@@ -94,7 +94,11 @@ export default class ChatGPT_MD extends Plugin {
             isTitleTimestampFormat(view?.file?.basename, this.settings.dateFormat) &&
             messagesWithRoleAndMessage.length > 4
           ) {
-            await this.editorService.inferTitle(editor, view, this.settings, this.settings.apiKey, messages);
+            if (frontmatter.aiService == AI_SERVICE_OPENAI) {
+              await this.openAIService.inferTitle(editor, view, this.settings, messages, this.editorService);
+            } else {
+              await this.ollamaService.inferTitle(editor, view, this.settings, messages, this.editorService);
+            }
           }
         } catch (err) {
           if (Platform.isMobile) {
@@ -156,7 +160,11 @@ export default class ChatGPT_MD extends Plugin {
         this.updateStatusBar(`Calling ${frontmatter.model}`);
         const { messages } = this.editorService.getMessagesFromEditor(editor, this.settings);
 
-        await this.editorService.inferTitle(editor, view, this.settings, this.settings.apiKey, messages);
+        if (frontmatter.aiService == AI_SERVICE_OPENAI) {
+          await this.openAIService.inferTitle(editor, view, this.settings, messages, this.editorService);
+        } else {
+          await this.ollamaService.inferTitle(editor, view, this.settings, messages, this.editorService);
+        }
         this.updateStatusBar("");
       },
     });

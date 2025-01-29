@@ -1,7 +1,9 @@
-import { Editor, Notice, requestUrl } from "obsidian";
+import { Editor, MarkdownView, Notice, requestUrl } from "obsidian";
 import { StreamManager } from "src/stream";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENAI, ROLE_USER } from "src/Constants";
+import { ChatGPT_MDSettings } from "src/Models/Config";
+import { EditorService } from "src/Services/EditorService";
 
 export interface OpenAIStreamPayload {
   model: string;
@@ -151,6 +153,28 @@ export class OpenAIService {
       return data.choices[0].message.content;
     } catch (err) {
       this.handleAPIError(err, config, "[ChatGPT MD] Error");
+    }
+  }
+
+  async inferTitle(
+    editor: Editor,
+    view: MarkdownView,
+    settings: ChatGPT_MDSettings,
+    messages: string[],
+    editorService: EditorService
+  ): Promise<void> {
+    if (!view.file) {
+      throw new Error("No active file found");
+    }
+
+    console.log("[ChatGPT MD] auto inferring title from messages");
+
+    const inferredTitle = await inferTitleFromMessages(settings.apiKey, messages, settings.inferTitleLanguage);
+    if (inferredTitle) {
+      console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
+      await editorService.writeInferredTitle(view, settings.chatFolder, inferredTitle);
+    } else {
+      new Notice("[ChatGPT MD] Could not infer title", 5000);
     }
   }
 }

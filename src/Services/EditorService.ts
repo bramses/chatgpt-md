@@ -11,7 +11,7 @@ import {
 } from "src/Utilities/TextHelpers";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ChatTemplates } from "src/Views/ChatTemplates";
-import { DEFAULT_OPENAI_CONFIG, inferTitleFromMessages } from "src/Services/OpenAIService";
+import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAIService";
 import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
@@ -328,28 +328,6 @@ export class EditorService {
       return "#".repeat(6) + " ";
     }
     return "#".repeat(headingLevel) + " ";
-  }
-
-  async inferTitle(
-    editor: Editor,
-    view: MarkdownView,
-    settings: ChatGPT_MDSettings,
-    apiKey: string,
-    messages: string[]
-  ): Promise<void> {
-    if (!view.file) {
-      throw new Error("No active file found");
-    }
-
-    console.log("[ChatGPT MD] auto inferring title from messages");
-
-    const inferredTitle = await inferTitleFromMessages(apiKey, messages, settings.inferTitleLanguage);
-    if (inferredTitle) {
-      console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
-      await this.writeInferredTitle(view, settings.chatFolder, inferredTitle);
-    } else {
-      new Notice("[ChatGPT MD] Could not infer title", 5000);
-    }
   }
 
   async processResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings) {
