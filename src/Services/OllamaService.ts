@@ -5,6 +5,7 @@ import { AI_SERVICE_OLLAMA } from "../Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
 import { inferTitleFromMessages } from "./OpenAIService";
+import { IAIService } from "./AIService";
 
 export interface OllamaStreamPayload {
   model: string;
@@ -27,14 +28,14 @@ export const DEFAULT_OLLAMA_API_CONFIG: OllamaConfig = {
   stream: true,
 };
 
-export class OllamaService {
+export class OllamaService implements IAIService {
   constructor(private streamManager: StreamManager) {}
 
-  async callOllamaAPI(
+  async callAIAPI(
     messages: Message[],
     options: Partial<OllamaConfig> = {},
-    editor?: Editor,
     headingPrefix?: string,
+    editor?: Editor,
     setAtCursor?: boolean
   ): Promise<any> {
     const config = { ...DEFAULT_OLLAMA_API_CONFIG, ...options };
@@ -55,7 +56,11 @@ export class OllamaService {
       const response = await this.streamManager.stream(
         editor,
         `${config.url}/api/chat`,
-        { model: config.model, messages, stream: true },
+        {
+          model: config.model,
+          messages,
+          stream: true,
+        },
         { "Content-Type": "application/json" },
         config.aiService,
         setAtCursor,

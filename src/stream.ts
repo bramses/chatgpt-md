@@ -6,7 +6,6 @@ import { OllamaStreamPayload } from "src/Services/OllamaService";
 
 export class StreamManager {
   private abortController: AbortController | null = null;
-  private manualClose = false;
 
   private handleEditorTextUpdate(editor: Editor, newText: string, cursorPosition: { line: number; ch: number }) {
     const updatedPosition = editor.posToOffset(cursorPosition);
@@ -44,7 +43,15 @@ export class StreamManager {
     return newCursor;
   }
 
-  private finalizeText(editor: Editor, text: string, initialPos: { line: number; ch: number }, setAtCursor: boolean) {
+  private finalizeText(
+    editor: Editor,
+    text: string,
+    initialPos: {
+      line: number;
+      ch: number;
+    },
+    setAtCursor: undefined | boolean
+  ) {
     const finalText = unfinishedCodeBlock(text) ? text + "\n```" : text;
 
     const cursor = editor.getCursor();
@@ -83,7 +90,7 @@ export class StreamManager {
     options: OpenAIStreamPayload | OllamaStreamPayload,
     headers: Record<string, string>,
     aiService: string,
-    setAtCursor: boolean,
+    setAtCursor: boolean | undefined,
     headingPrefix: string
   ) {
     let txt = "";
@@ -176,7 +183,6 @@ export class StreamManager {
       return;
     }
     if (this.abortController) {
-      this.manualClose = true;
       this.abortController.abort();
       console.log("[ChatGPT MD] Stream aborted");
       this.abortController = null;
