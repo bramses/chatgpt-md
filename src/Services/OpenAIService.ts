@@ -4,6 +4,7 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENAI, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
+import { IAIService } from "./AIService";
 
 export interface OpenAIStreamPayload {
   model: string;
@@ -52,7 +53,7 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   url: "https://api.openai.com/v1/chat/completions",
 };
 
-export class OpenAIService {
+export class OpenAIService implements IAIService {
   constructor(private streamManager: StreamManager) {}
 
   private handleAPIError(err: any, config: OpenAIConfig, prefix: string) {
@@ -87,13 +88,13 @@ export class OpenAIService {
     };
   }
 
-  async callOpenAIAPI(
-    apiKey: string,
+  async callAIAPI(
     messages: Message[],
     options: Partial<OpenAIConfig> = {},
     headingPrefix: string,
     editor?: Editor,
-    setAtCursor?: boolean
+    setAtCursor?: boolean,
+    apiKey?: string
   ): Promise<any> {
     const config: OpenAIConfig = { ...DEFAULT_OPENAI_CONFIG, ...options };
     return options.stream && editor
@@ -102,12 +103,12 @@ export class OpenAIService {
   }
 
   private async callStreamingAPI(
-    apiKey: string,
+    apiKey: string | undefined,
     messages: Message[],
     config: OpenAIConfig,
     editor: Editor,
     headingPrefix: string,
-    setAtCursor: boolean = false
+    setAtCursor?: boolean | undefined
   ): Promise<any> {
     try {
       const payload = this.createPayload(config, messages);
@@ -129,7 +130,11 @@ export class OpenAIService {
     }
   }
 
-  private async callNonStreamingAPI(apiKey: string, messages: Message[], config: OpenAIConfig): Promise<any> {
+  private async callNonStreamingAPI(
+    apiKey: string | undefined,
+    messages: Message[],
+    config: OpenAIConfig
+  ): Promise<any> {
     try {
       console.log(`[ChatGPT MD] "stream"`, config);
 

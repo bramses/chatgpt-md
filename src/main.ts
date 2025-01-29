@@ -3,12 +3,10 @@ import { Editor, MarkdownView, Notice, Platform, Plugin } from "obsidian";
 import { StreamManager } from "src/stream";
 import { ChatGPT_MDSettingsTab } from "src/Views/ChatGPT_MDSettingsTab";
 import { ChatGPT_MDSettings, DEFAULT_SETTINGS } from "src/Models/Config";
-import { OpenAIService } from "src/Services/OpenAIService";
 import { EditorService } from "src/Services/EditorService";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
-  AI_SERVICE_OPENAI,
   CALL_CHATGPT_API_COMMAND_ID,
   CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
   CLEAR_CHAT_COMMAND_ID,
@@ -20,12 +18,11 @@ import {
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
 import { isTitleTimestampFormat } from "src/Utilities/TextHelpers";
-import { OllamaService } from "src/Services/OllamaService";
+import { getApiService, IAIService } from "./Services/AIService";
 
 export default class ChatGPT_MD extends Plugin {
   settings: ChatGPT_MDSettings;
-  openAIService: OpenAIService;
-  ollamaService: OllamaService;
+  aiService: IAIService;
   editorService: EditorService;
   statusBarItemEl: HTMLElement;
 
@@ -35,8 +32,6 @@ export default class ChatGPT_MD extends Plugin {
     await this.loadSettings();
 
     const streamManager = new StreamManager();
-    this.openAIService = new OpenAIService(streamManager);
-    this.ollamaService = new OllamaService(streamManager);
     this.editorService = new EditorService(this.app);
 
     // This adds an editor command that can perform some operation on the current editor instance
@@ -47,6 +42,7 @@ export default class ChatGPT_MD extends Plugin {
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         // get frontmatter
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
+        this.aiService = getApiService(streamManager, frontmatter.aiService);
 
         try {
           this.updateStatusBar(`Calling ${frontmatter.model}`);
@@ -66,26 +62,14 @@ export default class ChatGPT_MD extends Plugin {
             new Notice(`[ChatGPT MD] Calling ${frontmatter.model}`);
           }
 
-          let response;
-
-          if (frontmatter.aiService == AI_SERVICE_OPENAI) {
-            response = await this.openAIService.callOpenAIAPI(
-              this.settings.apiKey,
-              messagesWithRoleAndMessage,
-              frontmatter,
-              this.editorService.getHeadingPrefix(this.settings.headingLevel),
-              editor,
-              this.settings.generateAtCursor
-            );
-          } else {
-            response = await this.ollamaService.callOllamaAPI(
-              messagesWithRoleAndMessage,
-              frontmatter,
-              editor,
-              this.editorService.getHeadingPrefix(this.settings.headingLevel),
-              this.settings.generateAtCursor
-            );
-          }
+          const response = await this.aiService.callAIAPI(
+            messagesWithRoleAndMessage,
+            frontmatter,
+            this.editorService.getHeadingPrefix(this.settings.headingLevel),
+            editor,
+            this.settings.generateAtCursor,
+            this.settings.apiKey
+          );
 
           await this.editorService.processResponse(editor, response, this.settings);
 
@@ -94,11 +78,7 @@ export default class ChatGPT_MD extends Plugin {
             isTitleTimestampFormat(view?.file?.basename, this.settings.dateFormat) &&
             messagesWithRoleAndMessage.length > 4
           ) {
-            if (frontmatter.aiService == AI_SERVICE_OPENAI) {
-              await this.openAIService.inferTitle(editor, view, this.settings, messages, this.editorService);
-            } else {
-              await this.ollamaService.inferTitle(editor, view, this.settings, messages, this.editorService);
-            }
+            await this.aiService.inferTitle(editor, view, this.settings, messages, this.editorService);
           }
         } catch (err) {
           if (Platform.isMobile) {
@@ -160,11 +140,8 @@ export default class ChatGPT_MD extends Plugin {
         this.updateStatusBar(`Calling ${frontmatter.model}`);
         const { messages } = this.editorService.getMessagesFromEditor(editor, this.settings);
 
-        if (frontmatter.aiService == AI_SERVICE_OPENAI) {
-          await this.openAIService.inferTitle(editor, view, this.settings, messages, this.editorService);
-        } else {
-          await this.ollamaService.inferTitle(editor, view, this.settings, messages, this.editorService);
-        }
+        await this.aiService.inferTitle(editor, view, this.settings, messages, this.editorService);
+
         this.updateStatusBar("");
       },
     });
