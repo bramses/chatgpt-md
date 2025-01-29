@@ -1,7 +1,10 @@
-import { Editor, Notice, requestUrl } from "obsidian";
+import { Editor, MarkdownView, Notice, requestUrl } from "obsidian";
 import { StreamManager } from "src/stream";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_OLLAMA } from "../Constants";
+import { ChatGPT_MDSettings } from "src/Models/Config";
+import { EditorService } from "src/Services/EditorService";
+import { inferTitleFromMessages } from "./OpenAIService";
 
 export interface OllamaStreamPayload {
   model: string;
@@ -90,6 +93,28 @@ export class OllamaService {
       new Notice(`[Custom API] Error :: ${err.error.message}`);
     } else {
       new Notice(`Issue calling ${model}, see console for more details`);
+    }
+  }
+
+  async inferTitle(
+    editor: Editor,
+    view: MarkdownView,
+    settings: ChatGPT_MDSettings,
+    messages: string[],
+    editorService: EditorService
+  ): Promise<void> {
+    if (!view.file) {
+      throw new Error("No active file found");
+    }
+
+    console.log("[ChatGPT MD] auto inferring title from messages");
+
+    const inferredTitle = await inferTitleFromMessages(settings.apiKey, messages, settings.inferTitleLanguage);
+    if (inferredTitle) {
+      console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
+      await editorService.writeInferredTitle(view, settings.chatFolder, inferredTitle);
+    } else {
+      new Notice("[ChatGPT MD] Could not infer title", 5000);
     }
   }
 }
