@@ -11,7 +11,7 @@ import {
 } from "src/Utilities/TextHelpers";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ChatTemplates } from "src/Views/ChatTemplates";
-import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAIService";
+import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
@@ -26,7 +26,7 @@ import {
   ROLE_SYSTEM,
   ROLE_USER,
 } from "src/Constants";
-import { DEFAULT_OLLAMA_API_CONFIG } from "./OllamaService";
+import { DEFAULT_OLLAMA_API_CONFIG } from "src/Services/OllamaService";
 
 export class EditorService {
   constructor(private app: App) {}

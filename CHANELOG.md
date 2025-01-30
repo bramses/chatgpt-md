@@ -6,7 +6,7 @@
 
 - Centralized statusBar updates and improved response processing (@Deniz Okcu)
 - Added command IDs and other important strings as constants (@Deniz Okcu)
-- Moved helper methods to EditorService and OpenAIService (@Deniz Okcu)
+- Moved helper methods to EditorService and OpenAiService (@Deniz Okcu)
 - Improved code organization and imports (@Deniz Okcu)
 - Added more configuration values (@Deniz Okcu)
 - Extracted data structures to Models (@Deniz Okcu)
