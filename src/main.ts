@@ -18,31 +18,29 @@ import {
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
 import { isTitleTimestampFormat } from "src/Utilities/TextHelpers";
-import { getApiService, IAIService } from "./Services/AIService";
+import { getAiApiService, IAiApiService } from "src/Services/AiService";
 
 export default class ChatGPT_MD extends Plugin {
-  settings: ChatGPT_MDSettings;
-  aiService: IAIService;
+  aiService: IAiApiService;
   editorService: EditorService;
+  settings: ChatGPT_MDSettings;
   statusBarItemEl: HTMLElement;
+  streamManager: StreamManager;
 
   async onload() {
     this.statusBarItemEl = this.addStatusBarItem();
-
-    await this.loadSettings();
-
-    const streamManager = new StreamManager();
+    this.streamManager = new StreamManager();
     this.editorService = new EditorService(this.app);
+    this.settings = await Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 
-    // This adds an editor command that can perform some operation on the current editor instance
     this.addCommand({
       id: CALL_CHATGPT_API_COMMAND_ID,
       name: "Chat",
       icon: "message-circle",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        // get frontmatter
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
-        this.aiService = getApiService(streamManager, frontmatter.aiService);
+
+        this.aiService = getAiApiService(this.streamManager, frontmatter.aiService);
 
         try {
           this.updateStatusBar(`Calling ${frontmatter.model}`);
@@ -78,7 +76,7 @@ export default class ChatGPT_MD extends Plugin {
             isTitleTimestampFormat(view?.file?.basename, this.settings.dateFormat) &&
             messagesWithRoleAndMessage.length > 4
           ) {
-            await this.aiService.inferTitle(editor, view, this.settings, messages, this.editorService);
+            await this.aiService.inferTitle(view, frontmatter, messages, this.editorService);
           }
         } catch (err) {
           if (Platform.isMobile) {
@@ -86,6 +84,7 @@ export default class ChatGPT_MD extends Plugin {
           }
           console.log(err);
         }
+
         this.updateStatusBar("");
       },
     });
@@ -104,7 +103,7 @@ export default class ChatGPT_MD extends Plugin {
       name: "Add comment block",
       icon: "comment",
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        // add a comment block at cursor in format: =begin-chatgpt-md-comment and =end-chatgpt-md-comment
+        // add a comment block at cursor
         const cursor = editor.getCursor();
         const line = cursor.line;
         const ch = cursor.ch;
@@ -125,8 +124,8 @@ export default class ChatGPT_MD extends Plugin {
       id: STOP_STREAMING_COMMAND_ID,
       name: "Stop streaming",
       icon: "octagon",
-      editorCallback: (editor: Editor, view: MarkdownView) => {
-        streamManager.stopStreaming();
+      callback: () => {
+        this.streamManager.stopStreaming();
       },
     });
 
@@ -137,10 +136,12 @@ export default class ChatGPT_MD extends Plugin {
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         // get frontmatter
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
+        this.aiService = getAiApiService(this.streamManager, frontmatter.aiService);
+
         this.updateStatusBar(`Calling ${frontmatter.model}`);
         const { messages } = this.editorService.getMessagesFromEditor(editor, this.settings);
 
-        await this.aiService.inferTitle(editor, view, this.settings, messages, this.editorService);
+        await this.aiService.inferTitle(view, this.settings, messages, this.editorService);
 
         this.updateStatusBar("");
       },
@@ -184,12 +185,6 @@ export default class ChatGPT_MD extends Plugin {
 
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new ChatGPT_MDSettingsTab(this.app, this));
-  }
-
-  onunload() {}
-
-  async loadSettings(): Promise<void> {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
 
   async saveSettings() {

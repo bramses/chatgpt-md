@@ -4,7 +4,7 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENAI, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
-import { IAIService } from "./AIService";
+import { IAiApiService } from "src/Services/AiService";
 
 export interface OpenAIStreamPayload {
   model: string;
@@ -53,8 +53,43 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   url: "https://api.openai.com/v1/chat/completions",
 };
 
-export class OpenAIService implements IAIService {
+export class OpenAiService implements IAiApiService {
   constructor(private streamManager: StreamManager) {}
+
+  async callAIAPI(
+    messages: Message[],
+    options: Partial<OpenAIConfig> = {},
+    headingPrefix: string,
+    editor?: Editor,
+    setAtCursor?: boolean,
+    apiKey?: string
+  ): Promise<any> {
+    const config: OpenAIConfig = { ...DEFAULT_OPENAI_CONFIG, ...options };
+    return options.stream && editor
+      ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor)
+      : this.callNonStreamingAPI(apiKey, messages, config);
+  }
+
+  async inferTitle(
+    view: MarkdownView,
+    settings: ChatGPT_MDSettings,
+    messages: string[],
+    editorService: EditorService
+  ): Promise<any> {
+    if (!view.file) {
+      throw new Error("No active file found");
+    }
+
+    console.log("[ChatGPT MD] auto inferring title from messages");
+
+    const inferredTitle = await this.inferTitleFromMessages(settings.apiKey, messages, settings);
+    if (inferredTitle) {
+      console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
+      await editorService.writeInferredTitle(view, settings.chatFolder, inferredTitle);
+    } else {
+      new Notice("[ChatGPT MD] Could not infer title", 5000);
+    }
+  }
 
   private handleAPIError(err: any, config: OpenAIConfig, prefix: string) {
     if (err instanceof Object) {
@@ -86,20 +121,6 @@ export class OpenAIService implements IAIService {
       stop: config.stop,
       n: config.n,
     };
-  }
-
-  async callAIAPI(
-    messages: Message[],
-    options: Partial<OpenAIConfig> = {},
-    headingPrefix: string,
-    editor?: Editor,
-    setAtCursor?: boolean,
-    apiKey?: string
-  ): Promise<any> {
-    const config: OpenAIConfig = { ...DEFAULT_OPENAI_CONFIG, ...options };
-    return options.stream && editor
-      ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor)
-      : this.callNonStreamingAPI(apiKey, messages, config);
   }
 
   private async callStreamingAPI(
@@ -136,7 +157,9 @@ export class OpenAIService implements IAIService {
     config: OpenAIConfig
   ): Promise<any> {
     try {
-      console.log(`[ChatGPT MD] "stream"`, config);
+      console.log(`[ChatGPT MD] "no stream"`, config);
+
+      config.stream = false;
 
       const payload = this.createPayload(config, messages);
       const responseUrl = await requestUrl({
@@ -161,59 +184,22 @@ export class OpenAIService implements IAIService {
     }
   }
 
-  async inferTitle(
-    editor: Editor,
-    view: MarkdownView,
-    settings: ChatGPT_MDSettings,
-    messages: string[],
-    editorService: EditorService
-  ): Promise<void> {
-    if (!view.file) {
-      throw new Error("No active file found");
-    }
+  private inferTitleFromMessages = async (apiKey: string, messages: string[], settings: any) => {
+    try {
+      if (messages.length < 2) {
+        new Notice("Not enough messages to infer title. Minimum 2 messages.");
+        return "";
+      }
+      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${settings.inferTitleLanguage}. \nMessages:\n\n${JSON.stringify(
+        messages
+      )}`;
 
-    console.log("[ChatGPT MD] auto inferring title from messages");
+      const config = { ...DEFAULT_OPENAI_CONFIG, ...settings };
 
-    const inferredTitle = await inferTitleFromMessages(settings.apiKey, messages, settings.inferTitleLanguage);
-    if (inferredTitle) {
-      console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
-      await editorService.writeInferredTitle(view, settings.chatFolder, inferredTitle);
-    } else {
-      new Notice("[ChatGPT MD] Could not infer title", 5000);
+      return await this.callNonStreamingAPI(settings.apiKey, [{ role: ROLE_USER, content: prompt }], config);
+    } catch (err) {
+      new Notice("[ChatGPT MD] Error inferring title from messages");
+      throw new Error("[ChatGPT MD] Error inferring title from messages" + err);
     }
-  }
+  };
 }
-
-export const inferTitleFromMessages = async (apiKey: string, messages: string[], inferTitleLanguage: string) => {
-  try {
-    if (messages.length < 2) {
-      new Notice("Not enough messages to infer title. Minimum 2 messages.");
-      return "";
-    }
-    const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${inferTitleLanguage}. \nMessages:\n\n${JSON.stringify(
-      messages
-    )}`;
-    const responseUrl = await requestUrl({
-      url: DEFAULT_OPENAI_CONFIG.url,
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      contentType: "application/json",
-      body: JSON.stringify({
-        model: DEFAULT_OPENAI_CONFIG.model,
-        messages: [{ role: ROLE_USER, content: prompt }],
-      }),
-      throw: false,
-    });
-    const data = responseUrl.json;
-    return data.choices[0].message.content
-      .replace(/[:/\\]/g, "")
-      .replace(/title/i, "")
-      .trim();
-  } catch (err) {
-    new Notice("[ChatGPT MD] Error inferring title from messages");
-    throw new Error("[ChatGPT MD] Error inferring title from messages" + err);
-  }
-};

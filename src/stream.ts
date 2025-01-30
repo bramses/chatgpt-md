@@ -1,7 +1,7 @@
 import { Editor, Notice, Platform } from "obsidian";
 import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
 import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, ROLE_ASSISTANT, ROLE_HEADER } from "src/Constants";
-import { OpenAIStreamPayload } from "src/Services/OpenAIService";
+import { OpenAIStreamPayload } from "src/Services/OpenAiService";
 import { OllamaStreamPayload } from "src/Services/OllamaService";
 
 export class StreamManager {
