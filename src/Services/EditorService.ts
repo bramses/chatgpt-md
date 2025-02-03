@@ -185,40 +185,91 @@ export class EditorService {
     }
   }
 
-  getMessagesFromEditor(
+  findLinksInMessage(message: string): { link: string; title: string }[] {
+    const wikiLinkRegex = /\[\[([^\][]+)\]\]/g;
+    const markdownLinkRegex = /\[([^\]]+)\]\(([^()]+)\)/g;
+
+    const linksArray: { link: string; title: string }[] = [];
+    const seenTitles = new Set<string>();
+
+    const extractLinks = (regex: RegExp, fullMatchIndex: number, titleIndex: number) => {
+      for (const match of message.matchAll(regex)) {
+        const fullLink = match[fullMatchIndex];
+        const linkTitle = match[titleIndex];
+
+        // Handle potential missing titles gracefully
+        if (linkTitle && !seenTitles.has(linkTitle)) {
+          linksArray.push({ link: fullLink, title: linkTitle });
+          seenTitles.add(linkTitle);
+        }
+      }
+    };
+
+    extractLinks(wikiLinkRegex, 0, 1);
+    extractLinks(markdownLinkRegex, 0, 2);
+
+    return linksArray;
+  }
+
+  getLinkedNoteContent = async (linkPath: string) => {
+    try {
+      const file = this.app.metadataCache.getFirstLinkpathDest(linkPath, "");
+
+      return file ? await this.app.vault.read(file) : null;
+    } catch (error) {
+      console.error(`Error reading linked note: ${linkPath}`, error);
+      return null;
+    }
+  };
+
+  escapeRegExp(string: string): string {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  async getMessagesFromEditor(
     editor: Editor,
     settings: ChatGPT_MDSettings
-  ): {
+  ): Promise<{
     messages: string[];
     messagesWithRole: { role: string; content: string }[];
-  } {
-    const bodyWithoutYML = removeYAMLFrontMatter(editor.getValue());
-    let messages = splitMessages(bodyWithoutYML);
-    messages = messages.map((message) => {
-      return removeCommentsFromMessages(message);
-    });
+  }> {
+    let messages = splitMessages(removeYAMLFrontMatter(editor.getValue())).map(removeCommentsFromMessages);
 
-    const messagesWithRole = messages.map((message) => {
-      return extractRoleAndMessage(message);
-    });
+    messages = await Promise.all(
+      messages.map(async (message) => {
+        const links = this.findLinksInMessage(message);
+        for (const link of links) {
+          try {
+            const content = await this.getLinkedNoteContent(link.title);
 
+            if (content) {
+              message = message.replace(
+                new RegExp(this.escapeRegExp(link.link), "g"),
+                `${NEWLINE}${link.title}${NEWLINE}${content}${NEWLINE}`
+              );
+            } else {
+              console.warn(`Error fetching linked note content for: ${link.link}`);
+            }
+          } catch (error) {
+            console.error(error);
+          }
+        }
+
+        return message;
+      })
+    );
+
+    // Extract roles from each message
+    const messagesWithRole = messages.map(extractRoleAndMessage);
+
+    // Add system commands to the beginning of the list if they exist
     const frontmatter = this.getFrontmatter(null, settings, this.app);
     if (frontmatter.system_commands) {
-      const systemCommands = frontmatter.system_commands;
-      messagesWithRole.unshift(
-        ...systemCommands.map((command: string) => {
-          return {
-            role: frontmatter.aiService == AI_SERVICE_OPENAI ? ROLE_DEVELOPER : ROLE_SYSTEM,
-            content: command,
-          };
-        })
-      );
+      const role = frontmatter.aiService === AI_SERVICE_OPENAI ? ROLE_DEVELOPER : ROLE_SYSTEM;
+      frontmatter.system_commands.forEach((command) => messagesWithRole.unshift({ role, content: command }));
     }
 
-    return {
-      messages,
-      messagesWithRole,
-    };
+    return { messages, messagesWithRole };
   }
 
   async createNewChatFromTemplate(settings: ChatGPT_MDSettings, titleDate: string): Promise<void> {
