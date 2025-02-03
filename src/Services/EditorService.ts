@@ -2,6 +2,7 @@ import { App, Editor, MarkdownView, Notice } from "obsidian";
 import { createFolderModal } from "src/Utilities/ModalHelpers";
 import {
   extractRoleAndMessage,
+  getHeaderRole,
   getHeadingPrefix,
   parseSettingsFrontmatter,
   removeCommentsFromMessages,
@@ -11,18 +12,23 @@ import {
 } from "src/Utilities/TextHelpers";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ChatTemplates } from "src/Views/ChatTemplates";
-import { DEFAULT_OPENAI_CONFIG, inferTitleFromMessages } from "src/Services/OpenAIService";
+import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import {
+  AI_SERVICE_OLLAMA,
+  AI_SERVICE_OPENAI,
   CHAT_FOLDER_TYPE,
   CHAT_TEMPLATE_FOLDER_TYPE,
   DEFAULT_HEADING_LEVEL,
-  HORIZONTAL_RULE_CLASS,
+  HORIZONTAL_LINE_CLASS,
+  MAX_HEADING_LEVEL,
+  NEWLINE,
   ROLE_ASSISTANT,
   ROLE_DEVELOPER,
-  ROLE_HEADER,
   ROLE_IDENTIFIER,
+  ROLE_SYSTEM,
   ROLE_USER,
 } from "src/Constants";
+import { DEFAULT_OLLAMA_API_CONFIG } from "src/Services/OllamaService";
 
 export class EditorService {
   constructor(private app: App) {}
@@ -71,11 +77,9 @@ export class EditorService {
   }
 
   addHorizontalRule(editor: Editor, role: string, headingLevel: number): void {
-    const NEWLINE = "\n\n";
-
     const formattedContent = [
       NEWLINE,
-      `<hr class="${HORIZONTAL_RULE_CLASS}">`,
+      `<hr class="${HORIZONTAL_LINE_CLASS}">`,
       NEWLINE,
       `${getHeadingPrefix(headingLevel)}${ROLE_IDENTIFIER}${role}`,
       NEWLINE,
@@ -111,7 +115,7 @@ export class EditorService {
 
       const newFile = await this.app.vault.create(
         `${settings.chatFolder}/${this.getDate(new Date(), settings.dateFormat)}.md`,
-        `${settings.defaultChatFrontmatter}\n\n${selectedText}`
+        `${settings.defaultChatFrontmatter}${NEWLINE}${selectedText}`
       );
 
       // open new file
@@ -131,8 +135,8 @@ export class EditorService {
     }
   }
 
-  appendMessage(editor: Editor, role: string, message: string, headingLevel: number): void {
-    const newLine = `${ROLE_HEADER(getHeadingPrefix(headingLevel), role)}${message}${ROLE_HEADER(getHeadingPrefix(headingLevel), ROLE_USER)}`;
+  appendMessage(editor: Editor, message: string, headingLevel: number): void {
+    const newLine = `${getHeaderRole(getHeadingPrefix(headingLevel), ROLE_ASSISTANT)}${message}${getHeaderRole(getHeadingPrefix(headingLevel), ROLE_USER)}`;
     editor.replaceRange(newLine, editor.getCursor());
   }
 
@@ -204,7 +208,7 @@ export class EditorService {
       messagesWithRole.unshift(
         ...systemCommands.map((command: string) => {
           return {
-            role: ROLE_DEVELOPER,
+            role: frontmatter.aiService == AI_SERVICE_OPENAI ? ROLE_DEVELOPER : ROLE_SYSTEM,
             content: command,
           };
         })
@@ -267,6 +271,23 @@ export class EditorService {
       .replace("ss", paddedSecond);
   }
 
+  aiProviderFromUrl(url?: string, model?: string): string {
+    const trimmedUrl = (url ?? "").trim().toLowerCase();
+    const trimmedModel = (model ?? "").trim().toLowerCase();
+
+    if (trimmedModel.includes("@")) {
+      const provider = trimmedModel.split("@")[0];
+      if (["local", AI_SERVICE_OLLAMA].includes(provider)) return AI_SERVICE_OLLAMA;
+      if (provider === AI_SERVICE_OPENAI) return AI_SERVICE_OPENAI;
+    }
+
+    if (trimmedUrl.startsWith("http://localhost") || trimmedUrl.startsWith("http://127.0.0.1")) {
+      return AI_SERVICE_OLLAMA;
+    }
+
+    return AI_SERVICE_OPENAI;
+  }
+
   getFrontmatter(view: MarkdownView | null, settings: ChatGPT_MDSettings, app: App) {
     const activeFile = view?.file || app.workspace.getActiveFile();
     if (!activeFile) {
@@ -276,55 +297,42 @@ export class EditorService {
     // get the settings frontmatter
     const settingsFrontmatter = parseSettingsFrontmatter(settings.defaultChatFrontmatter);
     // merge with frontmatter from current file
+    const noteFrontmatter = app.metadataCache.getFileCache(activeFile)?.frontmatter || {};
     const metaMatter = {
       ...settingsFrontmatter,
-      ...(app.metadataCache.getFileCache(activeFile)?.frontmatter || {}),
+      ...noteFrontmatter,
     };
 
+    if (!noteFrontmatter.url) {
+      delete metaMatter.url;
+    }
+
+    const aiService = this.aiProviderFromUrl(metaMatter.url, metaMatter.model);
+
+    const defaultConfig = aiService == AI_SERVICE_OPENAI ? DEFAULT_OPENAI_CONFIG : DEFAULT_OLLAMA_API_CONFIG;
+
     return {
-      ...DEFAULT_OPENAI_CONFIG,
+      ...defaultConfig,
       ...metaMatter,
-      stream: metaMatter.stream ?? settings.stream ?? DEFAULT_OPENAI_CONFIG.stream,
-      title: view?.file?.basename ?? DEFAULT_OPENAI_CONFIG.title,
+      model: metaMatter.model.split("@")[1] || metaMatter.model,
+      aiService: aiService,
+      stream: metaMatter.stream ?? settings.stream ?? defaultConfig.stream,
+      title: view?.file?.basename ?? defaultConfig.title,
     };
   }
 
   getHeadingPrefix(headingLevel: number): string {
     if (headingLevel === DEFAULT_HEADING_LEVEL) {
       return "";
-    } else if (headingLevel > 6) {
-      return "#".repeat(6) + " ";
+    } else if (headingLevel > MAX_HEADING_LEVEL) {
+      return "#".repeat(MAX_HEADING_LEVEL) + " ";
     }
     return "#".repeat(headingLevel) + " ";
   }
 
-  async inferTitle(
-    editor: Editor,
-    view: MarkdownView,
-    settings: ChatGPT_MDSettings,
-    apiKey: string,
-    messages: string[]
-  ): Promise<void> {
-    if (!view.file) {
-      throw new Error("No active file found");
-    }
-
-    console.log("[ChatGPT MD] auto inferring title from messages");
-
-    const inferredTitle = await inferTitleFromMessages(apiKey, messages, settings.inferTitleLanguage);
-    if (inferredTitle) {
-      console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
-      await this.writeInferredTitle(view, settings.chatFolder, inferredTitle);
-    } else {
-      new Notice("[ChatGPT MD] Could not infer title", 5000);
-    }
-  }
-
   async processResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings) {
-    let responseStr = response;
     if (response.mode === "streaming") {
-      responseStr = response.fullstr;
-      const newLine = ROLE_HEADER(this.getHeadingPrefix(settings.headingLevel), ROLE_USER);
+      const newLine = getHeaderRole(this.getHeadingPrefix(settings.headingLevel), ROLE_USER);
       editor.replaceRange(newLine, editor.getCursor());
 
       // move cursor to end of completion
@@ -335,11 +343,12 @@ export class EditorService {
       };
       editor.setCursor(newCursor);
     } else {
+      let responseStr = response;
       if (unfinishedCodeBlock(responseStr)) {
         responseStr = responseStr + "\n```";
       }
 
-      this.appendMessage(editor, ROLE_ASSISTANT, responseStr, settings.headingLevel);
+      this.appendMessage(editor, responseStr, settings.headingLevel);
     }
   }
 }
