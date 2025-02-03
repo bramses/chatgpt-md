@@ -15,6 +15,7 @@ import {
   INFER_TITLE_COMMAND_ID,
   MIN_AUTO_INFER_MESSAGES,
   MOVE_TO_CHAT_COMMAND_ID,
+  NEWLINE,
   ROLE_USER,
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
@@ -109,7 +110,7 @@ export default class ChatGPT_MD extends Plugin {
         const line = cursor.line;
         const ch = cursor.ch;
 
-        const commentBlock = `${COMMENT_BLOCK_START}\n\n${COMMENT_BLOCK_END}`;
+        const commentBlock = `${COMMENT_BLOCK_START}${NEWLINE}${COMMENT_BLOCK_END}`;
         editor.replaceRange(commentBlock, cursor);
 
         // move cursor to middle of comment block
