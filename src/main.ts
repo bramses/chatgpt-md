@@ -13,6 +13,7 @@ import {
   COMMENT_BLOCK_END,
   COMMENT_BLOCK_START,
   INFER_TITLE_COMMAND_ID,
+  MIN_AUTO_INFER_MESSAGES,
   MOVE_TO_CHAT_COMMAND_ID,
   ROLE_USER,
   STOP_STREAMING_COMMAND_ID,
@@ -43,8 +44,6 @@ export default class ChatGPT_MD extends Plugin {
         this.aiService = getAiApiService(this.streamManager, frontmatter.aiService);
 
         try {
-          this.updateStatusBar(`Calling ${frontmatter.model}`);
-
           // get messages from editor
           const { messagesWithRole: messagesWithRoleAndMessage, messages } = this.editorService.getMessagesFromEditor(
             editor,
@@ -58,6 +57,8 @@ export default class ChatGPT_MD extends Plugin {
 
           if (Platform.isMobile) {
             new Notice(`[ChatGPT MD] Calling ${frontmatter.model}`);
+          } else {
+            this.updateStatusBar(`Calling ${frontmatter.model}`);
           }
 
           const response = await this.aiService.callAIAPI(
@@ -74,7 +75,7 @@ export default class ChatGPT_MD extends Plugin {
           if (
             this.settings.autoInferTitle &&
             isTitleTimestampFormat(view?.file?.basename, this.settings.dateFormat) &&
-            messagesWithRoleAndMessage.length > 4
+            messagesWithRoleAndMessage.length > MIN_AUTO_INFER_MESSAGES
           ) {
             await this.aiService.inferTitle(view, frontmatter, messages, this.editorService);
           }

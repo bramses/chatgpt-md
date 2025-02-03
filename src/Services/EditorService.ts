@@ -6,6 +6,7 @@ import {
   parseSettingsFrontmatter,
   removeCommentsFromMessages,
   removeYAMLFrontMatter,
+  getHeaderRole,
   splitMessages,
   unfinishedCodeBlock,
 } from "src/Utilities/TextHelpers";
@@ -18,10 +19,10 @@ import {
   CHAT_FOLDER_TYPE,
   CHAT_TEMPLATE_FOLDER_TYPE,
   DEFAULT_HEADING_LEVEL,
-  HORIZONTAL_RULE_CLASS,
+  MAX_HEADING_LEVEL,
+  HORIZONTAL_LINE_CLASS,
   ROLE_ASSISTANT,
   ROLE_DEVELOPER,
-  ROLE_HEADER,
   ROLE_IDENTIFIER,
   ROLE_SYSTEM,
   ROLE_USER,
@@ -79,7 +80,7 @@ export class EditorService {
 
     const formattedContent = [
       NEWLINE,
-      `<hr class="${HORIZONTAL_RULE_CLASS}">`,
+      `<hr class="${HORIZONTAL_LINE_CLASS}">`,
       NEWLINE,
       `${getHeadingPrefix(headingLevel)}${ROLE_IDENTIFIER}${role}`,
       NEWLINE,
@@ -136,7 +137,7 @@ export class EditorService {
   }
 
   appendMessage(editor: Editor, role: string, message: string, headingLevel: number): void {
-    const newLine = `${ROLE_HEADER(getHeadingPrefix(headingLevel), role)}${message}${ROLE_HEADER(getHeadingPrefix(headingLevel), ROLE_USER)}`;
+    const newLine = `${getHeaderRole(getHeadingPrefix(headingLevel), role)}${message}${getHeaderRole(getHeadingPrefix(headingLevel), ROLE_USER)}`;
     editor.replaceRange(newLine, editor.getCursor());
   }
 
@@ -324,8 +325,8 @@ export class EditorService {
   getHeadingPrefix(headingLevel: number): string {
     if (headingLevel === DEFAULT_HEADING_LEVEL) {
       return "";
-    } else if (headingLevel > 6) {
-      return "#".repeat(6) + " ";
+    } else if (headingLevel > MAX_HEADING_LEVEL) {
+      return "#".repeat(MAX_HEADING_LEVEL) + " ";
     }
     return "#".repeat(headingLevel) + " ";
   }
@@ -334,7 +335,7 @@ export class EditorService {
     let responseStr = response;
     if (response.mode === "streaming") {
       responseStr = response.fullstr;
-      const newLine = ROLE_HEADER(this.getHeadingPrefix(settings.headingLevel), ROLE_USER);
+      const newLine = getHeaderRole(this.getHeadingPrefix(settings.headingLevel), ROLE_USER);
       editor.replaceRange(newLine, editor.getCursor());
 
       // move cursor to end of completion
