@@ -1,6 +1,15 @@
 import { Editor, Notice, Platform } from "obsidian";
-import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
-import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, ROLE_ASSISTANT, ROLE_HEADER } from "src/Constants";
+import { getHeaderRole, unfinishedCodeBlock } from "src/Utilities/TextHelpers";
+import {
+  AI_SERVICE_OLLAMA,
+  AI_SERVICE_OPENAI,
+  CHAT_ERROR_MESSAGE_401,
+  CHAT_ERROR_MESSAGE_404,
+  CHAT_ERROR_MESSAGE_NO_CONNECTION,
+  CHAT_ERROR_RESPONSE,
+  ERROR_NO_CONNECTION,
+  ROLE_ASSISTANT,
+} from "src/Constants";
 import { OpenAIStreamPayload } from "src/Services/OpenAiService";
 import { OllamaStreamPayload } from "src/Services/OllamaService";
 
@@ -31,7 +40,7 @@ export class StreamManager {
   }
 
   private insertAssistantHeader(editor: Editor, headingPrefix: string) {
-    const newLine = ROLE_HEADER(headingPrefix, ROLE_ASSISTANT);
+    const newLine = getHeaderRole(headingPrefix, ROLE_ASSISTANT);
     editor.replaceRange(newLine, editor.getCursor());
 
     const cursor = editor.getCursor();
@@ -109,8 +118,19 @@ export class StreamManager {
         signal: this.abortController.signal,
       });
 
+      if (response.status == 401) {
+        return this.finalizeText(editor, CHAT_ERROR_MESSAGE_401, initialCursor, setAtCursor);
+      } else if (response.status == 404) {
+        return this.finalizeText(
+          editor,
+          `${CHAT_ERROR_MESSAGE_404}:\n\nModel: ${options.model}\n\nURL: ${url}`,
+          initialCursor,
+          setAtCursor
+        );
+      }
+
       if (!response.ok) throw new Error("Network response was not ok");
-      if (!response.body) throw new Error("Response body is null");
+      if (!response.body) throw new Error("The response was empty");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -168,10 +188,13 @@ export class StreamManager {
     } catch (error) {
       if (error.name === "AbortError") {
         console.log("[ChatGPT MD] Stream aborted");
-        return this.finalizeText(editor, txt, initialCursor!, setAtCursor);
+        return this.finalizeText(editor, "Stream aborted", initialCursor!, setAtCursor);
+      }
+      if (error.message == ERROR_NO_CONNECTION) {
+        return this.finalizeText(editor, CHAT_ERROR_MESSAGE_NO_CONNECTION, initialCursor!, setAtCursor);
       }
       console.error("Stream error:", error);
-      throw error;
+      return this.finalizeText(editor, `${CHAT_ERROR_RESPONSE}\n\n${error}`, initialCursor!, setAtCursor);
     } finally {
       this.abortController = null;
     }

@@ -1,25 +1,33 @@
-export const HORIZONTAL_RULE_CLASS = "__chatgpt_plugin";
-export const ROLE_USER = "user";
-export const ROLE_ASSISTANT = "assistant";
-export const ROLE_DEVELOPER = "developer";
-export const ROLE_SYSTEM = "system";
+export const ADD_COMMENT_BLOCK_COMMAND_ID = "add-comment-block";
+export const ADD_HR_COMMAND_ID = "add-hr";
+export const AI_SERVICE_OLLAMA = "ollama";
+export const AI_SERVICE_OPENAI = "openai";
+export const CALL_CHATGPT_API_COMMAND_ID = "call-chatgpt-api";
+export const CHAT_ERROR_MESSAGE_401 =
+  "I am sorry. There was an authorization issue with the external API (Status 401).\nPlease check your API key in the settings";
+export const CHAT_ERROR_MESSAGE_NO_CONNECTION =
+  "I am sorry. There was an issue reaching the network.\nPlease check your network connection.";
+export const CHAT_ERROR_MESSAGE_404 =
+  "I am sorry, your request looks wrong. Please check your URL or model name in the settings or frontmatter.";
+export const CHAT_ERROR_RESPONSE =
+  "I am sorry, I could not answer your request because of an error, here is what went wrong:";
 export const CHAT_FOLDER_TYPE = "chatFolder";
 export const CHAT_TEMPLATE_FOLDER_TYPE = "chatTemplateFolder";
-export const HORIZONTAL_LINE_MD = `<hr class="${HORIZONTAL_RULE_CLASS}">`;
-export const COMMENT_BLOCK_START = `=begin-chatgpt-md-comment\n\n`;
-export const COMMENT_BLOCK_END = `=end-chatgpt-md-comment`;
-export const DEFAULT_HEADING_LEVEL = 0;
-export const CALL_CHATGPT_API_COMMAND_ID = "call-chatgpt-api";
-export const ADD_HR_COMMAND_ID = "add-hr";
-export const ADD_COMMENT_BLOCK_COMMAND_ID = "add-comment-block";
-export const STOP_STREAMING_COMMAND_ID = "stop-streaming";
-export const INFER_TITLE_COMMAND_ID = "infer-title";
-export const MOVE_TO_CHAT_COMMAND_ID = "move-to-chat";
 export const CHOOSE_CHAT_TEMPLATE_COMMAND_ID = "choose-chat-template";
 export const CLEAR_CHAT_COMMAND_ID = "clear-chat";
+export const COMMENT_BLOCK_END = `=end-chatgpt-md-comment`;
+export const COMMENT_BLOCK_START = `=begin-chatgpt-md-comment\n\n`;
+export const DEFAULT_HEADING_LEVEL = 0;
+export const ERROR_NO_CONNECTION = "Failed to fetch";
+export const HORIZONTAL_LINE_CLASS = "__chatgpt_plugin";
+export const HORIZONTAL_LINE_MD = `<hr class="${HORIZONTAL_LINE_CLASS}">`;
+export const INFER_TITLE_COMMAND_ID = "infer-title";
+export const MAX_HEADING_LEVEL = 6;
+export const MIN_AUTO_INFER_MESSAGES = 4;
+export const MOVE_TO_CHAT_COMMAND_ID = "move-to-chat";
+export const ROLE_ASSISTANT = "assistant";
+export const ROLE_DEVELOPER = "developer";
 export const ROLE_IDENTIFIER = "role::";
-export const AI_SERVICE_OPENAI = "openai";
-export const AI_SERVICE_OLLAMA = "ollama";
-
-export const ROLE_HEADER = (headingPrefix: string, role: string) =>
-  `\n\n${HORIZONTAL_LINE_MD}\n\n${headingPrefix}${ROLE_IDENTIFIER}${role}\n\n`;
+export const ROLE_SYSTEM = "system";
+export const ROLE_USER = "user";
+export const STOP_STREAMING_COMMAND_ID = "stop-streaming";

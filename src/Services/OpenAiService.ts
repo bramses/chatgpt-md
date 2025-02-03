@@ -1,57 +1,10 @@
 import { Editor, MarkdownView, Notice, requestUrl } from "obsidian";
 import { StreamManager } from "src/stream";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_OPENAI, ROLE_USER } from "src/Constants";
+import { AI_SERVICE_OPENAI, CHAT_ERROR_RESPONSE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
 import { IAiApiService } from "src/Services/AiService";
-
-export interface OpenAIStreamPayload {
-  model: string;
-  messages: Array<Message>;
-  temperature: number;
-  top_p: number;
-  presence_penalty: number;
-  frequency_penalty: number;
-  stop: string[] | null;
-  n: number;
-  max_completion_tokens: number;
-  stream: boolean;
-}
-
-export interface OpenAIConfig {
-  aiService: string;
-  frequency_penalty: number;
-  max_tokens: number;
-  model: string;
-  n: number;
-  presence_penalty: number;
-  stop: string[] | null;
-  stream: boolean;
-  system_commands: string[] | null;
-  tags: string[] | null;
-  temperature: number;
-  title: string;
-  top_p: number;
-  url: string;
-}
-
-export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
-  aiService: AI_SERVICE_OPENAI,
-  frequency_penalty: 0.5,
-  max_tokens: 300,
-  model: "gpt-4o-mini",
-  n: 1,
-  presence_penalty: 0.5,
-  stop: null,
-  stream: true,
-  system_commands: null,
-  tags: [],
-  temperature: 0.3,
-  title: "Untitled",
-  top_p: 1,
-  url: "https://api.openai.com/v1/chat/completions",
-};
 
 export class OpenAiService implements IAiApiService {
   constructor(private streamManager: StreamManager) {}
@@ -130,7 +83,7 @@ export class OpenAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean | undefined
-  ): Promise<any> {
+  ): Promise<{ fullstr: string; mode: "streaming" }> {
     try {
       const payload = this.createPayload(config, messages);
       const response = await this.streamManager.stream(
@@ -148,6 +101,9 @@ export class OpenAiService implements IAiApiService {
       return { fullstr: response, mode: "streaming" };
     } catch (err) {
       this.handleAPIError(err, config, "[ChatGPT MD] Stream = True Error");
+
+      const response = `${CHAT_ERROR_RESPONSE}\n\n${err}`;
+      return { fullstr: response, mode: "streaming" };
     }
   }
 
@@ -203,3 +159,50 @@ export class OpenAiService implements IAiApiService {
     }
   };
 }
+
+export interface OpenAIStreamPayload {
+  model: string;
+  messages: Array<Message>;
+  temperature: number;
+  top_p: number;
+  presence_penalty: number;
+  frequency_penalty: number;
+  stop: string[] | null;
+  n: number;
+  max_completion_tokens: number;
+  stream: boolean;
+}
+
+export interface OpenAIConfig {
+  aiService: string;
+  frequency_penalty: number;
+  max_tokens: number;
+  model: string;
+  n: number;
+  presence_penalty: number;
+  stop: string[] | null;
+  stream: boolean;
+  system_commands: string[] | null;
+  tags: string[] | null;
+  temperature: number;
+  title: string;
+  top_p: number;
+  url: string;
+}
+
+export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
+  aiService: AI_SERVICE_OPENAI,
+  frequency_penalty: 0.5,
+  max_tokens: 300,
+  model: "gpt-4o-mini",
+  n: 1,
+  presence_penalty: 0.5,
+  stop: null,
+  stream: true,
+  system_commands: null,
+  tags: [],
+  temperature: 0.3,
+  title: "Untitled",
+  top_p: 1,
+  url: "https://api.openai.com/v1/chat/completions",
+};
