@@ -8,6 +8,7 @@ import {
   CHAT_ERROR_MESSAGE_NO_CONNECTION,
   CHAT_ERROR_RESPONSE,
   ERROR_NO_CONNECTION,
+  NEWLINE,
   ROLE_ASSISTANT,
 } from "src/Constants";
 import { OpenAIStreamPayload } from "src/Services/OpenAiService";
@@ -39,8 +40,9 @@ export class StreamManager {
     return newCursorPosition;
   }
 
-  private insertAssistantHeader(editor: Editor, headingPrefix: string) {
-    const newLine = getHeaderRole(headingPrefix, ROLE_ASSISTANT);
+  private insertAssistantHeader(editor: Editor, headingPrefix: string, model: string) {
+    const newLine = getHeaderRole(headingPrefix, ROLE_ASSISTANT, model);
+
     editor.replaceRange(newLine, editor.getCursor());
 
     const cursor = editor.getCursor();
@@ -62,8 +64,8 @@ export class StreamManager {
     setAtCursor: undefined | boolean
   ) {
     const finalText = unfinishedCodeBlock(text) ? text + "\n```" : text;
-
     const cursor = editor.getCursor();
+
     editor.replaceRange(
       finalText,
       {
@@ -107,7 +109,7 @@ export class StreamManager {
 
     try {
       console.log(`[ChatGPT MD] "stream"`, options);
-      initialCursor = this.insertAssistantHeader(editor, headingPrefix);
+      initialCursor = this.insertAssistantHeader(editor, headingPrefix, options.model);
 
       this.abortController = new AbortController();
 
@@ -123,7 +125,7 @@ export class StreamManager {
       } else if (response.status == 404) {
         return this.finalizeText(
           editor,
-          `${CHAT_ERROR_MESSAGE_404}:\n\nModel: ${options.model}\n\nURL: ${url}`,
+          `${CHAT_ERROR_MESSAGE_404}:${NEWLINE}Model: ${options.model}${NEWLINE}URL: ${url}`,
           initialCursor,
           setAtCursor
         );
@@ -194,7 +196,7 @@ export class StreamManager {
         return this.finalizeText(editor, CHAT_ERROR_MESSAGE_NO_CONNECTION, initialCursor!, setAtCursor);
       }
       console.error("Stream error:", error);
-      return this.finalizeText(editor, `${CHAT_ERROR_RESPONSE}\n\n${error}`, initialCursor!, setAtCursor);
+      return this.finalizeText(editor, `${CHAT_ERROR_RESPONSE}${NEWLINE}${error}`, initialCursor!, setAtCursor);
     } finally {
       this.abortController = null;
     }

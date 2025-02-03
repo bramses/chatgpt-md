@@ -1,7 +1,7 @@
 import { Editor, MarkdownView, Notice, requestUrl } from "obsidian";
 import { StreamManager } from "src/stream";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_OLLAMA, ROLE_USER } from "src/Constants";
+import { AI_SERVICE_OLLAMA, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
 import { IAiApiService } from "src/Services/AiService";
@@ -130,7 +130,7 @@ export class OllamaService implements IAiApiService {
         new Notice("Not enough messages to infer title. Minimum 2 messages.");
         return "";
       }
-      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${settings.inferTitleLanguage}. \nMessages:\n\n${JSON.stringify(
+      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${settings.inferTitleLanguage}. \nMessages:${NEWLINE}${JSON.stringify(
         messages
       )}`;
       const config = { ...DEFAULT_OLLAMA_API_CONFIG, ...settings };

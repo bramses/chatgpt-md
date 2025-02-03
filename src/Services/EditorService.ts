@@ -2,11 +2,11 @@ import { App, Editor, MarkdownView, Notice } from "obsidian";
 import { createFolderModal } from "src/Utilities/ModalHelpers";
 import {
   extractRoleAndMessage,
+  getHeaderRole,
   getHeadingPrefix,
   parseSettingsFrontmatter,
   removeCommentsFromMessages,
   removeYAMLFrontMatter,
-  getHeaderRole,
   splitMessages,
   unfinishedCodeBlock,
 } from "src/Utilities/TextHelpers";
@@ -19,8 +19,9 @@ import {
   CHAT_FOLDER_TYPE,
   CHAT_TEMPLATE_FOLDER_TYPE,
   DEFAULT_HEADING_LEVEL,
-  MAX_HEADING_LEVEL,
   HORIZONTAL_LINE_CLASS,
+  MAX_HEADING_LEVEL,
+  NEWLINE,
   ROLE_ASSISTANT,
   ROLE_DEVELOPER,
   ROLE_IDENTIFIER,
@@ -76,8 +77,6 @@ export class EditorService {
   }
 
   addHorizontalRule(editor: Editor, role: string, headingLevel: number): void {
-    const NEWLINE = "\n\n";
-
     const formattedContent = [
       NEWLINE,
       `<hr class="${HORIZONTAL_LINE_CLASS}">`,
@@ -116,7 +115,7 @@ export class EditorService {
 
       const newFile = await this.app.vault.create(
         `${settings.chatFolder}/${this.getDate(new Date(), settings.dateFormat)}.md`,
-        `${settings.defaultChatFrontmatter}\n\n${selectedText}`
+        `${settings.defaultChatFrontmatter}${NEWLINE}${selectedText}`
       );
 
       // open new file
@@ -136,8 +135,8 @@ export class EditorService {
     }
   }
 
-  appendMessage(editor: Editor, role: string, message: string, headingLevel: number): void {
-    const newLine = `${getHeaderRole(getHeadingPrefix(headingLevel), role)}${message}${getHeaderRole(getHeadingPrefix(headingLevel), ROLE_USER)}`;
+  appendMessage(editor: Editor, message: string, headingLevel: number): void {
+    const newLine = `${getHeaderRole(getHeadingPrefix(headingLevel), ROLE_ASSISTANT)}${message}${getHeaderRole(getHeadingPrefix(headingLevel), ROLE_USER)}`;
     editor.replaceRange(newLine, editor.getCursor());
   }
 
@@ -332,9 +331,7 @@ export class EditorService {
   }
 
   async processResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings) {
-    let responseStr = response;
     if (response.mode === "streaming") {
-      responseStr = response.fullstr;
       const newLine = getHeaderRole(this.getHeadingPrefix(settings.headingLevel), ROLE_USER);
       editor.replaceRange(newLine, editor.getCursor());
 
@@ -346,11 +343,12 @@ export class EditorService {
       };
       editor.setCursor(newCursor);
     } else {
+      let responseStr = response;
       if (unfinishedCodeBlock(responseStr)) {
         responseStr = responseStr + "\n```";
       }
 
-      this.appendMessage(editor, ROLE_ASSISTANT, responseStr, settings.headingLevel);
+      this.appendMessage(editor, responseStr, settings.headingLevel);
     }
   }
 }

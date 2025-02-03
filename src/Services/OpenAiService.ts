@@ -1,7 +1,7 @@
 import { Editor, MarkdownView, Notice, requestUrl } from "obsidian";
 import { StreamManager } from "src/stream";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_OPENAI, CHAT_ERROR_RESPONSE, ROLE_USER } from "src/Constants";
+import { AI_SERVICE_OPENAI, CHAT_ERROR_RESPONSE, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
 import { IAiApiService } from "src/Services/AiService";
@@ -102,7 +102,7 @@ export class OpenAiService implements IAiApiService {
     } catch (err) {
       this.handleAPIError(err, config, "[ChatGPT MD] Stream = True Error");
 
-      const response = `${CHAT_ERROR_RESPONSE}\n\n${err}`;
+      const response = `${CHAT_ERROR_RESPONSE}${NEWLINE}${err}`;
       return { fullstr: response, mode: "streaming" };
     }
   }
@@ -146,7 +146,7 @@ export class OpenAiService implements IAiApiService {
         new Notice("Not enough messages to infer title. Minimum 2 messages.");
         return "";
       }
-      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${settings.inferTitleLanguage}. \nMessages:\n\n${JSON.stringify(
+      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${settings.inferTitleLanguage}. \nMessages:${NEWLINE}${JSON.stringify(
         messages
       )}`;
 

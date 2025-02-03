@@ -1,4 +1,4 @@
-import { HORIZONTAL_LINE_MD, ROLE_ASSISTANT, ROLE_DEVELOPER, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
+import { HORIZONTAL_LINE_MD, NEWLINE, ROLE_ASSISTANT, ROLE_DEVELOPER, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 
 export const unfinishedCodeBlock = (txt: string): boolean => {
   const codeBlockMatches = txt.match(/```/g) || [];
@@ -106,8 +106,8 @@ export const getHeadingPrefix = (headingLevel: number) => {
   return "#".repeat(headingLevel) + " ";
 };
 
-export const getHeaderRole = (headingPrefix: string, role: string) =>
-  `\n\n${HORIZONTAL_LINE_MD}\n\n${headingPrefix}${ROLE_IDENTIFIER}${role}\n\n`;
+export const getHeaderRole = (headingPrefix: string, role: string, model?: string) =>
+  `${NEWLINE}${HORIZONTAL_LINE_MD}${NEWLINE}${headingPrefix}${ROLE_IDENTIFIER}${role}${model ? `<span style="font-size: small;"> (${model})</span>` : ``}${NEWLINE}`;
 
 export const parseSettingsFrontmatter = (yamlString: string): Record<string, any> => {
   // Remove the --- markers and split into lines
