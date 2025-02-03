@@ -1,4 +1,4 @@
-import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAIService";
+import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 
 export const DEFAULT_CHAT_FRONT_MATTER = `---
 system_commands: ['I am a helpful assistant.']

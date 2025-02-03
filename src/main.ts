@@ -3,7 +3,6 @@ import { Editor, MarkdownView, Notice, Platform, Plugin } from "obsidian";
 import { StreamManager } from "src/stream";
 import { ChatGPT_MDSettingsTab } from "src/Views/ChatGPT_MDSettingsTab";
 import { ChatGPT_MDSettings, DEFAULT_SETTINGS } from "src/Models/Config";
-import { OpenAIService } from "src/Services/OpenAIService";
 import { EditorService } from "src/Services/EditorService";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
@@ -14,39 +13,38 @@ import {
   COMMENT_BLOCK_END,
   COMMENT_BLOCK_START,
   INFER_TITLE_COMMAND_ID,
+  MIN_AUTO_INFER_MESSAGES,
   MOVE_TO_CHAT_COMMAND_ID,
+  NEWLINE,
   ROLE_USER,
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
-import { isTitleTimestampFormat } from "./Utilities/TextHelpers";
+import { isTitleTimestampFormat } from "src/Utilities/TextHelpers";
+import { getAiApiService, IAiApiService } from "src/Services/AiService";
 
 export default class ChatGPT_MD extends Plugin {
-  settings: ChatGPT_MDSettings;
-  openAIService: OpenAIService;
+  aiService: IAiApiService;
   editorService: EditorService;
+  settings: ChatGPT_MDSettings;
   statusBarItemEl: HTMLElement;
+  streamManager: StreamManager;
 
   async onload() {
     this.statusBarItemEl = this.addStatusBarItem();
-
-    await this.loadSettings();
-
-    const streamManager = new StreamManager();
-    this.openAIService = new OpenAIService(streamManager);
+    this.streamManager = new StreamManager();
     this.editorService = new EditorService(this.app);
+    this.settings = await Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 
-    // This adds an editor command that can perform some operation on the current editor instance
     this.addCommand({
       id: CALL_CHATGPT_API_COMMAND_ID,
       name: "Chat",
       icon: "message-circle",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        // get frontmatter
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
 
-        try {
-          this.updateStatusBar(`Calling ${frontmatter.model}`);
+        this.aiService = getAiApiService(this.streamManager, frontmatter.aiService);
 
+        try {
           // get messages from editor
           const { messagesWithRole: messagesWithRoleAndMessage, messages } = this.editorService.getMessagesFromEditor(
             editor,
@@ -60,16 +58,17 @@ export default class ChatGPT_MD extends Plugin {
 
           if (Platform.isMobile) {
             new Notice(`[ChatGPT MD] Calling ${frontmatter.model}`);
+          } else {
+            this.updateStatusBar(`Calling ${frontmatter.model}`);
           }
 
-          const response = await this.openAIService.callOpenAIAPI(
-            this.settings.apiKey,
+          const response = await this.aiService.callAIAPI(
             messagesWithRoleAndMessage,
             frontmatter,
-            frontmatter.stream,
             this.editorService.getHeadingPrefix(this.settings.headingLevel),
             editor,
-            this.settings.generateAtCursor
+            this.settings.generateAtCursor,
+            this.settings.apiKey
           );
 
           await this.editorService.processResponse(editor, response, this.settings);
@@ -77,19 +76,18 @@ export default class ChatGPT_MD extends Plugin {
           if (
             this.settings.autoInferTitle &&
             isTitleTimestampFormat(view?.file?.basename, this.settings.dateFormat) &&
-            messagesWithRoleAndMessage.length > 4
+            messagesWithRoleAndMessage.length > MIN_AUTO_INFER_MESSAGES
           ) {
-            await this.editorService.inferTitle(editor, view, this.settings, this.settings.apiKey, messages);
+            await this.aiService.inferTitle(view, frontmatter, messages, this.editorService);
           }
-
-          this.updateStatusBar("");
         } catch (err) {
           if (Platform.isMobile) {
             new Notice(`[ChatGPT MD] Calling ${frontmatter.model}. ` + err, 9000);
           }
-          this.updateStatusBar("");
           console.log(err);
         }
+
+        this.updateStatusBar("");
       },
     });
 
@@ -107,12 +105,12 @@ export default class ChatGPT_MD extends Plugin {
       name: "Add comment block",
       icon: "comment",
       editorCallback: (editor: Editor, view: MarkdownView) => {
-        // add a comment block at cursor in format: =begin-chatgpt-md-comment and =end-chatgpt-md-comment
+        // add a comment block at cursor
         const cursor = editor.getCursor();
         const line = cursor.line;
         const ch = cursor.ch;
 
-        const commentBlock = `${COMMENT_BLOCK_START}\n\n${COMMENT_BLOCK_END}`;
+        const commentBlock = `${COMMENT_BLOCK_START}${NEWLINE}${COMMENT_BLOCK_END}`;
         editor.replaceRange(commentBlock, cursor);
 
         // move cursor to middle of comment block
@@ -128,8 +126,8 @@ export default class ChatGPT_MD extends Plugin {
       id: STOP_STREAMING_COMMAND_ID,
       name: "Stop streaming",
       icon: "octagon",
-      editorCallback: (editor: Editor, view: MarkdownView) => {
-        streamManager.stopStreaming();
+      callback: () => {
+        this.streamManager.stopStreaming();
       },
     });
 
@@ -140,10 +138,13 @@ export default class ChatGPT_MD extends Plugin {
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         // get frontmatter
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
+        this.aiService = getAiApiService(this.streamManager, frontmatter.aiService);
+
         this.updateStatusBar(`Calling ${frontmatter.model}`);
         const { messages } = this.editorService.getMessagesFromEditor(editor, this.settings);
 
-        await this.editorService.inferTitle(editor, view, this.settings, this.settings.apiKey, messages);
+        await this.aiService.inferTitle(view, this.settings, messages, this.editorService);
+
         this.updateStatusBar("");
       },
     });
@@ -186,12 +187,6 @@ export default class ChatGPT_MD extends Plugin {
 
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new ChatGPT_MDSettingsTab(this.app, this));
-  }
-
-  onunload() {}
-
-  async loadSettings(): Promise<void> {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
 
   async saveSettings() {

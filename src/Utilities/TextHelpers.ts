@@ -1,4 +1,4 @@
-import { HORIZONTAL_LINE_MD, ROLE_ASSISTANT, ROLE_DEVELOPER, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
+import { HORIZONTAL_LINE_MD, NEWLINE, ROLE_ASSISTANT, ROLE_DEVELOPER, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 
 export const unfinishedCodeBlock = (txt: string): boolean => {
   const codeBlockMatches = txt.match(/```/g) || [];
@@ -71,13 +71,10 @@ export const extractRoleAndMessage = (message: string) => {
 
 export const removeCommentsFromMessages = (message: string) => {
   try {
-    // comment block in form of =begin-chatgpt-md-comment and =end-chatgpt-md-comment
     const commentBlock = /=begin-chatgpt-md-comment[\s\S]*?=end-chatgpt-md-comment/g;
 
     // remove comment block
-    const newMessage = message.replace(commentBlock, "");
-
-    return newMessage;
+    return message.replace(commentBlock, "");
   } catch (err) {
     throw new Error("Error removing comments from messages" + err);
   }
@@ -96,14 +93,8 @@ const generateDatePattern = (format: string) => {
   return new RegExp(`^${pattern}$`);
 };
 
-export const isTitleTimestampFormat = (title: string | undefined, dateFormat: string) => {
-  try {
-    const pattern = generateDatePattern(dateFormat);
-
-    return title?.length == dateFormat.length && pattern.test(title);
-  } catch (err) {
-    throw new Error("Error checking if title is in timestamp format" + err);
-  }
+export const isTitleTimestampFormat = (title: string = "", dateFormat: string): boolean => {
+  return title?.length == dateFormat.length && generateDatePattern(dateFormat).test(title);
 };
 
 export const getHeadingPrefix = (headingLevel: number) => {
@@ -114,6 +105,9 @@ export const getHeadingPrefix = (headingLevel: number) => {
   }
   return "#".repeat(headingLevel) + " ";
 };
+
+export const getHeaderRole = (headingPrefix: string, role: string, model?: string) =>
+  `${NEWLINE}${HORIZONTAL_LINE_MD}${NEWLINE}${headingPrefix}${ROLE_IDENTIFIER}${role}${model ? `<span style="font-size: small;"> (${model})</span>` : ``}${NEWLINE}`;
 
 export const parseSettingsFrontmatter = (yamlString: string): Record<string, any> => {
   // Remove the --- markers and split into lines
