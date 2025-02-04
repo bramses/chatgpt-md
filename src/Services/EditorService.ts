@@ -20,6 +20,7 @@ import {
   CHAT_TEMPLATE_FOLDER_TYPE,
   DEFAULT_HEADING_LEVEL,
   HORIZONTAL_LINE_CLASS,
+  HORIZONTAL_LINE_MD,
   MAX_HEADING_LEVEL,
   NEWLINE,
   ROLE_ASSISTANT,
@@ -240,9 +241,17 @@ export class EditorService {
         const links = this.findLinksInMessage(message);
         for (const link of links) {
           try {
-            const content = await this.getLinkedNoteContent(link.title);
+            let content = await this.getLinkedNoteContent(link.title);
 
             if (content) {
+              // remove the assistant and uer delimiters
+              // if the inlined note was already a chat
+              const regex = new RegExp(
+                `${NEWLINE}${HORIZONTAL_LINE_MD}${NEWLINE}#+ ${ROLE_IDENTIFIER}(?:${ROLE_USER}|${ROLE_ASSISTANT}).*$`,
+                "gm"
+              );
+              content = content?.replace(regex, "");
+
               message = message.replace(
                 new RegExp(this.escapeRegExp(link.link), "g"),
                 `${NEWLINE}${link.title}${NEWLINE}${content}${NEWLINE}`
