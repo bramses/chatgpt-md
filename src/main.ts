@@ -46,10 +46,8 @@ export default class ChatGPT_MD extends Plugin {
 
         try {
           // get messages from editor
-          const { messagesWithRole: messagesWithRoleAndMessage, messages } = this.editorService.getMessagesFromEditor(
-            editor,
-            this.settings
-          );
+          const { messagesWithRole: messagesWithRoleAndMessage, messages } =
+            await this.editorService.getMessagesFromEditor(editor, this.settings);
 
           // move cursor to end of file if generateAtCursor is false
           if (!this.settings.generateAtCursor) {
@@ -141,7 +139,7 @@ export default class ChatGPT_MD extends Plugin {
         this.aiService = getAiApiService(this.streamManager, frontmatter.aiService);
 
         this.updateStatusBar(`Calling ${frontmatter.model}`);
-        const { messages } = this.editorService.getMessagesFromEditor(editor, this.settings);
+        const { messages } = await this.editorService.getMessagesFromEditor(editor, this.settings);
 
         await this.aiService.inferTitle(view, this.settings, messages, this.editorService);
 
