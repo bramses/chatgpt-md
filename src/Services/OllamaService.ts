@@ -60,7 +60,7 @@ export class OllamaService implements IAiApiService {
 
     if (inferredTitle) {
       console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
-      await editorService.writeInferredTitle(view, settings.chatFolder, inferredTitle);
+      await editorService.writeInferredTitle(view, inferredTitle);
     } else {
       new Notice("[ChatGPT MD] Could not infer title", 5000);
     }

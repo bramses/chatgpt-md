@@ -1,6 +1,7 @@
 import { App, Editor, MarkdownView, Notice } from "obsidian";
 import { createFolderModal } from "src/Utilities/ModalHelpers";
 import {
+  escapeRegExp,
   extractRoleAndMessage,
   getHeaderRole,
   getHeadingPrefix,
@@ -14,13 +15,14 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ChatTemplates } from "src/Views/ChatTemplates";
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import {
-  AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   CHAT_FOLDER_TYPE,
   CHAT_TEMPLATE_FOLDER_TYPE,
+  DEFAULT_DATE_FORMAT,
   DEFAULT_HEADING_LEVEL,
   HORIZONTAL_LINE_CLASS,
   HORIZONTAL_LINE_MD,
+  MARKDOWN_LINKS_REGEX,
   MAX_HEADING_LEVEL,
   NEWLINE,
   ROLE_ASSISTANT,
@@ -28,34 +30,29 @@ import {
   ROLE_IDENTIFIER,
   ROLE_SYSTEM,
   ROLE_USER,
+  WIKI_LINKS_REGEX,
+  YAML_FRONTMATTER_REGEX,
 } from "src/Constants";
 import { DEFAULT_OLLAMA_API_CONFIG } from "src/Services/OllamaService";
+import { aiProviderFromUrl } from "./AiService";
 
 export class EditorService {
   constructor(private app: App) {}
 
-  async writeInferredTitle(view: MarkdownView, chatFolder: string, title: string): Promise<void> {
+  async writeInferredTitle(view: MarkdownView, title: string): Promise<void> {
+    const file = view.file;
+    if (!file) {
+      throw new Error("No file is currently open");
+    }
+
+    const currentFolder = file.parent?.path ?? "/";
+    let newFileName = `${currentFolder}/${title}.md`;
+
+    for (let i = 1; await this.app.vault.adapter.exists(newFileName); i++) {
+      newFileName = `${currentFolder}/${title} (${i}).md`;
+    }
+
     try {
-      // set title of file
-      const file = view.file;
-      if (!file) {
-        throw new Error("No file is currently open");
-      }
-
-      // replace trailing / if it exists
-      const folder = chatFolder.replace(/\/$/, "");
-
-      // if new file name exists in directory, append a number to the end
-      let newFileName = `${folder}/${title}.md`;
-      let i = 1;
-
-      while (await this.app.vault.adapter.exists(newFileName)) {
-        newFileName = `${folder}/${title} (${i}).md`;
-        i++;
-      }
-
-      await this.ensureFolderExists(chatFolder, CHAT_FOLDER_TYPE);
-
       await this.app.fileManager.renameFile(file, newFileName);
     } catch (err) {
       new Notice("[ChatGPT MD] Error writing inferred title to editor");
@@ -64,40 +61,29 @@ export class EditorService {
     }
   }
 
-  async ensureFolderExists(folderPath: string, folderType: string): Promise<boolean> {
-    if (!(await this.app.vault.adapter.exists(folderPath))) {
-      const result = await createFolderModal(this.app, this.app.vault, folderType, folderPath);
+  private async ensureFolderExists(folderPath: string, folderType: string): Promise<boolean> {
+    const exists = await this.app.vault.adapter.exists(folderPath);
+
+    if (!exists) {
+      const result = await createFolderModal(this.app, folderType, folderPath);
       if (!result) {
         new Notice(
-          `[ChatGPT MD] No ${folderType} found. One must be created to use plugin. Set one in settings and make sure it exists.`
+          `[ChatGPT MD] No ${folderType} found. One must be created to use the plugin. Set one in settings and make sure it exists.`
         );
         return false;
       }
     }
+
     return true;
   }
 
   addHorizontalRule(editor: Editor, role: string, headingLevel: number): void {
-    const formattedContent = [
-      NEWLINE,
-      `<hr class="${HORIZONTAL_LINE_CLASS}">`,
-      NEWLINE,
-      `${getHeadingPrefix(headingLevel)}${ROLE_IDENTIFIER}${role}`,
-      NEWLINE,
-    ].join("");
+    const formattedContent = `${NEWLINE}<hr class="${HORIZONTAL_LINE_CLASS}">${NEWLINE}${getHeadingPrefix(headingLevel)}${ROLE_IDENTIFIER}${role}${NEWLINE}`;
 
     const currentPosition = editor.getCursor();
 
-    // Insert the formatted content at current cursor position
     editor.replaceRange(formattedContent, currentPosition);
-
-    // Calculate and set new cursor position
-    const newPosition = {
-      line: currentPosition.line,
-      ch: currentPosition.ch + formattedContent.length,
-    };
-
-    editor.setCursor(newPosition);
+    editor.setCursor(currentPosition.line + formattedContent.split("\n").length - 1, 0);
   }
 
   async createNewChatWithHighlightedText(editor: Editor, settings: ChatGPT_MDSettings): Promise<void> {
@@ -114,12 +100,11 @@ export class EditorService {
         return;
       }
 
-      const newFile = await this.app.vault.create(
-        `${settings.chatFolder}/${this.getDate(new Date(), settings.dateFormat)}.md`,
-        `${settings.defaultChatFrontmatter}${NEWLINE}${selectedText}`
-      );
+      const fileName = `${this.getDate(new Date(), settings.dateFormat)}.md`;
+      const filePath = `${settings.chatFolder}/${fileName}`;
 
-      // open new file
+      const newFile = await this.app.vault.create(filePath, selectedText);
+
       await this.app.workspace.openLinkText(newFile.basename, "", true, { state: { mode: "source" } });
       const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 
@@ -136,14 +121,16 @@ export class EditorService {
     }
   }
 
-  appendMessage(editor: Editor, message: string, headingLevel: number): void {
-    const newLine = `${getHeaderRole(getHeadingPrefix(headingLevel), ROLE_ASSISTANT)}${message}${getHeaderRole(getHeadingPrefix(headingLevel), ROLE_USER)}`;
-    editor.replaceRange(newLine, editor.getCursor());
+  private appendMessage(editor: Editor, message: string, headingLevel: number): void {
+    const headingPrefix = getHeadingPrefix(headingLevel);
+    const assistantRoleHeader = getHeaderRole(headingPrefix, ROLE_ASSISTANT);
+    const userRoleHeader = getHeaderRole(headingPrefix, ROLE_USER);
+
+    editor.replaceRange(`${assistantRoleHeader}${message}${userRoleHeader}`, editor.getCursor());
   }
 
   clearChat(editor: Editor): void {
     try {
-      const YAML_FRONTMATTER_REGEX = /---\s*[\s\S]*?\s*---/g;
       // Extract frontmatter from current content
       const content = editor.getValue();
       const frontmatterMatches = content.match(YAML_FRONTMATTER_REGEX);
@@ -172,10 +159,8 @@ export class EditorService {
 
   moveCursorToEnd(editor: Editor): void {
     try {
-      // get length of file
       const length = editor.lastLine();
 
-      // move cursor to end of file https://davidwalsh.name/codemirror-set-focus-line
       const newCursor = {
         line: length + 1,
         ch: 0,
@@ -186,33 +171,31 @@ export class EditorService {
     }
   }
 
-  findLinksInMessage(message: string): { link: string; title: string }[] {
-    const wikiLinkRegex = /\[\[([^\][]+)\]\]/g;
-    const markdownLinkRegex = /\[([^\]]+)\]\(([^()]+)\)/g;
+  private findLinksInMessage(message: string): { link: string; title: string }[] {
+    const regexes = [
+      { regex: WIKI_LINKS_REGEX, fullMatchIndex: 0, titleIndex: 1 },
+      { regex: MARKDOWN_LINKS_REGEX, fullMatchIndex: 0, titleIndex: 2 },
+    ];
 
-    const linksArray: { link: string; title: string }[] = [];
+    const links: { link: string; title: string }[] = [];
     const seenTitles = new Set<string>();
 
-    const extractLinks = (regex: RegExp, fullMatchIndex: number, titleIndex: number) => {
+    for (const { regex, fullMatchIndex, titleIndex } of regexes) {
       for (const match of message.matchAll(regex)) {
         const fullLink = match[fullMatchIndex];
         const linkTitle = match[titleIndex];
 
-        // Handle potential missing titles gracefully
         if (linkTitle && !seenTitles.has(linkTitle)) {
-          linksArray.push({ link: fullLink, title: linkTitle });
+          links.push({ link: fullLink, title: linkTitle });
           seenTitles.add(linkTitle);
         }
       }
-    };
+    }
 
-    extractLinks(wikiLinkRegex, 0, 1);
-    extractLinks(markdownLinkRegex, 0, 2);
-
-    return linksArray;
+    return links;
   }
 
-  getLinkedNoteContent = async (linkPath: string) => {
+  private getLinkedNoteContent = async (linkPath: string) => {
     try {
       const file = this.app.metadataCache.getFirstLinkpathDest(linkPath, "");
 
@@ -223,8 +206,9 @@ export class EditorService {
     }
   };
 
-  escapeRegExp(string: string): string {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  private cleanMessagesFromNote(editor: Editor) {
+    const messages = splitMessages(removeYAMLFrontMatter(editor.getValue()));
+    return messages.map(removeCommentsFromMessages);
   }
 
   async getMessagesFromEditor(
@@ -234,7 +218,7 @@ export class EditorService {
     messages: string[];
     messagesWithRole: { role: string; content: string }[];
   }> {
-    let messages = splitMessages(removeYAMLFrontMatter(editor.getValue())).map(removeCommentsFromMessages);
+    let messages = this.cleanMessagesFromNote(editor);
 
     messages = await Promise.all(
       messages.map(async (message) => {
@@ -244,16 +228,16 @@ export class EditorService {
             let content = await this.getLinkedNoteContent(link.title);
 
             if (content) {
-              // remove the assistant and uer delimiters
+              // remove the assistant and user delimiters
               // if the inlined note was already a chat
               const regex = new RegExp(
                 `${NEWLINE}${HORIZONTAL_LINE_MD}${NEWLINE}#+ ${ROLE_IDENTIFIER}(?:${ROLE_USER}|${ROLE_ASSISTANT}).*$`,
                 "gm"
               );
-              content = content?.replace(regex, "");
+              content = content?.replace(regex, "").replace(YAML_FRONTMATTER_REGEX, "");
 
               message = message.replace(
-                new RegExp(this.escapeRegExp(link.link), "g"),
+                new RegExp(escapeRegExp(link.link), "g"),
                 `${NEWLINE}${link.title}${NEWLINE}${content}${NEWLINE}`
               );
             } else {
@@ -282,33 +266,30 @@ export class EditorService {
   }
 
   async createNewChatFromTemplate(settings: ChatGPT_MDSettings, titleDate: string): Promise<void> {
-    if (!settings.chatFolder || settings.chatFolder.trim() === "") {
+    const { chatFolder, chatTemplateFolder } = settings;
+
+    if (!chatFolder || !chatFolder.trim()) {
       new Notice(`[ChatGPT MD] No chat folder value found. Please set one in settings.`);
       return;
     }
 
-    const chatFolderExists = await this.ensureFolderExists(settings.chatFolder, CHAT_FOLDER_TYPE);
-    if (!chatFolderExists) {
+    if (!(await this.ensureFolderExists(chatFolder, CHAT_FOLDER_TYPE))) {
       return;
     }
 
-    if (!settings.chatTemplateFolder || settings.chatTemplateFolder.trim() === "") {
+    if (!chatTemplateFolder || !chatTemplateFolder.trim()) {
       new Notice(`[ChatGPT MD] No chat template folder value found. Please set one in settings.`);
       return;
     }
 
-    const chatTemplateFolderExists = await this.ensureFolderExists(
-      settings.chatTemplateFolder,
-      CHAT_TEMPLATE_FOLDER_TYPE
-    );
-    if (!chatTemplateFolderExists) {
+    if (!(await this.ensureFolderExists(chatTemplateFolder, CHAT_TEMPLATE_FOLDER_TYPE))) {
       return;
     }
 
     new ChatTemplates(this.app, settings, titleDate).open();
   }
 
-  getDate(date: Date, format = "YYYYMMDDhhmmss"): string {
+  getDate(date: Date, format = DEFAULT_DATE_FORMAT): string {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const day = date.getDate();
@@ -331,23 +312,6 @@ export class EditorService {
       .replace("ss", paddedSecond);
   }
 
-  aiProviderFromUrl(url?: string, model?: string): string {
-    const trimmedUrl = (url ?? "").trim().toLowerCase();
-    const trimmedModel = (model ?? "").trim().toLowerCase();
-
-    if (trimmedModel.includes("@")) {
-      const provider = trimmedModel.split("@")[0];
-      if (["local", AI_SERVICE_OLLAMA].includes(provider)) return AI_SERVICE_OLLAMA;
-      if (provider === AI_SERVICE_OPENAI) return AI_SERVICE_OPENAI;
-    }
-
-    if (trimmedUrl.startsWith("http://localhost") || trimmedUrl.startsWith("http://127.0.0.1")) {
-      return AI_SERVICE_OLLAMA;
-    }
-
-    return AI_SERVICE_OPENAI;
-  }
-
   getFrontmatter(view: MarkdownView | null, settings: ChatGPT_MDSettings, app: App) {
     const activeFile = view?.file || app.workspace.getActiveFile();
     if (!activeFile) {
@@ -367,7 +331,7 @@ export class EditorService {
       delete metaMatter.url;
     }
 
-    const aiService = this.aiProviderFromUrl(metaMatter.url, metaMatter.model);
+    const aiService = aiProviderFromUrl(metaMatter.url, metaMatter.model);
 
     const defaultConfig = aiService == AI_SERVICE_OPENAI ? DEFAULT_OPENAI_CONFIG : DEFAULT_OLLAMA_API_CONFIG;
 

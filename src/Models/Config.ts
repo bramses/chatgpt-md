@@ -1,4 +1,5 @@
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
+import { DEFAULT_DATE_FORMAT } from "../Constants";
 
 export const DEFAULT_CHAT_FRONT_MATTER = `---
 system_commands: ['I am a helpful assistant.']
@@ -35,7 +36,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   chatFolder: "ChatGPT_MD/chats",
   generateAtCursor: false,
   autoInferTitle: false,
-  dateFormat: "YYYYMMDDhhmmss",
+  dateFormat: DEFAULT_DATE_FORMAT,
   headingLevel: 0,
   inferTitleLanguage: "English",
 };
