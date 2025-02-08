@@ -1,4 +1,4 @@
-import { App, Notice, SuggestModal, TFile, TFolder } from "obsidian";
+import { App, normalizePath, Notice, SuggestModal, TFile, TFolder } from "obsidian";
 
 import { ChatGPT_MDSettings } from "src/Models/Config";
 
@@ -62,9 +62,22 @@ export class ChatTemplates extends SuggestModal<ChatTemplate> {
     new Notice(`Selected ${template.title}`);
     const templateText = await this.app.vault.read(template.file);
     // use template text to create new file in chat folder
-    const file = await this.app.vault.create(`${this.settings.chatFolder}/${this.titleDate}.md`, templateText);
 
-    // open new file
-    await this.app.workspace.openLinkText(file.basename, "", true);
+    const newFileName = `${this.titleDate} ${template.title}`;
+    let newFilePath = normalizePath(`${this.settings.chatFolder}/${newFileName}.md`);
+
+    let i = 1;
+    while (await this.app.vault.adapter.exists(newFilePath)) {
+      newFilePath = normalizePath(`${this.settings.chatFolder}/${newFileName} (${i}).md`);
+      i++;
+    }
+
+    try {
+      const file = await this.app.vault.create(newFilePath, templateText);
+      // open new file
+      await this.app.workspace.openLinkText(file.basename, "", true);
+    } catch (error) {
+      console.error(error);
+    }
   }
 }

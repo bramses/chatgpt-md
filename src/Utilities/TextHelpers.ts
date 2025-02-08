@@ -1,4 +1,12 @@
-import { HORIZONTAL_LINE_MD, NEWLINE, ROLE_ASSISTANT, ROLE_DEVELOPER, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
+import {
+  HORIZONTAL_LINE_MD,
+  NEWLINE,
+  ROLE_ASSISTANT,
+  ROLE_DEVELOPER,
+  ROLE_IDENTIFIER,
+  ROLE_USER,
+  YAML_FRONTMATTER_REGEX,
+} from "src/Constants";
 
 export const unfinishedCodeBlock = (txt: string): boolean => {
   const codeBlockMatches = txt.match(/```/g) || [];
@@ -9,28 +17,6 @@ export const unfinishedCodeBlock = (txt: string): boolean => {
   }
 
   return isUnclosed;
-};
-
-export const splitMessages = (text: string) => {
-  try {
-    return text.split(HORIZONTAL_LINE_MD);
-  } catch (err) {
-    throw new Error("Error splitting messages" + err);
-  }
-};
-
-export const removeYAMLFrontMatter = (message: string) => {
-  if (!message) {
-    return message;
-  }
-
-  const YAML_FRONT_MATTER_PATTERN = /---\s*[\s\S]*?\s*---/g;
-
-  try {
-    return message.replace(YAML_FRONT_MATTER_PATTERN, "").trim();
-  } catch (error) {
-    throw new Error(`Failed to remove YAML Front Matter: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
 };
 
 const cleanupRole = (role: string): string => {
@@ -151,4 +137,14 @@ export const parseSettingsFrontmatter = (yamlString: string): Record<string, any
   }
 
   return result;
+};
+export const escapeRegExp = (string: string): string => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+
+export const splitMessages = (text: string | undefined): string[] => (text ? text.split(HORIZONTAL_LINE_MD) : []);
+
+export const removeYAMLFrontMatter = (note: string | undefined): string | undefined => {
+  note = note ? note.replace(YAML_FRONTMATTER_REGEX, "").trim() : note;
+  return note;
 };

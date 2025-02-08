@@ -93,7 +93,7 @@ export default class ChatGPT_MD extends Plugin {
       id: ADD_HR_COMMAND_ID,
       name: "Add divider",
       icon: "minus",
-      editorCallback: (editor: Editor, view: MarkdownView) => {
+      editorCallback: (editor: Editor, _view: MarkdownView) => {
         this.editorService.addHorizontalRule(editor, ROLE_USER, this.settings.headingLevel);
       },
     });
@@ -102,7 +102,7 @@ export default class ChatGPT_MD extends Plugin {
       id: ADD_COMMENT_BLOCK_COMMAND_ID,
       name: "Add comment block",
       icon: "comment",
-      editorCallback: (editor: Editor, view: MarkdownView) => {
+      editorCallback: (editor: Editor, _view: MarkdownView) => {
         // add a comment block at cursor
         const cursor = editor.getCursor();
         const line = cursor.line;
@@ -167,9 +167,14 @@ export default class ChatGPT_MD extends Plugin {
       name: "Create new chat from template",
       icon: "layout-template",
       callback: async () => {
-        await this.editorService.createNewChatFromTemplate(
-          this.settings,
-          this.editorService.getDate(new Date(), this.settings.dateFormat)
+        if (this.settings.dateFormat) {
+          await this.editorService.createNewChatFromTemplate(
+            this.settings,
+            this.editorService.getDate(new Date(), this.settings.dateFormat)
+          );
+        }
+        new Notice(
+          "date format cannot be empty in your ChatGPT MD settings. You can choose something like YYYYMMDDhhmmss"
         );
       },
     });
@@ -178,7 +183,7 @@ export default class ChatGPT_MD extends Plugin {
       id: CLEAR_CHAT_COMMAND_ID,
       name: "Clear chat (except frontmatter)",
       icon: "trash",
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
+      editorCallback: async (editor: Editor, _view: MarkdownView) => {
         this.editorService.clearChat(editor);
       },
     });
@@ -191,7 +196,7 @@ export default class ChatGPT_MD extends Plugin {
     await this.saveData(this.settings);
   }
 
-  updateStatusBar(text: string) {
+  private updateStatusBar(text: string) {
     this.statusBarItemEl.setText(`[ChatGPT MD] ${text}`);
   }
 }
