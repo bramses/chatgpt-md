@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import ChatGPT_MD from "src/main";
 import { DEFAULT_CHAT_FRONT_MATTER } from "src/Models/Config";
-import { ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
+import { DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 
 export class ChatGPT_MDSettingsTab extends PluginSettingTab {
   plugin: ChatGPT_MD;
@@ -118,7 +118,7 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
       .setDesc("Date format for chat files. Valid date blocks are: YYYY, MM, DD, hh, mm, ss")
       .addText((text) =>
         text
-          .setPlaceholder("YYYYMMDDhhmmss")
+          .setPlaceholder(DEFAULT_DATE_FORMAT)
           .setValue(this.plugin.settings.dateFormat)
           .onChange(async (value) => {
             this.plugin.settings.dateFormat = value;

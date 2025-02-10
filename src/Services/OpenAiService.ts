@@ -36,9 +36,10 @@ export class OpenAiService implements IAiApiService {
     console.log("[ChatGPT MD] auto inferring title from messages");
 
     const inferredTitle = await this.inferTitleFromMessages(settings.apiKey, messages, settings);
+
     if (inferredTitle) {
       console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
-      await editorService.writeInferredTitle(view, settings.chatFolder, inferredTitle);
+      await editorService.writeInferredTitle(view, inferredTitle);
     } else {
       new Notice("[ChatGPT MD] Could not infer title", 5000);
     }

@@ -34,3 +34,20 @@ export const getAiApiService = (streamManager: StreamManager, settings: any): IA
       throw new Error("Unsupported API type");
   }
 };
+
+export const aiProviderFromUrl = (url?: string, model?: string): string => {
+  const trimmedUrl = (url ?? "").trim().toLowerCase();
+  const trimmedModel = (model ?? "").trim().toLowerCase();
+
+  if (trimmedModel.includes("@")) {
+    const provider = trimmedModel.split("@")[0];
+    if (["local", AI_SERVICE_OLLAMA].includes(provider)) return AI_SERVICE_OLLAMA;
+    if (provider === AI_SERVICE_OPENAI) return AI_SERVICE_OPENAI;
+  }
+
+  if (trimmedUrl.startsWith("http://localhost") || trimmedUrl.startsWith("http://127.0.0.1")) {
+    return AI_SERVICE_OLLAMA;
+  }
+
+  return AI_SERVICE_OPENAI;
+};
