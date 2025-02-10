@@ -1,13 +1,8 @@
-import { App, Vault } from "obsidian";
+import { App } from "obsidian";
 
 import { FolderCreationModal } from "src/Views/FolderCreationModal";
 
-export const createFolderModal = async (
-  app: App,
-  vault: Vault,
-  folderName: string,
-  folderPath: string
-): Promise<boolean> => {
+export const createFolderModal = async (app: App, folderName: string, folderPath: string): Promise<boolean> => {
   const folderCreationModal = new FolderCreationModal(app, folderName, folderPath);
 
   folderCreationModal.open();
@@ -15,7 +10,7 @@ export const createFolderModal = async (
 
   if (result) {
     console.log("[ChatGPT MD] Creating folder");
-    await vault.createFolder(folderPath);
+    await app.vault.createFolder(folderPath);
   } else {
     console.log("[ChatGPT MD] Not creating folder");
   }

@@ -23,6 +23,9 @@ export const CHAT_FOLDER_TYPE = "chatFolder";
 export const CHAT_TEMPLATE_FOLDER_TYPE = "chatTemplateFolder";
 
 export const NEWLINE = "\n\n";
+export const YAML_FRONTMATTER_REGEX = /---[\s\S]*?---/g;
+export const WIKI_LINKS_REGEX = /\[\[([^\][]+)\]\]/g;
+export const MARKDOWN_LINKS_REGEX = /\[([^\]]+)\]\(([^()]+)\)/g;
 
 export const COMMENT_BLOCK_START = `=begin-chatgpt-md-comment${NEWLINE}`;
 export const COMMENT_BLOCK_END = `=end-chatgpt-md-comment`;
@@ -30,6 +33,7 @@ export const COMMENT_BLOCK_END = `=end-chatgpt-md-comment`;
 export const DEFAULT_HEADING_LEVEL = 0;
 export const MAX_HEADING_LEVEL = 6;
 export const MIN_AUTO_INFER_MESSAGES = 4;
+export const DEFAULT_DATE_FORMAT = "YYYYMMDDhhmmss";
 
 export const ERROR_NO_CONNECTION = "Failed to fetch";
 
