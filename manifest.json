@@ -1,10 +1,10 @@
 {
   "id": "chatgpt-md",
   "name": "ChatGPT MD",
-  "version": "1.6.0",
+  "version": "2.0.0",
   "minAppVersion": "0.15.0",
-  "description": "A (nearly) seamless integration of ChatGPT into Obsidian.",
-  "author": "Bram Adams",
+  "description": "A seamless integration of openAIs GPT LLMs and Ollama into Obsidian.",
+  "author": "Deniz Okcu (created by Bram Adams)",
   "authorUrl": "https://www.bramadams.dev",
   "fundingUrl": "https://www.bramadams.dev/#/portal/",
   "isDesktopOnly": false
