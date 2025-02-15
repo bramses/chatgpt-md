@@ -1,143 +1,144 @@
+# ChatGPT MD
 
+🚀 A seamless integration of openAIs GPT LLMs and Ollama into Obsidian.
 
+![Chatting with links about vacation plans](images/chat-with-link.gif)
 
-# ChatGPT-MD
+## A simple and quick Start 🏁
+Get started in just a few simple steps:
 
-A (nearly) seamless integration of ChatGPT into Obsidian.
+1. **Install ChatGPT MD**: Go to `Settings > Community Plugins > Browse`, search for `ChatGPT MD` and click `Install`.
+2. **Add your OpenAI API key**: In the plugin settings, add your OpenAI API key and/or install Ollama and local LLMs of your choice.
+3. **Start chatting**: Use the `ChatGPT MD: Chat` command (`cmd + p` or `ctrl + p`) to start a conversation from any note.
 
-## Demo
+💡 *Pro tip*: Set up a hotkey for the best experience! Go to `Settings > Hotkeys`, search for `ChatGPT MD: Chat` and add your preferred keybinding (e.g., `cmd + j`).
 
-https://user-images.githubusercontent.com/3282661/223005882-6632c997-b9a6-445b-800c-77a4b76a6325.mov
-
-### (youtube mirror - for mobile users ⬇️)
-
-[![video thumbnail](video-thumbnail.png)](https://youtu.be/CxDlol_DDI8)
+Start chatting, don't worry too much about the more advanced features. They will come naturally :-) 
 
 ## Features
+* **Interactive conversations**: 
+  * Engage directly with ChatGPT and Ollama from any Markdown note, edit questions or responses on-the-fly, and continue the chat seamlessly.
+* **Privacy & Zero API Costs:** 
+  * Use local LLMs via Ollama, keeping your chats on your computer and avoiding API costs.
+* **System Commands:** 
+  * Instruct the LLM via system commands to get the best possible answers.
+* **Link context**: 
+  * Provide links to any other note in your vault for added context during conversations with Markdown or Wiki links.
+* **Per-note Configuration:** 
+  * Overwrite default settings via frontmatter for individual notes using params from [OpenAI API](https://platform.openai.com/docs/api-reference/chat) or [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-chat-completion).
+* **Markdown Support:** 
+  * Enjoy full rendering of lists, code blocks, and more from all responses.
+* **Minimal Setup:** 
+  * Utilize your OpenAI API key or install any LLM locally via Ollama.
+* **Comment Blocks:** 
+  * Ignore parts of your notes using comment blocks.
+* **Chat Templates**: 
+  * Use and share frontmatter templates for recurring scenarios. Explore [chatgpt-md-templates](https://github.com/bramses/chatgpt-md-templates).
 
-- Chat from *any* MD note
-- Create Chat *Templates* for sharing and running similar scenarios. Check out the companion repo [chatgpt-md-templates](https://github.com/bramses/chatgpt-md-templates) for some templates!
-- As *minimal boilerplate as possible*, only two required in fact! `<hr class="__chatgpt_plugin">` and `role::system|assistant|user`
-- Use *frontmatter* to change variables for the ChatGPT API
-- *Stream* characters to Obsidian, creating a realtime feel
-- Uses *regular Markdown*. Meaning everything from *lists* to *code blocks* from ChatGPT *will render*!
-- Create chats from *highlighted text*.
-- [*Infer title* from messages](https://github.com/bramses/chatgpt-md/discussions/11). Can be set to run automatically after >4 messages.
-- Stream at cursor position or at end of file. Can be set in settings.
-- Choose [heading level for role](https://github.com/bramses/chatgpt-md/pull/22) h1-h6. Can be set in settings.
-- Custom endpoints can be specified using the url parameter in your front matter. See FAQ for an example.
-- Stop a running stream with a command. See commands section below.
-- (NEW!) Choose between nine languages for "Infer Title". Can be set in settings.
-- (NEW!) ChatGPT comment blocks. Allows you to leave scratchpad notes, backlinks...or anything else really!! See command below for details.
+## Privacy and Security
 
-### Commands
+ChatGPT MD is 
+- only storing data locally in your vault, with zero tracking and no 3rd party integrations except direct calls to the openAI API. 
+- allowing you to use Ollama, a local LLM installation for offline conversation-based knowledge exploration.
 
-#### Chat
-
-The main command! Parses the file and calls ChatGPT. Recommended to add to a hotkey for easy usage.
-
-
-#### Create New Chat with Highlighted Text
-
-Take currently highlighted text and default frontmatter and create a new chat file in `Chat Folder`
-
-#### Create New Chat From Template
-
-Create a new chat file from a template specified in `Chat Template Folder`. Remember to check out [chatgpt-md-templates](https://github.com/bramses/chatgpt-md-templates) for some templates!
-
-#### Infer Title
-
-[Infer the title of the chat from the messages](https://github.com/bramses/chatgpt-md/discussions/11). Requires at least 2 messages. Can be set in settings to run automatically after >4 messages.
-
-#### Add comment block
-
-Add a comment block to the editor that will not be processed by ChatGPT. Allows you to leave scratchpad notes, backlinks...or anything else really!
-
-Comments begin with `=begin-chatgpt-md-comment` and end with `=end-chatgpt-md-comment`
-
-![Screenshot 2023-04-03 16-47-05](https://user-images.githubusercontent.com/3282661/229628591-eda70076-9e03-44e3-98b5-16be73f39957.png)
-![Screenshot 2023-04-03 16-59-26](https://user-images.githubusercontent.com/3282661/229628629-2fc9ec19-7cce-4754-9c09-11f2364395e5.png)
-
-#### Clear Chat
-
-Removes all messages but leaves frontmatter
-
-#### Stop Streaming (Does not work on mobile)
-
-Stops the stream. Useful if you want to stop the stream if you don't like where ChatGPT is heading/going too long.
-
-#### Add Divider
-
-Add a ChatGPT MD Horizontal Rule and `role::user`. 
-
-**!! Note: both `role::system|assistant|user` AND `<hr class="__chatgpt_plugin">` are REQUIRED for the plugin to work!!**
-
-## Installation
-
-### Community Plugins
-
-Go to Community Plugins and search `ChatGPT MD`
-
-### Local
-
-1. Clone this repo into your `plugins` directory in your vault
-2. Run `npm i` and `npm run build`
-
-### Both
-
-1. Insert your OpenAI API Key into the settings
-2. Set `Chat Folder` and `Chat Template Folder`
-3. Add a hotkey for `Chat` (Im using `alt-[`)
-
-## FAQ
-
-### Q: The chat seems to be getting cut off halfway through
-
-To address this, first try to increase your `max_tokens` (default is set to 300). You may also want to update it more permanently in the default frontmatter settings. See pics below:
-
-![Screenshot 2023-03-12 16-14-35](https://user-images.githubusercontent.com/3282661/224571118-080ca393-6f94-4a20-ba98-27bc8b8b6ad2.png)
-![Screenshot 2023-03-12 16-15-01](https://user-images.githubusercontent.com/3282661/224571119-cba1be45-3ab1-4b86-b056-ba596bacd918.png)
-
-### Q: Code Blocks cut off halfway through and leave \`\`\`
-
-The Obsidian editor renders backticks in automatically (see [issue](https://github.com/bramses/chatgpt-md/issues/15#issuecomment-1466813500)) and fires extra logic that causes the stream to add extra backticks. To address this, you can:
-
-1. at the end of the code block add \`\`\` (three backticks) to close the code block BEFORE the `<hr>` and delete the three extra Obsidian added automatically.
-2. in `role::user` write "keep going"
-
-See pics below:
-
-![Screenshot 2023-03-15 18-47-40](https://user-images.githubusercontent.com/3282661/225460844-54101bf2-d5ac-4725-95b5-c79bf6b6ed6a.png)
-![Screenshot 2023-03-15 18-48-30](https://user-images.githubusercontent.com/3282661/225460845-6ff12c98-ea74-4ae8-bc2d-4161e89acdda.png)
-
-
-### Q: How do I use GPT-4?
-
-If you are off the [waitlist](https://openai.com/waitlist/gpt-4-api), simply replace `model: gpt-3.5-turbo` with `model: gpt-4` in the frontmatter. (*note: gpt-4 is slower than turbo!*)
-
-### Q: How do I use a custom endpoint?
-
-```md
+### Default Configuration
+The plugin comes with a well-balanced pre-configuration to get you started immediately. 
+You can change the global settings or use the local parameters in any note via frontmatter
+(start typing `---` in the first line of your note to add properties)
+```
 ---
-system_commands: ['I create small self contained app ideas that could fit in a CodePen or a Replit']
-url: https://localhost
+system_commands: ['I am a helpful assistant.']
+temperature: 0.3
+top_p: 1
+max_tokens: 300
+presence_penalty: 0.5
+frequency_penalty: 0.5
+stream: true
+stop: null
+n: 1
+model: gpt-4o-mini
+---
+```
+💡 Pro tip: Increasing `max_tokens` to a higher value e.g. `4096` for more complex tasks like reasoning, coding or text creation.
+The default model `gpt-4o-mini` is a good compromise between fast and cheap responses. Change this if you have more complex needs.
+
+### Multi Model Chats
+You can set and change the model for each request in your note. 
+Specify the `model` property via frontmatter:
+
+for openAI models
+```
+---
+model: gpt-4o
+system_commands: [act as a senior javascript developer]
+---
+```
+prefix it with `local@` for Ollama for local LLMs.
+```
+---
+model: local@gemma2:27b
+temperature: 1
 ---
 ```
 
-The custom API must conform to the OpenAI API spec. eg you could use Azure's OpenAI hosted endpoints here. Refer to your provider for API key handling.
 
-## About the Developer
+The AI responses will keep the used model name in the response title for future reference.
+You can find the list of your installed Ollama model names from your terminal via `ollama list` or the available openAI model names online on this [openAI models](https://platform.openai.com/docs/models) page.
 
-This repository was written by Bram Adams, a writer and programmer based out of NYC. 
+The default url for Ollama is
+```
+url: http://localhost:11434
+```
+This can be changed via local frontmatter properties.
 
-Bram publishes a weekly newsletter, is a [community developer ambassador for OpenAI](https://platform.openai.com/ambassadors), and does freeleance contracts ([for hire!](https://www.bramadams.dev/consulting/)) related to AI/web dev/AR+VR. 
+### Commands 👨‍💻
+Run commands from Obsidian's command pallet via `cmd + p` or `ctrl + p` and start typing `chatgpt` or set hotkeys
+(a chat command hotkey is highly recommended for effortless chats (I use `cmd + j`, which works fantastic, because your index finger is already resting on that key)).
 
-As of Fall 2023, Bram is actively working on [Commonplace Bot](https://github.com/bramses/commonplace-bot), a novel and modern look into how LLMs and creative coding can help us capture, engage, and creatively remix the best pieces of information we come across. You can test it out live in the Bram Adams' [Discord server](https://discord.gg/GrgkFP3Je3).
+#### Main Command
+- **Chat**: Parse the file and interact with ChatGPT. Assign a hotkey, e.g. `cmd + j`.
+  
+#### Creation Commands
+- **New Chat with Highlighted Text**: Start a chat using highlighted text and default frontmatter in `Chat Folder`.
+- **New Chat From Template**: Create chats from templates in `Chat Template Folder`.
 
-Bram is the creator of [Stenography](https://stenography.dev), an API and [VSC Extension](https://marketplace.visualstudio.com/items?itemName=Stenography.stenography) that automatically documents code on save, which went [#1 on Product Hunt](https://www.producthunt.com/products/stenography#stenography). He also is the author of [Bramses' Highly Opinionated Vault](https://github.com/bramses/bramses-highly-opinionated-vault-2023), an extremely detailed philosophy + vault template used by thousands of Obsidian users (new and old!), and [ChatGPT MD](https://github.com/bramses/chatgpt-md), a (nearly) seemless integration of Chat GPT into Obsidian which has been downloaded by over twenty thousand Obsidian users. He also taught the [GPT-3 in Production Course for O'Reilly Media](https://www.oreilly.com/live-events/gpt-3-in-production/0636920065944/0636920071443/), teaching students how to leverage LLMs in the real world of production.
+#### Utility Commands
+- **Infer Title**: Automatically generate a note title based on the notes content. Configurable to auto-run after 4+ messages.
+- **Add Comment Block**: Insert comment blocks for parts of yor note that should be ignored.
 
-Previously Developer Advocate @ [Algolia](https://www.algolia.com/), Software Engineer @ [HBO](https://www.hbo.com/), Computer Science B.S. @ [University of Rochester](https://rochester.edu/)
+#### Maintenance Commands
+- **Clear Chat**: Remove all messages while retaining frontmatter.
+- **Stop Streaming (Desktop Only)**: Halt ongoing streams if necessary.
 
-You can learn more about him and his work on his [website](https://www.bramadams.dev/about/). 
+#### Formatting Tools
+- **Add Divider**: Insert horizontal rulers to organize content visually.
 
-The best way to support his work is to sign up for his newsletter [here](https://www.bramadams.dev/#/portal/).
+## FAQs ❓
+#### How do I start chatting with ChatGPT MD?
+Use the `ChatGPT MD: Chat` command from the Obsidian command Palette (`cmd + p` or `ctrl + p`) to start a conversation from any note.
+
+#### Can I set up a hotkey for the `ChatGPT MD: Chat` command?
+Yes, you should! Go to `Settings > Hotkeys`, search for `ChatGPT MD: Chat` and add your preferred keybinding (e.g., `cmd + j`).
+
+#### How do I use chat and reasoning models?
+You can use openAI's GPT 3 and 4 models and any model you have installed via Ollama.
+Compatibility with openAI's o1 and o3 models is on the roadmap.
+DeepSeek-r1:7b works great for reasoning locally via Ollama.
+
+#### How do I use a custom endpoint?
+Ensure your custom API adheres to OpenAI's specifications, such as Azure's hosted endpoints. Consult your provider for API key management details.
+
+#### Where should I add my OpenAI API key?
+In the plugin settings, add your OpenAI API key and/or install Ollama and local LLMs of your choice.
+
+🤖 Enjoy exploring the power of ChatGPT MD in your Obsidian vault!🚀
+
+## Contributions Welcome 🤝
+Pull requests, bug reports, and all other forms of contribution are welcomed and highly encouraged!* :octocat:
+
+## About the Developers ✍️
+Bram created ChatGPT MD in March 2023 lives in NYC and is building [Your Commonbase](https://bramses.notion.site/Your-Commonbase-ALPHA-10b034182ddd8038b9ffe11cc2833713) (A Self Organizing Scrapbook with Zero Stress Storing, Searching, and Sharing). His personal website and newsletter is located at [bramadams.dev](https://www.bramadams.dev/)
+
+Deniz joined Bram in 2024 to continue development. He is working in a gaming company in Germany and uses AI heavily in his work and private life. Say "hi" on Bluesky: [Deniz](https://bsky.app/profile/denizokcu.bsky.social)
+
+Happy writing with ChatGPT MD! 💻 🎉
