@@ -130,30 +130,20 @@ export class EditorService {
   }
 
   clearChat(editor: Editor): void {
-    try {
-      // Extract frontmatter from current content
-      const content = editor.getValue();
-      const frontmatterMatches = content.match(YAML_FRONTMATTER_REGEX);
+    const content = editor.getValue();
+    const frontmatterMatches = content.match(YAML_FRONTMATTER_REGEX);
 
-      if (!frontmatterMatches || frontmatterMatches.length === 0) {
-        throw new Error("No YAML frontmatter found in the document");
-      }
-
-      const frontmatter = frontmatterMatches[0];
+    if (frontmatterMatches?.length) {
+      const [frontmatter] = frontmatterMatches;
 
       // Clear editor and restore frontmatter
-      editor.setValue("");
-      editor.replaceRange(frontmatter, editor.getCursor());
+      editor.setValue(frontmatter);
 
       // Position cursor at the end of the document
-      const newCursorPosition = {
-        line: editor.lastLine() + 1,
-        ch: 0,
-      };
-
-      editor.setCursor(newCursorPosition);
-    } catch (error) {
-      throw new Error(`Failed to clear conversation: ${error.message}`);
+      editor.setCursor({ line: editor.lastLine() + 1, ch: 0 });
+    } else {
+      // Clear editor
+      editor.setValue("");
     }
   }
 
