@@ -12,7 +12,7 @@ import {
   unfinishedCodeBlock,
 } from "src/Utilities/TextHelpers";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { ChatTemplates } from "src/Views/ChatTemplates";
+import { ChatTemplatesSuggestModal } from "src/Views/ChatTemplatesSuggestModal";
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import {
   AI_SERVICE_OPENAI,
@@ -276,7 +276,7 @@ export class EditorService {
       return;
     }
 
-    new ChatTemplates(this.app, settings, titleDate).open();
+    new ChatTemplatesSuggestModal(this.app, settings, titleDate).open();
   }
 
   getDate(date: Date, format = DEFAULT_DATE_FORMAT): string {
@@ -364,5 +364,31 @@ export class EditorService {
 
       this.appendMessage(editor, responseStr, settings.headingLevel);
     }
+  }
+
+  setModel(editor: Editor, modelName: string) {
+    const content = editor.getValue();
+
+    const frontmatterMatches = content.match(YAML_FRONTMATTER_REGEX);
+
+    let newContent;
+
+    if (frontmatterMatches) {
+      const frontmatter = frontmatterMatches[0];
+      let extractedFrontmatter = frontmatter.replace(/---/g, "");
+
+      const modelRegex = /^model:\s*(.*)$/m;
+      if (modelRegex.test(extractedFrontmatter)) {
+        extractedFrontmatter = extractedFrontmatter.replace(modelRegex, `model: ${modelName}`);
+      } else {
+        extractedFrontmatter += `\nmodel: ${modelName}`;
+      }
+
+      newContent = content.replace(YAML_FRONTMATTER_REGEX, `---${extractedFrontmatter}---`);
+    } else {
+      newContent = `---\nmodel: ${modelName}\n---\n${content}`;
+    }
+
+    editor.setValue(newContent);
   }
 }

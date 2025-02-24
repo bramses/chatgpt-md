@@ -4,7 +4,7 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_OLLAMA, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
-import { IAiApiService } from "src/Services/AiService";
+import { IAiApiService, OllamaModel } from "src/Services/AiService";
 
 export interface OllamaStreamPayload {
   model: string;
@@ -25,6 +25,32 @@ export const DEFAULT_OLLAMA_API_CONFIG: OllamaConfig = {
   aiService: AI_SERVICE_OLLAMA,
   url: "http://localhost:11434",
   stream: true,
+};
+
+export const fetchAvailableOllamaModels = async () => {
+  try {
+    const response = await fetch(`${DEFAULT_OLLAMA_API_CONFIG.url}/api/tags`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) throw new Error("Failed to fetch models");
+    const json = await response.json();
+    const models = json.models;
+
+    return models
+      .sort((a: OllamaModel, b: OllamaModel) => {
+        if (a.name < b.name) return 1;
+        if (a.name > b.name) return -1;
+        return 0;
+      })
+      .map((model: OllamaModel) => `local@${model.name.replace(":latest", "")}`);
+  } catch (error) {
+    console.error("Error fetching models:", error);
+    return [];
+  }
 };
 
 export class OllamaService implements IAiApiService {
