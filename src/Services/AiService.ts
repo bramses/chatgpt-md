@@ -1,9 +1,9 @@
 import { Message } from "src/Models/Message";
-import { Editor, MarkdownView } from "obsidian";
-import { OpenAIConfig, OpenAiService } from "src/Services/OpenAiService";
+import { Editor, MarkdownView, Notice } from "obsidian";
+import { fetchAvailableOpenAiModels, OpenAIConfig, OpenAiService } from "src/Services/OpenAiService";
 import { StreamManager } from "src/stream";
 import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI } from "src/Constants";
-import { OllamaConfig, OllamaService } from "src/Services/OllamaService";
+import { fetchAvailableOllamaModels, OllamaConfig, OllamaService } from "src/Services/OllamaService";
 import { EditorService } from "src/Services/EditorService";
 
 export interface IAiApiService {
@@ -22,6 +22,30 @@ export interface IAiApiService {
     messages: string[],
     editorService: EditorService
   ): any;
+}
+
+export const fetchAvailableModels = async (url: string, apiKey: string) => {
+  try {
+    const ollamaModels = await fetchAvailableOllamaModels();
+    const openAiModels = await fetchAvailableOpenAiModels(url, apiKey);
+
+    return [...ollamaModels, ...openAiModels];
+  } catch (error) {
+    new Notice("Error fetching models: " + error);
+    console.error("Error fetching models:", error);
+    throw error;
+  }
+};
+
+export interface OpenAiModel {
+  id: string;
+  object: string;
+  created: number;
+  owned_by: string;
+}
+
+export interface OllamaModel {
+  name: string;
 }
 
 export const getAiApiService = (streamManager: StreamManager, settings: any): IAiApiService => {

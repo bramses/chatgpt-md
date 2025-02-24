@@ -20,7 +20,8 @@ import {
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
 import { isTitleTimestampFormat } from "src/Utilities/TextHelpers";
-import { getAiApiService, IAiApiService } from "src/Services/AiService";
+import { fetchAvailableModels, getAiApiService, IAiApiService } from "src/Services/AiService";
+import { AiModelSuggestModal } from "./Views/AiModelSuggestModel";
 
 export default class ChatGPT_MD extends Plugin {
   aiService: IAiApiService;
@@ -86,6 +87,32 @@ export default class ChatGPT_MD extends Plugin {
         }
 
         this.updateStatusBar("");
+      },
+    });
+
+    this.addCommand({
+      id: "select-model-command",
+      name: "Select Model",
+      icon: "list",
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        const aiModelSuggestModal = new AiModelSuggestModal(this.app, editor, this.editorService);
+        aiModelSuggestModal.open();
+
+        const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
+
+        // Step 1: Fetch available models from API
+        this.aiService = getAiApiService(this.streamManager, frontmatter.aiService);
+        try {
+          const models = await fetchAvailableModels(frontmatter.url, this.settings.apiKey);
+
+          aiModelSuggestModal.close();
+          new AiModelSuggestModal(this.app, editor, this.editorService, models).open();
+        } catch (e) {
+          aiModelSuggestModal.close();
+
+          new Notice("Could not find any models");
+          console.error(e);
+        }
       },
     });
 

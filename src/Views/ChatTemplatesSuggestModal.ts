@@ -7,7 +7,7 @@ interface ChatTemplate {
   file: TFile;
 }
 
-export class ChatTemplates extends SuggestModal<ChatTemplate> {
+export class ChatTemplatesSuggestModal extends SuggestModal<ChatTemplate> {
   settings: ChatGPT_MDSettings;
   titleDate: string;
 

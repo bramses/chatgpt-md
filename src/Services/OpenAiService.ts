@@ -4,7 +4,42 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENAI, CHAT_ERROR_RESPONSE, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
-import { IAiApiService } from "src/Services/AiService";
+import { IAiApiService, OpenAiModel } from "src/Services/AiService";
+
+export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) => {
+  try {
+    const response = await fetch(`${DEFAULT_OPENAI_CONFIG.url}v1/models`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!response.ok) throw new Error("Failed to fetch models");
+
+    const json = await response.json();
+    const models = json.data;
+
+    return models
+      .filter(
+        (model: OpenAiModel) =>
+          model.id.includes("gpt") &&
+          !model.id.includes("audio") &&
+          !model.id.includes("realtime") &&
+          !model.id.includes("instruct") &&
+          !model.id.includes("chatgpt")
+      )
+      .sort((a: OpenAiModel, b: OpenAiModel) => {
+        if (a.id < b.id) return 1;
+        if (a.id > b.id) return -1;
+        return 0;
+      })
+      .map((model: OpenAiModel) => model.id);
+  } catch (error) {
+    console.error("Error fetching models:", error);
+    return [];
+  }
+};
 
 export class OpenAiService implements IAiApiService {
   constructor(private streamManager: StreamManager) {}
@@ -89,7 +124,7 @@ export class OpenAiService implements IAiApiService {
       const payload = this.createPayload(config, messages);
       const response = await this.streamManager.stream(
         editor,
-        config.url,
+        `${config.url}v1/chat/completions`,
         payload,
         {
           "Content-Type": "application/json",
@@ -120,7 +155,7 @@ export class OpenAiService implements IAiApiService {
 
       const payload = this.createPayload(config, messages);
       const responseUrl = await requestUrl({
-        url: config.url,
+        url: `${config.url}v1/chat/completions`,
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -205,5 +240,5 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   temperature: 0.3,
   title: "Untitled",
   top_p: 1,
-  url: "https://api.openai.com/v1/chat/completions",
+  url: "https://api.openai.com/",
 };

@@ -10,7 +10,7 @@
 - Improved code organization and imports (@Deniz Okcu)
 - Added more configuration values (@Deniz Okcu)
 - Extracted data structures to Models (@Deniz Okcu)
-- Moved ChatTemplates and Settings to Views (@Deniz Okcu)
+- Moved ChatTemplatesSuggestModal and Settings to Views (@Deniz Okcu)
 
 ### Bug Fixes
 
