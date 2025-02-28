@@ -16,6 +16,7 @@ model: ${DEFAULT_OPENAI_CONFIG.model}
 
 export interface ChatGPT_MDSettings {
   apiKey: string;
+  openrouterApiKey: string;
   defaultChatFrontmatter: string;
   stream: boolean;
   chatTemplateFolder: string;
@@ -30,6 +31,7 @@ export interface ChatGPT_MDSettings {
 
 export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   apiKey: "default",
+  openrouterApiKey: "",
   defaultChatFrontmatter: DEFAULT_CHAT_FRONT_MATTER,
   stream: true,
   chatTemplateFolder: "ChatGPT_MD/templates",

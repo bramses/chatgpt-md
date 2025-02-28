@@ -16,15 +16,6 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    containerEl.createEl("h2", {
-      text: "Settings for ChatGPT MD: Keep tokens in mind! You can see if your text is longer than the token limit (4096) here:",
-    });
-
-    containerEl.createEl("a", {
-      text: "https://platform.openai.com/tokenizer",
-      href: "https://platform.openai.com/tokenizer",
-    });
-
     new Setting(containerEl)
       .setName("OpenAI API Key")
       .setDesc("API Key for OpenAI")
@@ -34,6 +25,19 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.apiKey)
           .onChange(async (value) => {
             this.plugin.settings.apiKey = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("OpenRouter.ai API Key")
+      .setDesc("API Key for OpenRouter.ai")
+      .addText((text) =>
+        text
+          .setPlaceholder("some-api-key")
+          .setValue(this.plugin.settings.openrouterApiKey)
+          .onChange(async (value) => {
+            this.plugin.settings.openrouterApiKey = value;
             await this.plugin.saveSettings();
           })
       );
