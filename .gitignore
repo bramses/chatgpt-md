@@ -18,3 +18,5 @@ data.json
 .DS_Store
 
 .env
+
+main.js
