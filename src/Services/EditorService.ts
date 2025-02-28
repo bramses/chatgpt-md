@@ -35,7 +35,7 @@ import {
   WIKI_LINKS_REGEX,
   YAML_FRONTMATTER_REGEX,
 } from "src/Constants";
-import { DEFAULT_OLLAMA_API_CONFIG } from "src/Services/OllamaService";
+import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { aiProviderFromUrl } from "./AiService";
 
 export class EditorService {
@@ -331,7 +331,7 @@ export class EditorService {
     } else if (aiService === AI_SERVICE_OPENROUTER) {
       defaultConfig = DEFAULT_OPENROUTER_CONFIG;
     } else {
-      defaultConfig = DEFAULT_OLLAMA_API_CONFIG;
+      defaultConfig = DEFAULT_OLLAMA_CONFIG;
     }
 
     return {
