@@ -1,13 +1,18 @@
-import { Editor, MarkdownView, Notice, requestUrl } from "obsidian";
+import { Editor, Notice, requestUrl } from "obsidian";
 import { StreamManager } from "src/stream";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_OPENAI, CHAT_ERROR_RESPONSE, NEWLINE, ROLE_USER } from "src/Constants";
+import { AI_SERVICE_OPENAI, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { EditorService } from "src/Services/EditorService";
-import { IAiApiService, OpenAiModel } from "src/Services/AiService";
+import { BaseAiService, IAiApiService, OpenAiModel } from "src/Services/AiService";
+import { isValidApiKey } from "src/Utilities/SettingsUtils";
 
 export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) => {
   try {
+    if (!isValidApiKey(apiKey)) {
+      console.error("OpenAI API key is missing. Please add your OpenAI API key in the settings.");
+      return [];
+    }
+
     const response = await fetch(`${DEFAULT_OPENAI_CONFIG.url}v1/models`, {
       method: "GET",
       headers: {
@@ -21,14 +26,7 @@ export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) =>
     const models = json.data;
 
     return models
-      .filter(
-        (model: OpenAiModel) =>
-          model.id.includes("gpt") &&
-          !model.id.includes("audio") &&
-          !model.id.includes("realtime") &&
-          !model.id.includes("instruct") &&
-          !model.id.includes("chatgpt")
-      )
+      .filter((model: OpenAiModel) => model.id.includes("gpt"))
       .sort((a: OpenAiModel, b: OpenAiModel) => {
         if (a.id < b.id) return 1;
         if (a.id > b.id) return -1;
@@ -41,46 +39,42 @@ export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) =>
   }
 };
 
-export class OpenAiService implements IAiApiService {
-  constructor(private streamManager: StreamManager) {}
-
-  async callAIAPI(
-    messages: Message[],
-    options: Partial<OpenAIConfig> = {},
-    headingPrefix: string,
-    editor?: Editor,
-    setAtCursor?: boolean,
-    apiKey?: string
-  ): Promise<any> {
-    const config: OpenAIConfig = { ...DEFAULT_OPENAI_CONFIG, ...options };
-    return options.stream && editor
-      ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor)
-      : this.callNonStreamingAPI(apiKey, messages, config);
+export class OpenAiService extends BaseAiService implements IAiApiService {
+  constructor(streamManager: StreamManager) {
+    super(streamManager);
   }
 
-  async inferTitle(
-    view: MarkdownView,
-    settings: ChatGPT_MDSettings,
-    messages: string[],
-    editorService: EditorService
-  ): Promise<any> {
-    if (!view.file) {
-      throw new Error("No active file found");
-    }
-
-    console.log("[ChatGPT MD] auto inferring title from messages");
-
-    const inferredTitle = await this.inferTitleFromMessages(settings.apiKey, messages, settings);
-
-    if (inferredTitle) {
-      console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
-      await editorService.writeInferredTitle(view, inferredTitle);
-    } else {
-      new Notice("[ChatGPT MD] Could not infer title", 5000);
-    }
+  getServiceType(): string {
+    return AI_SERVICE_OPENAI;
   }
 
-  private handleAPIError(err: any, config: OpenAIConfig, prefix: string) {
+  getDefaultConfig(): OpenAIConfig {
+    return DEFAULT_OPENAI_CONFIG;
+  }
+
+  getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
+    return settings.apiKey;
+  }
+
+  createPayload(config: OpenAIConfig, messages: Message[]): OpenAIStreamPayload {
+    // Remove the provider prefix if it exists in the model name
+    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
+
+    return {
+      model: modelName,
+      messages,
+      max_completion_tokens: config.max_tokens,
+      temperature: config.temperature,
+      top_p: config.top_p,
+      presence_penalty: config.presence_penalty,
+      frequency_penalty: config.frequency_penalty,
+      stream: config.stream,
+      stop: config.stop,
+      n: config.n,
+    };
+  }
+
+  handleAPIError(err: any, config: OpenAIConfig, prefix: string): never {
     if (err instanceof Object) {
       if (err.error) {
         new Notice(`${prefix} :: ${err.error.message}`);
@@ -97,22 +91,7 @@ export class OpenAiService implements IAiApiService {
     throw new Error(`${prefix} see error: ${err}`);
   }
 
-  private createPayload(config: OpenAIConfig, messages: Message[]): OpenAIStreamPayload {
-    return {
-      model: config.model,
-      messages,
-      max_completion_tokens: config.max_tokens,
-      temperature: config.temperature,
-      top_p: config.top_p,
-      presence_penalty: config.presence_penalty,
-      frequency_penalty: config.frequency_penalty,
-      stream: config.stream,
-      stop: config.stop,
-      n: config.n,
-    };
-  }
-
-  private async callStreamingAPI(
+  protected async callStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
     config: OpenAIConfig,
@@ -121,6 +100,9 @@ export class OpenAiService implements IAiApiService {
     setAtCursor?: boolean | undefined
   ): Promise<{ fullstr: string; mode: "streaming" }> {
     try {
+      // Validate API key
+      this.validateApiKey(apiKey, "OpenAI");
+
       const payload = this.createPayload(config, messages);
       const response = await this.streamManager.stream(
         editor,
@@ -138,18 +120,21 @@ export class OpenAiService implements IAiApiService {
     } catch (err) {
       this.handleAPIError(err, config, "[ChatGPT MD] Stream = True Error");
 
-      const response = `${CHAT_ERROR_RESPONSE}${NEWLINE}${err}`;
+      const response = `Error: ${err}`;
       return { fullstr: response, mode: "streaming" };
     }
   }
 
-  private async callNonStreamingAPI(
+  protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
     config: OpenAIConfig
   ): Promise<any> {
     try {
       console.log(`[ChatGPT MD] "no stream"`, config);
+
+      // Validate API key
+      this.validateApiKey(apiKey, "OpenAI");
 
       config.stream = false;
 
@@ -176,7 +161,7 @@ export class OpenAiService implements IAiApiService {
     }
   }
 
-  private inferTitleFromMessages = async (apiKey: string, messages: string[], settings: any) => {
+  protected inferTitleFromMessages = async (apiKey: string, messages: string[], settings: any): Promise<string> => {
     try {
       if (messages.length < 2) {
         new Notice("Not enough messages to infer title. Minimum 2 messages.");
@@ -186,9 +171,12 @@ export class OpenAiService implements IAiApiService {
         messages
       )}`;
 
-      const config = { ...DEFAULT_OPENAI_CONFIG, ...settings };
+      const config = {
+        ...DEFAULT_OPENAI_CONFIG,
+        ...settings,
+      };
 
-      return await this.callNonStreamingAPI(settings.apiKey, [{ role: ROLE_USER, content: prompt }], config);
+      return await this.callNonStreamingAPI(apiKey, [{ role: ROLE_USER, content: prompt }], config);
     } catch (err) {
       new Notice("[ChatGPT MD] Error inferring title from messages");
       throw new Error("[ChatGPT MD] Error inferring title from messages" + err);
@@ -230,7 +218,7 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   aiService: AI_SERVICE_OPENAI,
   frequency_penalty: 0.5,
   max_tokens: 300,
-  model: "gpt-4o-mini",
+  model: "gpt-3.5-turbo",
   n: 1,
   presence_penalty: 0.5,
   stop: null,

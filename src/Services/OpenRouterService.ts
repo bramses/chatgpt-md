@@ -1,10 +1,10 @@
-import { Editor, MarkdownView, Notice, requestUrl } from "obsidian";
+import { Editor, Notice, requestUrl } from "obsidian";
 import { StreamManager } from "src/stream";
 import { Message } from "src/Models/Message";
 import { NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { EditorService } from "src/Services/EditorService";
-import { IAiApiService } from "src/Services/AiService";
+import { BaseAiService, IAiApiService } from "src/Services/AiService";
+import { isValidApiKey } from "src/Utilities/SettingsUtils";
 
 // Define a constant for OpenRouter service
 export const AI_SERVICE_OPENROUTER = "openrouter";
@@ -68,7 +68,7 @@ export const DEFAULT_OPENROUTER_CONFIG: OpenRouterConfig = {
 export const fetchAvailableOpenRouterModels = async (apiKey: string) => {
   try {
     // Check if API key is empty or undefined
-    if (!apiKey) {
+    if (!isValidApiKey(apiKey)) {
       console.error("OpenRouter API key is missing. Please add your OpenRouter API key in the settings.");
       return [];
     }
@@ -100,68 +100,24 @@ export const fetchAvailableOpenRouterModels = async (apiKey: string) => {
   }
 };
 
-export class OpenRouterService implements IAiApiService {
-  constructor(private streamManager: StreamManager) {}
-
-  async callAIAPI(
-    messages: Message[],
-    options: Partial<OpenRouterConfig> = {},
-    headingPrefix: string,
-    editor?: Editor,
-    setAtCursor?: boolean,
-    apiKey?: string
-  ): Promise<any> {
-    const config: OpenRouterConfig = { ...DEFAULT_OPENROUTER_CONFIG, ...options };
-
-    // Use the provided apiKey (which should be the openrouterApiKey from main.ts)
-    // or fall back to the one in the config
-    const openRouterApiKey = apiKey || config.openrouterApiKey;
-
-    return options.stream && editor
-      ? this.callStreamingAPI(openRouterApiKey, messages, config, editor, headingPrefix, setAtCursor)
-      : this.callNonStreamingAPI(openRouterApiKey, messages, config);
+export class OpenRouterService extends BaseAiService implements IAiApiService {
+  constructor(streamManager: StreamManager) {
+    super(streamManager);
   }
 
-  async inferTitle(
-    view: MarkdownView,
-    settings: ChatGPT_MDSettings,
-    messages: string[],
-    editorService: EditorService
-  ): Promise<any> {
-    if (!view.file) {
-      throw new Error("No active file found");
-    }
-
-    console.log("[ChatGPT MD] auto inferring title from messages");
-
-    const inferredTitle = await this.inferTitleFromMessages(settings.openrouterApiKey, messages, settings);
-
-    if (inferredTitle) {
-      console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
-      await editorService.writeInferredTitle(view, inferredTitle);
-    } else {
-      new Notice("[ChatGPT MD] Could not infer title", 5000);
-    }
+  getServiceType(): string {
+    return AI_SERVICE_OPENROUTER;
   }
 
-  private handleAPIError(err: any, config: OpenRouterConfig, prefix: string) {
-    if (err instanceof Object) {
-      if (err.error) {
-        new Notice(`${prefix} :: ${err.error.message}`);
-        throw new Error(JSON.stringify(err.error));
-      }
-      if (config.url !== DEFAULT_OPENROUTER_CONFIG.url) {
-        new Notice(`${prefix} calling specified url: ${config.url}`);
-        throw new Error(`${prefix} calling specified url: ${config.url}`);
-      }
-      new Notice(`${prefix} :: ${JSON.stringify(err)}`);
-      throw new Error(JSON.stringify(err));
-    }
-    new Notice(`${prefix} calling ${config.model}, see console for details`);
-    throw new Error(`${prefix} see error: ${err}`);
+  getDefaultConfig(): OpenRouterConfig {
+    return DEFAULT_OPENROUTER_CONFIG;
   }
 
-  private createPayload(config: OpenRouterConfig, messages: Message[]): OpenRouterStreamPayload {
+  getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
+    return settings.openrouterApiKey;
+  }
+
+  createPayload(config: OpenRouterConfig, messages: Message[]): OpenRouterStreamPayload {
     // Remove the provider prefix if it exists in the model name
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
@@ -178,7 +134,24 @@ export class OpenRouterService implements IAiApiService {
     };
   }
 
-  private async callStreamingAPI(
+  handleAPIError(err: any, config: OpenRouterConfig, prefix: string): never {
+    if (err instanceof Object) {
+      if (err.error) {
+        new Notice(`${prefix} :: ${err.error.message}`);
+        throw new Error(JSON.stringify(err.error));
+      }
+      if (config.url !== DEFAULT_OPENROUTER_CONFIG.url) {
+        new Notice(`${prefix} calling specified url: ${config.url}`);
+        throw new Error(`${prefix} calling specified url: ${config.url}`);
+      }
+      new Notice(`${prefix} :: ${JSON.stringify(err)}`);
+      throw new Error(JSON.stringify(err));
+    }
+    new Notice(`${prefix} calling ${config.model}, see console for details`);
+    throw new Error(`${prefix} see error: ${err}`);
+  }
+
+  protected async callStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
     config: OpenRouterConfig,
@@ -187,10 +160,8 @@ export class OpenRouterService implements IAiApiService {
     setAtCursor?: boolean | undefined
   ): Promise<{ fullstr: string; mode: "streaming" }> {
     try {
-      // Check if API key is empty or undefined
-      if (!apiKey) {
-        throw new Error("OpenRouter API key is missing. Please add your OpenRouter API key in the settings.");
-      }
+      // Validate API key
+      this.validateApiKey(apiKey, "OpenRouter");
 
       const payload = this.createPayload(config, messages);
       const response = await this.streamManager.stream(
@@ -216,7 +187,7 @@ export class OpenRouterService implements IAiApiService {
     }
   }
 
-  private async callNonStreamingAPI(
+  protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
     config: OpenRouterConfig
@@ -224,10 +195,8 @@ export class OpenRouterService implements IAiApiService {
     try {
       console.log(`[ChatGPT MD] "no stream"`, config);
 
-      // Check if API key is empty or undefined
-      if (!apiKey) {
-        throw new Error("OpenRouter API key is missing. Please add your OpenRouter API key in the settings.");
-      }
+      // Validate API key
+      this.validateApiKey(apiKey, "OpenRouter");
 
       config.stream = false;
 
@@ -256,7 +225,7 @@ export class OpenRouterService implements IAiApiService {
     }
   }
 
-  private inferTitleFromMessages = async (apiKey: string, messages: string[], settings: any) => {
+  protected inferTitleFromMessages = async (apiKey: string, messages: string[], settings: any): Promise<string> => {
     try {
       if (messages.length < 2) {
         new Notice("Not enough messages to infer title. Minimum 2 messages.");

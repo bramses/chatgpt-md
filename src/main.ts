@@ -7,6 +7,8 @@ import { EditorService } from "src/Services/EditorService";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
+  AI_SERVICE_OLLAMA,
+  AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
   CALL_CHATGPT_API_COMMAND_ID,
   CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
@@ -21,8 +23,52 @@ import {
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
 import { isTitleTimestampFormat } from "src/Utilities/TextHelpers";
-import { fetchAvailableModels, getAiApiService, IAiApiService } from "src/Services/AiService";
+import { IAiApiService } from "src/Services/AiService";
 import { AiModelSuggestModal } from "./Views/AiModelSuggestModel";
+import { getApiKeyForService, isValidApiKey } from "./Utilities/SettingsUtils";
+import { fetchAvailableOpenAiModels, OpenAiService } from "./Services/OpenAiService";
+import { fetchAvailableOllamaModels, OllamaService } from "./Services/OllamaService";
+import { fetchAvailableOpenRouterModels, OpenRouterService } from "./Services/OpenRouterService";
+
+// Implementation of getAiApiService to avoid circular dependencies
+export const getAiApiService = (streamManager: StreamManager, serviceType: string): IAiApiService => {
+  switch (serviceType) {
+    case AI_SERVICE_OPENAI:
+      return new OpenAiService(streamManager);
+    case AI_SERVICE_OLLAMA:
+      return new OllamaService(streamManager);
+    case AI_SERVICE_OPENROUTER:
+      return new OpenRouterService(streamManager);
+    default:
+      throw new Error(`Unsupported API type: ${serviceType}`);
+  }
+};
+
+// Implementation of fetchAvailableModels to avoid circular dependencies
+export const fetchAvailableModels = async (url: string, apiKey: string, openrouterApiKey: string) => {
+  try {
+    // Always fetch Ollama models as they don't require an API key
+    const ollamaModels = await fetchAvailableOllamaModels();
+
+    // Only fetch OpenAI models if a valid API key exists
+    let openAiModels: string[] = [];
+    if (isValidApiKey(apiKey)) {
+      openAiModels = await fetchAvailableOpenAiModels(url, apiKey);
+    }
+
+    // Only fetch OpenRouter models if a valid API key exists
+    let openRouterModels: string[] = [];
+    if (isValidApiKey(openrouterApiKey)) {
+      openRouterModels = await fetchAvailableOpenRouterModels(openrouterApiKey);
+    }
+
+    return [...ollamaModels, ...openAiModels, ...openRouterModels];
+  } catch (error) {
+    new Notice("Error fetching models: " + error);
+    console.error("Error fetching models:", error);
+    throw error;
+  }
+};
 
 export default class ChatGPT_MD extends Plugin {
   aiService: IAiApiService;
@@ -61,9 +107,9 @@ export default class ChatGPT_MD extends Plugin {
           } else {
             this.updateStatusBar(`Calling ${frontmatter.model}`);
           }
-          // Choose the appropriate API key based on the service type
-          const apiKeyToUse =
-            frontmatter.aiService === AI_SERVICE_OPENROUTER ? this.settings.openrouterApiKey : this.settings.apiKey;
+
+          // Get the appropriate API key for the service
+          const apiKeyToUse = getApiKeyForService(this.settings, frontmatter.aiService);
 
           const response = await this.aiService.callAIAPI(
             messagesWithRoleAndMessage,
@@ -81,10 +127,11 @@ export default class ChatGPT_MD extends Plugin {
             isTitleTimestampFormat(view?.file?.basename, this.settings.dateFormat) &&
             messagesWithRoleAndMessage.length > MIN_AUTO_INFER_MESSAGES
           ) {
-            // Make sure to use the correct API key for inferTitle
+            // Create a settings object with the correct API key
             const settingsWithApiKey = {
               ...frontmatter,
-              openrouterApiKey: this.settings.openrouterApiKey,
+              // Use the utility function to get the correct API key
+              openrouterApiKey: getApiKeyForService(this.settings, AI_SERVICE_OPENROUTER),
             };
             await this.aiService.inferTitle(view, settingsWithApiKey, messages, this.editorService);
           }
@@ -112,11 +159,11 @@ export default class ChatGPT_MD extends Plugin {
         // Step 1: Fetch available models from API
         this.aiService = getAiApiService(this.streamManager, frontmatter.aiService);
         try {
-          const models = await fetchAvailableModels(
-            frontmatter.url,
-            this.settings.apiKey,
-            this.settings.openrouterApiKey
-          );
+          // Use the utility function to get the API keys
+          const openAiKey = getApiKeyForService(this.settings, "openai");
+          const openRouterKey = getApiKeyForService(this.settings, AI_SERVICE_OPENROUTER);
+
+          const models = await fetchAvailableModels(frontmatter.url, openAiKey, openRouterKey);
 
           aiModelSuggestModal.close();
           new AiModelSuggestModal(this.app, editor, this.editorService, models).open();
@@ -181,7 +228,13 @@ export default class ChatGPT_MD extends Plugin {
         this.updateStatusBar(`Calling ${frontmatter.model}`);
         const { messages } = await this.editorService.getMessagesFromEditor(editor, this.settings);
 
-        await this.aiService.inferTitle(view, this.settings, messages, this.editorService);
+        // Use the utility function to get the correct API key
+        const settingsWithApiKey = {
+          ...this.settings,
+          openrouterApiKey: getApiKeyForService(this.settings, AI_SERVICE_OPENROUTER),
+        };
+
+        await this.aiService.inferTitle(view, settingsWithApiKey, messages, this.editorService);
 
         this.updateStatusBar("");
       },
