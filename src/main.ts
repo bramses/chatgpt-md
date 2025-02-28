@@ -7,6 +7,7 @@ import { EditorService } from "src/Services/EditorService";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
+  AI_SERVICE_OPENROUTER,
   CALL_CHATGPT_API_COMMAND_ID,
   CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
   CLEAR_CHAT_COMMAND_ID,
@@ -60,6 +61,9 @@ export default class ChatGPT_MD extends Plugin {
           } else {
             this.updateStatusBar(`Calling ${frontmatter.model}`);
           }
+          // Choose the appropriate API key based on the service type
+          const apiKeyToUse =
+            frontmatter.aiService === AI_SERVICE_OPENROUTER ? this.settings.openrouterApiKey : this.settings.apiKey;
 
           const response = await this.aiService.callAIAPI(
             messagesWithRoleAndMessage,
@@ -67,7 +71,7 @@ export default class ChatGPT_MD extends Plugin {
             this.editorService.getHeadingPrefix(this.settings.headingLevel),
             editor,
             this.settings.generateAtCursor,
-            this.settings.apiKey
+            apiKeyToUse
           );
 
           await this.editorService.processResponse(editor, response, this.settings);
@@ -77,7 +81,12 @@ export default class ChatGPT_MD extends Plugin {
             isTitleTimestampFormat(view?.file?.basename, this.settings.dateFormat) &&
             messagesWithRoleAndMessage.length > MIN_AUTO_INFER_MESSAGES
           ) {
-            await this.aiService.inferTitle(view, frontmatter, messages, this.editorService);
+            // Make sure to use the correct API key for inferTitle
+            const settingsWithApiKey = {
+              ...frontmatter,
+              openrouterApiKey: this.settings.openrouterApiKey,
+            };
+            await this.aiService.inferTitle(view, settingsWithApiKey, messages, this.editorService);
           }
         } catch (err) {
           if (Platform.isMobile) {
@@ -103,7 +112,11 @@ export default class ChatGPT_MD extends Plugin {
         // Step 1: Fetch available models from API
         this.aiService = getAiApiService(this.streamManager, frontmatter.aiService);
         try {
-          const models = await fetchAvailableModels(frontmatter.url, this.settings.apiKey);
+          const models = await fetchAvailableModels(
+            frontmatter.url,
+            this.settings.apiKey,
+            this.settings.openrouterApiKey
+          );
 
           aiModelSuggestModal.close();
           new AiModelSuggestModal(this.app, editor, this.editorService, models).open();
