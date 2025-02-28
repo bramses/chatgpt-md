@@ -14,8 +14,10 @@ import {
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ChatTemplatesSuggestModal } from "src/Views/ChatTemplatesSuggestModal";
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
+import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import {
   AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENROUTER,
   CHAT_FOLDER_TYPE,
   CHAT_TEMPLATE_FOLDER_TYPE,
   DEFAULT_DATE_FORMAT,
@@ -323,7 +325,14 @@ export class EditorService {
 
     const aiService = aiProviderFromUrl(metaMatter.url, metaMatter.model);
 
-    const defaultConfig = aiService == AI_SERVICE_OPENAI ? DEFAULT_OPENAI_CONFIG : DEFAULT_OLLAMA_API_CONFIG;
+    let defaultConfig;
+    if (aiService === AI_SERVICE_OPENAI) {
+      defaultConfig = DEFAULT_OPENAI_CONFIG;
+    } else if (aiService === AI_SERVICE_OPENROUTER) {
+      defaultConfig = DEFAULT_OPENROUTER_CONFIG;
+    } else {
+      defaultConfig = DEFAULT_OLLAMA_API_CONFIG;
+    }
 
     return {
       ...defaultConfig,

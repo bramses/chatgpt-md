@@ -3,6 +3,7 @@ import { getHeaderRole, unfinishedCodeBlock } from "src/Utilities/TextHelpers";
 import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENROUTER,
   CHAT_ERROR_MESSAGE_401,
   CHAT_ERROR_MESSAGE_404,
   CHAT_ERROR_MESSAGE_NO_CONNECTION,
@@ -13,6 +14,7 @@ import {
 } from "src/Constants";
 import { OpenAIStreamPayload } from "src/Services/OpenAiService";
 import { OllamaStreamPayload } from "src/Services/OllamaService";
+import { OpenRouterStreamPayload } from "src/Services/OpenRouterService";
 
 export class StreamManager {
   private abortController: AbortController | null = null;
@@ -98,7 +100,7 @@ export class StreamManager {
   async stream(
     editor: Editor,
     url: string,
-    options: OpenAIStreamPayload | OllamaStreamPayload,
+    options: OpenAIStreamPayload | OllamaStreamPayload | OpenRouterStreamPayload,
     headers: Record<string, string>,
     aiService: string,
     setAtCursor: boolean | undefined,
@@ -147,7 +149,7 @@ export class StreamManager {
         for (const line of lines) {
           if (!line.trim()) continue;
 
-          if (aiService == AI_SERVICE_OPENAI) {
+          if (aiService == AI_SERVICE_OPENAI || aiService == AI_SERVICE_OPENROUTER) {
             if (!line.startsWith("data: ")) continue;
             const data = line.slice(6); // Remove "data: " prefix
 
@@ -164,7 +166,7 @@ export class StreamManager {
                 txt += text;
               }
             } catch (error) {
-              console.error("Error parsing OpenAI JSON:", error);
+              console.error(`Error parsing ${aiService} JSON:`, error);
             }
           } else if (aiService == AI_SERVICE_OLLAMA) {
             try {
