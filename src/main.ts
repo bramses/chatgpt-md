@@ -1,9 +1,16 @@
 import { Editor, MarkdownView, Notice, Platform, Plugin } from "obsidian";
 
-import { StreamManager } from "src/stream";
 import { ChatGPT_MDSettingsTab } from "src/Views/ChatGPT_MDSettingsTab";
 import { ChatGPT_MDSettings, DEFAULT_SETTINGS } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
+import { FileService } from "src/Services/FileService";
+import { EditorContentService } from "src/Services/EditorContentService";
+import { MessageProcessingService } from "src/Services/MessageProcessingService";
+import { TemplateService } from "src/Services/TemplateService";
+import { FrontmatterService } from "src/Services/FrontmatterService";
+import { ResponseProcessingService } from "src/Services/ResponseProcessingService";
+import { StreamService } from "src/Services/StreamService";
+import { StreamManager } from "src/stream";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
@@ -31,14 +38,19 @@ import { OllamaService, fetchAvailableOllamaModels } from "src/Services/OllamaSe
 import { OpenRouterService, fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
 import { ErrorService } from "./Services/ErrorService";
 import { NotificationService } from "./Services/NotificationService";
+import { EditorUpdateService } from "./Services/EditorUpdateService";
 
 // Implementation of getAiApiService to avoid circular dependencies
 export const getAiApiService = (
-  streamManager: StreamManager,
+  streamService: StreamService,
   serviceType: string,
   errorService?: ErrorService,
-  notificationService?: NotificationService
+  notificationService?: NotificationService,
+  editorUpdateService?: EditorUpdateService
 ): IAiApiService => {
+  // Create a StreamManager for backward compatibility
+  const streamManager = new StreamManager(errorService, notificationService);
+
   switch (serviceType) {
     case AI_SERVICE_OPENAI:
       return new OpenAiService(streamManager, errorService, notificationService);
@@ -82,20 +94,47 @@ export default class ChatGPT_MD extends Plugin {
   editorService: EditorService;
   settings: ChatGPT_MDSettings;
   statusBarItemEl: HTMLElement;
+  streamService: StreamService;
   streamManager: StreamManager;
   notificationService: NotificationService;
   errorService: ErrorService;
+  editorUpdateService: EditorUpdateService;
+  fileService: FileService;
+  editorContentService: EditorContentService;
+  messageProcessingService: MessageProcessingService;
+  templateService: TemplateService;
+  frontmatterService: FrontmatterService;
+  responseProcessingService: ResponseProcessingService;
 
   async onload() {
     this.statusBarItemEl = this.addStatusBarItem();
-    this.streamManager = new StreamManager();
-    this.editorService = new EditorService(this.app);
     this.settings = await Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 
     // Initialize services
     this.notificationService = new NotificationService();
     this.errorService = new ErrorService(this.notificationService);
+    this.editorUpdateService = new EditorUpdateService(this.notificationService);
+    this.streamService = new StreamService(this.errorService, this.notificationService, this.editorUpdateService);
     this.streamManager = new StreamManager(this.errorService, this.notificationService);
+
+    // Initialize specialized services
+    this.fileService = new FileService(this.app);
+    this.editorContentService = new EditorContentService();
+    this.messageProcessingService = new MessageProcessingService(this.fileService);
+    this.frontmatterService = new FrontmatterService(this.app);
+    this.templateService = new TemplateService(this.app, this.fileService, this.editorContentService);
+    this.responseProcessingService = new ResponseProcessingService(this.editorContentService);
+
+    // Initialize the EditorService with all specialized services
+    this.editorService = new EditorService(
+      this.app,
+      this.fileService,
+      this.editorContentService,
+      this.messageProcessingService,
+      this.templateService,
+      this.frontmatterService,
+      this.responseProcessingService
+    );
 
     this.addCommand({
       id: CALL_CHATGPT_API_COMMAND_ID,
@@ -105,10 +144,11 @@ export default class ChatGPT_MD extends Plugin {
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
 
         this.aiService = getAiApiService(
-          this.streamManager,
+          this.streamService,
           frontmatter.aiService,
           this.errorService,
-          this.notificationService
+          this.notificationService,
+          this.editorUpdateService
         );
 
         try {
@@ -177,10 +217,11 @@ export default class ChatGPT_MD extends Plugin {
 
         // Step 1: Fetch available models from API
         this.aiService = getAiApiService(
-          this.streamManager,
+          this.streamService,
           frontmatter.aiService,
           this.errorService,
-          this.notificationService
+          this.notificationService,
+          this.editorUpdateService
         );
         try {
           // Use the utility function to get the API keys
@@ -242,7 +283,7 @@ export default class ChatGPT_MD extends Plugin {
           this.aiService.stopStreaming();
         } else {
           // Fallback to the old method
-          this.streamManager.stopStreaming();
+          this.streamService.stopStreaming();
         }
       },
     });
@@ -255,10 +296,11 @@ export default class ChatGPT_MD extends Plugin {
         // get frontmatter
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
         this.aiService = getAiApiService(
-          this.streamManager,
+          this.streamService,
           frontmatter.aiService,
           this.errorService,
-          this.notificationService
+          this.notificationService,
+          this.editorUpdateService
         );
 
         this.updateStatusBar(`Calling ${frontmatter.model}`);
@@ -301,6 +343,7 @@ export default class ChatGPT_MD extends Plugin {
             this.settings,
             this.editorService.getDate(new Date(), this.settings.dateFormat)
           );
+          return;
         }
         new Notice(
           "date format cannot be empty in your ChatGPT MD settings. You can choose something like YYYYMMDDhhmmss"
