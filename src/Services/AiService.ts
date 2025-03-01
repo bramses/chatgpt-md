@@ -1,6 +1,8 @@
 import { Message } from "src/Models/Message";
 import { Editor, MarkdownView, Notice } from "obsidian";
 import { StreamManager } from "src/stream";
+import { StreamService } from "./StreamService";
+import { EditorUpdateService } from "./EditorUpdateService";
 import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
 import { EditorService } from "src/Services/EditorService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
@@ -35,7 +37,19 @@ export interface IAiApiService {
  * Contains common functionality and defines abstract methods that must be implemented by subclasses
  */
 export abstract class BaseAiService implements IAiApiService {
-  constructor(protected streamManager: StreamManager) {}
+  protected streamService: StreamService;
+  protected editorUpdateService: EditorUpdateService;
+
+  constructor(
+    protected streamManager: StreamManager,
+    protected errorService?: ErrorService,
+    protected notificationService?: NotificationService
+  ) {
+    this.notificationService = notificationService || new NotificationService();
+    this.errorService = errorService || new ErrorService(this.notificationService);
+    this.editorUpdateService = new EditorUpdateService(this.notificationService);
+    this.streamService = new StreamService(this.errorService, this.notificationService, this.editorUpdateService);
+  }
 
   /**
    * Get the service type identifier
@@ -98,27 +112,27 @@ export abstract class BaseAiService implements IAiApiService {
     if (inferredTitle) {
       console.log(`[${this.getServiceType()}] automatically inferred title: ${inferredTitle}. Changing file name...`);
       await editorService.writeInferredTitle(view, inferredTitle);
+      return inferredTitle;
     } else {
       this.showNoTitleInferredNotification();
+      return null;
     }
   }
 
   /**
    * Show a notification when title inference fails
-   * This is a template method that should be overridden by subclasses
    */
   protected showNoTitleInferredNotification(): void {
-    new Notice(`[${this.getServiceType()}] Could not infer title`, 5000);
+    new Notice(`[${this.getServiceType()}] Could not infer title`);
   }
 
   /**
-   * Get the appropriate API key from settings
-   * This should be implemented by subclasses to return the correct API key
+   * Get the API key from settings
    */
   abstract getApiKeyFromSettings(settings: ChatGPT_MDSettings): string;
 
   /**
-   * Call the streaming API
+   * Call the API in streaming mode
    */
   protected abstract callStreamingAPI(
     apiKey: string | undefined,
@@ -130,7 +144,7 @@ export abstract class BaseAiService implements IAiApiService {
   ): Promise<{ fullstr: string; mode: "streaming" }>;
 
   /**
-   * Call the non-streaming API
+   * Call the API in non-streaming mode
    */
   protected abstract callNonStreamingAPI(apiKey: string | undefined, messages: Message[], config: any): Promise<any>;
 
@@ -140,12 +154,19 @@ export abstract class BaseAiService implements IAiApiService {
   protected abstract inferTitleFromMessages(apiKey: string, messages: string[], settings: any): Promise<string>;
 
   /**
-   * Validate that an API key is present and valid
+   * Validate the API key
    */
   protected validateApiKey(apiKey: string | undefined, serviceName: string): void {
     if (!isValidApiKey(apiKey)) {
       throw new Error(`${serviceName} API key is missing. Please add your ${serviceName} API key in the settings.`);
     }
+  }
+
+  /**
+   * Stop the current streaming operation
+   */
+  public stopStreaming(): void {
+    this.streamService.stopStreaming();
   }
 }
 

@@ -7,6 +7,8 @@ import { BaseAiService, IAiApiService } from "src/Services/AiService";
 import { isValidApiKey } from "src/Utilities/SettingsUtils";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
+import { StreamService } from "./StreamService";
+import { EditorUpdateService } from "./EditorUpdateService";
 
 // Define a constant for OpenRouter service
 export const AI_SERVICE_OPENROUTER = "openrouter";
@@ -103,11 +105,11 @@ export const fetchAvailableOpenRouterModels = async (apiKey: string) => {
 };
 
 export class OpenRouterService extends BaseAiService implements IAiApiService {
-  private errorService: ErrorService;
-  private notificationService: NotificationService;
+  protected errorService: ErrorService;
+  protected notificationService: NotificationService;
 
   constructor(streamManager: StreamManager, errorService?: ErrorService, notificationService?: NotificationService) {
-    super(streamManager);
+    super(streamManager, errorService, notificationService);
     this.notificationService = notificationService || new NotificationService();
     this.errorService = errorService || new ErrorService(this.notificationService);
   }
@@ -180,7 +182,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       this.validateApiKey(apiKey, "OpenRouter");
 
       const payload = this.createPayload(config, messages);
-      const response = await this.streamManager.stream(
+      const response = await this.streamService.stream(
         editor,
         `${config.url}v1/chat/completions`,
         payload,
@@ -196,7 +198,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       );
       return { fullstr: response, mode: "streaming" };
     } catch (err) {
-      // The error is already handled by the StreamManager, which uses ErrorService
+      // The error is already handled by the StreamService, which uses ErrorService
       // Just return the error message for the chat
       const errorMessage = `Error: ${err}`;
       return { fullstr: errorMessage, mode: "streaming" };

@@ -23,12 +23,12 @@ import {
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
 import { isTitleTimestampFormat } from "src/Utilities/TextHelpers";
-import { IAiApiService } from "src/Services/AiService";
+import { IAiApiService, BaseAiService } from "src/Services/AiService";
 import { AiModelSuggestModal } from "./Views/AiModelSuggestModel";
 import { getApiKeyForService, isValidApiKey } from "./Utilities/SettingsUtils";
-import { fetchAvailableOpenAiModels, OpenAiService } from "./Services/OpenAiService";
-import { fetchAvailableOllamaModels, OllamaService } from "./Services/OllamaService";
-import { fetchAvailableOpenRouterModels, OpenRouterService } from "./Services/OpenRouterService";
+import { OpenAiService, fetchAvailableOpenAiModels } from "src/Services/OpenAiService";
+import { OllamaService, fetchAvailableOllamaModels } from "src/Services/OllamaService";
+import { OpenRouterService, fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
 import { ErrorService } from "./Services/ErrorService";
 import { NotificationService } from "./Services/NotificationService";
 
@@ -236,7 +236,14 @@ export default class ChatGPT_MD extends Plugin {
       name: "Stop streaming",
       icon: "octagon",
       callback: () => {
-        this.streamManager.stopStreaming();
+        // Use the aiService's stopStreaming method if available
+        if (this.aiService && "stopStreaming" in this.aiService) {
+          // @ts-ignore - Call the stopStreaming method
+          this.aiService.stopStreaming();
+        } else {
+          // Fallback to the old method
+          this.streamManager.stopStreaming();
+        }
       },
     });
 
