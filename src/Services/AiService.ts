@@ -5,6 +5,8 @@ import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src
 import { EditorService } from "src/Services/EditorService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { isValidApiKey } from "src/Utilities/SettingsUtils";
+import { ErrorService } from "./ErrorService";
+import { NotificationService } from "./NotificationService";
 
 /**
  * Interface defining the contract for AI service implementations
@@ -97,8 +99,16 @@ export abstract class BaseAiService implements IAiApiService {
       console.log(`[${this.getServiceType()}] automatically inferred title: ${inferredTitle}. Changing file name...`);
       await editorService.writeInferredTitle(view, inferredTitle);
     } else {
-      new Notice(`[${this.getServiceType()}] Could not infer title`, 5000);
+      this.showNoTitleInferredNotification();
     }
+  }
+
+  /**
+   * Show a notification when title inference fails
+   * This is a template method that should be overridden by subclasses
+   */
+  protected showNoTitleInferredNotification(): void {
+    new Notice(`[${this.getServiceType()}] Could not infer title`, 5000);
   }
 
   /**
@@ -154,7 +164,12 @@ export interface OllamaModel {
  * Factory function to create the appropriate AI service based on the service type
  * Note: This function is implemented in main.ts to avoid circular dependencies
  */
-export const getAiApiService = (streamManager: StreamManager, serviceType: string): IAiApiService => {
+export const getAiApiService = (
+  streamManager: StreamManager,
+  serviceType: string,
+  errorService?: ErrorService,
+  notificationService?: NotificationService
+): IAiApiService => {
   // This is a placeholder that will be replaced by the actual implementation in main.ts
   throw new Error("getAiApiService should be implemented in main.ts to avoid circular dependencies");
 };
