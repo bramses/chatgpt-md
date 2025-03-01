@@ -10,7 +10,7 @@ import { TemplateService } from "src/Services/TemplateService";
 import { FrontmatterService } from "src/Services/FrontmatterService";
 import { ResponseProcessingService } from "src/Services/ResponseProcessingService";
 import { StreamService } from "src/Services/StreamService";
-import { StreamManager } from "src/stream";
+import { StreamManager } from "src/managers/StreamManager";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
@@ -30,12 +30,12 @@ import {
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
 import { isTitleTimestampFormat } from "src/Utilities/TextHelpers";
-import { IAiApiService, BaseAiService } from "src/Services/AiService";
+import { IAiApiService } from "src/Services/AiService";
 import { AiModelSuggestModal } from "./Views/AiModelSuggestModel";
 import { getApiKeyForService, isValidApiKey } from "./Utilities/SettingsUtils";
-import { OpenAiService, fetchAvailableOpenAiModels } from "src/Services/OpenAiService";
-import { OllamaService, fetchAvailableOllamaModels } from "src/Services/OllamaService";
-import { OpenRouterService, fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
+import { fetchAvailableOpenAiModels, OpenAiService } from "src/Services/OpenAiService";
+import { fetchAvailableOllamaModels, OllamaService } from "src/Services/OllamaService";
+import { fetchAvailableOpenRouterModels, OpenRouterService } from "src/Services/OpenRouterService";
 import { ErrorService } from "./Services/ErrorService";
 import { NotificationService } from "./Services/NotificationService";
 import { EditorUpdateService } from "./Services/EditorUpdateService";

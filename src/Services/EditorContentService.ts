@@ -1,5 +1,5 @@
 import { Editor } from "obsidian";
-import { getHeadingPrefix, getHeaderRole } from "src/Utilities/TextHelpers";
+import { getHeaderRole, getHeadingPrefix } from "src/Utilities/TextHelpers";
 import {
   HORIZONTAL_LINE_CLASS,
   NEWLINE,

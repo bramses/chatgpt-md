@@ -1,16 +1,10 @@
-import { Editor, Platform } from "obsidian";
+import { Editor } from "obsidian";
 import { getHeaderRole, unfinishedCodeBlock } from "src/Utilities/TextHelpers";
-import {
-  AI_SERVICE_OLLAMA,
-  AI_SERVICE_OPENAI,
-  AI_SERVICE_OPENROUTER,
-  ERROR_NO_CONNECTION,
-  ROLE_ASSISTANT,
-} from "src/Constants";
+import { ROLE_ASSISTANT } from "src/Constants";
 import { OpenAIStreamPayload } from "src/Services/OpenAiService";
 import { OllamaStreamPayload } from "src/Services/OllamaService";
 import { OpenRouterStreamPayload } from "src/Services/OpenRouterService";
-import { ErrorHandlingOptions, ErrorService } from "src/Services/ErrorService";
+import { ErrorService } from "src/Services/ErrorService";
 import { NotificationService } from "src/Services/NotificationService";
 import { StreamService } from "src/Services/StreamService";
 import { EditorUpdateService } from "src/Services/EditorUpdateService";

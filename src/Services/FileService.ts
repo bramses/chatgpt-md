@@ -1,6 +1,5 @@
 import { App, MarkdownView, Notice, TFile } from "obsidian";
 import { createFolderModal } from "src/Utilities/ModalHelpers";
-import { CHAT_FOLDER_TYPE } from "src/Constants";
 
 /**
  * Service responsible for file and folder operations

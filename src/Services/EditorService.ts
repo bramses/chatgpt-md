@@ -1,42 +1,6 @@
-import { App, Editor, MarkdownView, Notice } from "obsidian";
-import { createFolderModal } from "src/Utilities/ModalHelpers";
-import {
-  escapeRegExp,
-  extractRoleAndMessage,
-  getHeaderRole,
-  getHeadingPrefix,
-  parseSettingsFrontmatter,
-  removeCommentsFromMessages,
-  removeYAMLFrontMatter,
-  splitMessages,
-  unfinishedCodeBlock,
-} from "src/Utilities/TextHelpers";
+import { App, Editor, MarkdownView } from "obsidian";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { ChatTemplatesSuggestModal } from "src/Views/ChatTemplatesSuggestModal";
-import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
-import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
-import {
-  AI_SERVICE_OPENAI,
-  AI_SERVICE_OPENROUTER,
-  CHAT_FOLDER_TYPE,
-  CHAT_TEMPLATE_FOLDER_TYPE,
-  DEFAULT_DATE_FORMAT,
-  DEFAULT_HEADING_LEVEL,
-  HORIZONTAL_LINE_CLASS,
-  HORIZONTAL_LINE_MD,
-  MARKDOWN_LINKS_REGEX,
-  MAX_HEADING_LEVEL,
-  NEWLINE,
-  ROLE_ASSISTANT,
-  ROLE_DEVELOPER,
-  ROLE_IDENTIFIER,
-  ROLE_SYSTEM,
-  ROLE_USER,
-  WIKI_LINKS_REGEX,
-  YAML_FRONTMATTER_REGEX,
-} from "src/Constants";
-import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
-import { aiProviderFromUrl } from "./AiService";
+import { YAML_FRONTMATTER_REGEX } from "src/Constants";
 import { FileService } from "./FileService";
 import { EditorContentService } from "./EditorContentService";
 import { MessageProcessingService } from "./MessageProcessingService";

@@ -1,13 +1,11 @@
 import { Editor, requestUrl } from "obsidian";
-import { StreamManager } from "src/stream";
+import { StreamManager } from "src/managers/StreamManager";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_OLLAMA, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { BaseAiService, IAiApiService, OllamaModel } from "src/Services/AiService";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
-import { StreamService } from "./StreamService";
-import { EditorUpdateService } from "./EditorUpdateService";
 
 export interface OllamaStreamPayload {
   model: string;
