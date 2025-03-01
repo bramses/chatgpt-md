@@ -29,16 +29,23 @@ import { getApiKeyForService, isValidApiKey } from "./Utilities/SettingsUtils";
 import { fetchAvailableOpenAiModels, OpenAiService } from "./Services/OpenAiService";
 import { fetchAvailableOllamaModels, OllamaService } from "./Services/OllamaService";
 import { fetchAvailableOpenRouterModels, OpenRouterService } from "./Services/OpenRouterService";
+import { ErrorService } from "./Services/ErrorService";
+import { NotificationService } from "./Services/NotificationService";
 
 // Implementation of getAiApiService to avoid circular dependencies
-export const getAiApiService = (streamManager: StreamManager, serviceType: string): IAiApiService => {
+export const getAiApiService = (
+  streamManager: StreamManager,
+  serviceType: string,
+  errorService?: ErrorService,
+  notificationService?: NotificationService
+): IAiApiService => {
   switch (serviceType) {
     case AI_SERVICE_OPENAI:
-      return new OpenAiService(streamManager);
+      return new OpenAiService(streamManager, errorService, notificationService);
     case AI_SERVICE_OLLAMA:
-      return new OllamaService(streamManager);
+      return new OllamaService(streamManager, errorService, notificationService);
     case AI_SERVICE_OPENROUTER:
-      return new OpenRouterService(streamManager);
+      return new OpenRouterService(streamManager, errorService, notificationService);
     default:
       throw new Error(`Unsupported API type: ${serviceType}`);
   }
@@ -76,12 +83,19 @@ export default class ChatGPT_MD extends Plugin {
   settings: ChatGPT_MDSettings;
   statusBarItemEl: HTMLElement;
   streamManager: StreamManager;
+  notificationService: NotificationService;
+  errorService: ErrorService;
 
   async onload() {
     this.statusBarItemEl = this.addStatusBarItem();
     this.streamManager = new StreamManager();
     this.editorService = new EditorService(this.app);
     this.settings = await Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+
+    // Initialize services
+    this.notificationService = new NotificationService();
+    this.errorService = new ErrorService(this.notificationService);
+    this.streamManager = new StreamManager(this.errorService, this.notificationService);
 
     this.addCommand({
       id: CALL_CHATGPT_API_COMMAND_ID,
@@ -90,7 +104,12 @@ export default class ChatGPT_MD extends Plugin {
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
 
-        this.aiService = getAiApiService(this.streamManager, frontmatter.aiService);
+        this.aiService = getAiApiService(
+          this.streamManager,
+          frontmatter.aiService,
+          this.errorService,
+          this.notificationService
+        );
 
         try {
           // get messages from editor
@@ -157,7 +176,12 @@ export default class ChatGPT_MD extends Plugin {
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
 
         // Step 1: Fetch available models from API
-        this.aiService = getAiApiService(this.streamManager, frontmatter.aiService);
+        this.aiService = getAiApiService(
+          this.streamManager,
+          frontmatter.aiService,
+          this.errorService,
+          this.notificationService
+        );
         try {
           // Use the utility function to get the API keys
           const openAiKey = getApiKeyForService(this.settings, "openai");
@@ -223,7 +247,12 @@ export default class ChatGPT_MD extends Plugin {
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         // get frontmatter
         const frontmatter = this.editorService.getFrontmatter(view, this.settings, this.app);
-        this.aiService = getAiApiService(this.streamManager, frontmatter.aiService);
+        this.aiService = getAiApiService(
+          this.streamManager,
+          frontmatter.aiService,
+          this.errorService,
+          this.notificationService
+        );
 
         this.updateStatusBar(`Calling ${frontmatter.model}`);
         const { messages } = await this.editorService.getMessagesFromEditor(editor, this.settings);

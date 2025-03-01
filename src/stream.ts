@@ -1,23 +1,27 @@
-import { Editor, Notice, Platform } from "obsidian";
+import { Editor, Platform } from "obsidian";
 import { getHeaderRole, unfinishedCodeBlock } from "src/Utilities/TextHelpers";
 import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
-  CHAT_ERROR_MESSAGE_401,
-  CHAT_ERROR_MESSAGE_404,
-  CHAT_ERROR_MESSAGE_NO_CONNECTION,
-  CHAT_ERROR_RESPONSE,
   ERROR_NO_CONNECTION,
-  NEWLINE,
   ROLE_ASSISTANT,
 } from "src/Constants";
 import { OpenAIStreamPayload } from "src/Services/OpenAiService";
 import { OllamaStreamPayload } from "src/Services/OllamaService";
 import { OpenRouterStreamPayload } from "src/Services/OpenRouterService";
+import { ErrorHandlingOptions, ErrorService } from "src/Services/ErrorService";
+import { NotificationService } from "src/Services/NotificationService";
 
 export class StreamManager {
   private abortController: AbortController | null = null;
+  private errorService: ErrorService;
+  private notificationService: NotificationService;
+
+  constructor(errorService?: ErrorService, notificationService?: NotificationService) {
+    this.notificationService = notificationService || new NotificationService();
+    this.errorService = errorService || new ErrorService(this.notificationService);
+  }
 
   private handleEditorTextUpdate(editor: Editor, newText: string, cursorPosition: { line: number; ch: number }) {
     const updatedPosition = editor.posToOffset(cursorPosition);
@@ -89,8 +93,8 @@ export class StreamManager {
         ch: Infinity,
       });
     } else {
-      new Notice(
-        "[ChatGPT MD] Text pasted at cursor may leave artifacts. Please remove them manually. ChatGPT MD cannot safely remove text when pasting at cursor."
+      this.notificationService.showWarning(
+        "Text pasted at cursor may leave artifacts. Please remove them manually. ChatGPT MD cannot safely remove text when pasting at cursor."
       );
     }
 
@@ -122,19 +126,38 @@ export class StreamManager {
         signal: this.abortController.signal,
       });
 
-      if (response.status == 401) {
-        return this.finalizeText(editor, CHAT_ERROR_MESSAGE_401, initialCursor, setAtCursor);
-      } else if (response.status == 404) {
-        return this.finalizeText(
-          editor,
-          `${CHAT_ERROR_MESSAGE_404}:${NEWLINE}Model: ${options.model}${NEWLINE}URL: ${url}`,
-          initialCursor,
-          setAtCursor
+      // Handle HTTP status errors
+      if (response.status === 401) {
+        const errorMessage = this.errorService.handleApiError({ status: 401 }, aiService, {
+          returnForChat: true,
+          showNotification: true,
+          context: { model: options.model, url },
+        });
+        return this.finalizeText(editor, errorMessage, initialCursor, setAtCursor);
+      } else if (response.status === 404) {
+        const errorMessage = this.errorService.handleApiError({ status: 404 }, aiService, {
+          returnForChat: true,
+          showNotification: true,
+          context: { model: options.model, url },
+        });
+        return this.finalizeText(editor, errorMessage, initialCursor, setAtCursor);
+      } else if (!response.ok) {
+        const errorMessage = this.errorService.handleApiError(
+          { status: response.status, statusText: response.statusText },
+          aiService,
+          { returnForChat: true, showNotification: true, context: { model: options.model, url } }
         );
+        return this.finalizeText(editor, errorMessage, initialCursor, setAtCursor);
       }
 
-      if (!response.ok) throw new Error("Network response was not ok");
-      if (!response.body) throw new Error("The response was empty");
+      if (!response.body) {
+        const errorMessage = this.errorService.handleApiError(new Error("The response was empty"), aiService, {
+          returnForChat: true,
+          showNotification: true,
+          context: { model: options.model, url },
+        });
+        return this.finalizeText(editor, errorMessage, initialCursor, setAtCursor);
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -190,15 +213,27 @@ export class StreamManager {
 
       return txt;
     } catch (error) {
+      // Handle different error types
       if (error.name === "AbortError") {
         console.log("[ChatGPT MD] Stream aborted");
         return this.finalizeText(editor, "Stream aborted", initialCursor!, setAtCursor);
       }
-      if (error.message == ERROR_NO_CONNECTION) {
-        return this.finalizeText(editor, CHAT_ERROR_MESSAGE_NO_CONNECTION, initialCursor!, setAtCursor);
+
+      const errorOptions: ErrorHandlingOptions = {
+        returnForChat: true,
+        showNotification: true,
+        context: { url, model: options.model },
+      };
+
+      if (error.message === ERROR_NO_CONNECTION) {
+        const errorMessage = this.errorService.handleApiError(error, aiService, errorOptions);
+        return this.finalizeText(editor, errorMessage, initialCursor!, setAtCursor);
       }
+
+      // Handle generic errors
       console.error("Stream error:", error);
-      return this.finalizeText(editor, `${CHAT_ERROR_RESPONSE}${NEWLINE}${error}`, initialCursor!, setAtCursor);
+      const errorMessage = this.errorService.handleApiError(error, aiService, errorOptions);
+      return this.finalizeText(editor, errorMessage, initialCursor!, setAtCursor);
     } finally {
       this.abortController = null;
     }
@@ -206,7 +241,7 @@ export class StreamManager {
 
   stopStreaming = () => {
     if (Platform.isMobile) {
-      new Notice("[ChatGPT MD] Mobile not supported.");
+      this.notificationService.showWarning("Mobile not supported.");
       return;
     }
     if (this.abortController) {

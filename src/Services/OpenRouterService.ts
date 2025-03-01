@@ -1,10 +1,12 @@
-import { Editor, Notice, requestUrl } from "obsidian";
+import { Editor, requestUrl } from "obsidian";
 import { StreamManager } from "src/stream";
 import { Message } from "src/Models/Message";
 import { NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { BaseAiService, IAiApiService } from "src/Services/AiService";
 import { isValidApiKey } from "src/Utilities/SettingsUtils";
+import { ErrorService } from "./ErrorService";
+import { NotificationService } from "./NotificationService";
 
 // Define a constant for OpenRouter service
 export const AI_SERVICE_OPENROUTER = "openrouter";
@@ -101,8 +103,13 @@ export const fetchAvailableOpenRouterModels = async (apiKey: string) => {
 };
 
 export class OpenRouterService extends BaseAiService implements IAiApiService {
-  constructor(streamManager: StreamManager) {
+  private errorService: ErrorService;
+  private notificationService: NotificationService;
+
+  constructor(streamManager: StreamManager, errorService?: ErrorService, notificationService?: NotificationService) {
     super(streamManager);
+    this.notificationService = notificationService || new NotificationService();
+    this.errorService = errorService || new ErrorService(this.notificationService);
   }
 
   getServiceType(): string {
@@ -135,20 +142,29 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
   }
 
   handleAPIError(err: any, config: OpenRouterConfig, prefix: string): never {
-    if (err instanceof Object) {
-      if (err.error) {
-        new Notice(`${prefix} :: ${err.error.message}`);
-        throw new Error(JSON.stringify(err.error));
-      }
-      if (config.url !== DEFAULT_OPENROUTER_CONFIG.url) {
-        new Notice(`${prefix} calling specified url: ${config.url}`);
-        throw new Error(`${prefix} calling specified url: ${config.url}`);
-      }
-      new Notice(`${prefix} :: ${JSON.stringify(err)}`);
-      throw new Error(JSON.stringify(err));
+    // Use the new ErrorService to handle errors
+    const context = {
+      model: config.model,
+      url: config.url,
+      defaultUrl: DEFAULT_OPENROUTER_CONFIG.url,
+      aiService: this.getServiceType(),
+    };
+
+    // Special handling for custom URL errors
+    if (err instanceof Object && config.url !== DEFAULT_OPENROUTER_CONFIG.url) {
+      return this.errorService.handleUrlError(
+        config.url,
+        DEFAULT_OPENROUTER_CONFIG.url,
+        this.getServiceType()
+      ) as never;
     }
-    new Notice(`${prefix} calling ${config.model}, see console for details`);
-    throw new Error(`${prefix} see error: ${err}`);
+
+    // Use the centralized error handling
+    return this.errorService.handleApiError(err, this.getServiceType(), {
+      context,
+      showNotification: true,
+      logToConsole: true,
+    }) as never;
   }
 
   protected async callStreamingAPI(
@@ -180,10 +196,10 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       );
       return { fullstr: response, mode: "streaming" };
     } catch (err) {
-      this.handleAPIError(err, config, "[ChatGPT MD] Stream = True Error");
-
-      const response = `Error: ${err}`;
-      return { fullstr: response, mode: "streaming" };
+      // The error is already handled by the StreamManager, which uses ErrorService
+      // Just return the error message for the chat
+      const errorMessage = `Error: ${err}`;
+      return { fullstr: errorMessage, mode: "streaming" };
     }
   }
 
@@ -216,19 +232,28 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       });
       const data = responseUrl.json;
       if (data?.error) {
-        new Notice(`[ChatGPT MD] Stream = False Error :: ${data.error.message}`);
-        throw new Error(JSON.stringify(data.error));
+        // Use the error service to handle the error consistently
+        return this.errorService.handleApiError({ error: data.error }, this.getServiceType(), {
+          returnForChat: true,
+          showNotification: true,
+          context: { model: config.model, url: config.url },
+        });
       }
       return data.choices[0].message.content;
     } catch (err) {
-      this.handleAPIError(err, config, "[ChatGPT MD] Error");
+      // Use the error service to handle the error consistently
+      return this.errorService.handleApiError(err, this.getServiceType(), {
+        returnForChat: true,
+        showNotification: true,
+        context: { model: config.model, url: config.url },
+      });
     }
   }
 
   protected inferTitleFromMessages = async (apiKey: string, messages: string[], settings: any): Promise<string> => {
     try {
       if (messages.length < 2) {
-        new Notice("Not enough messages to infer title. Minimum 2 messages.");
+        this.notificationService.showWarning("Not enough messages to infer title. Minimum 2 messages.");
         return "";
       }
       const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${settings.inferTitleLanguage}. \nMessages:${NEWLINE}${JSON.stringify(
@@ -244,8 +269,25 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       // Use the apiKey directly
       return await this.callNonStreamingAPI(apiKey, [{ role: ROLE_USER, content: prompt }], config);
     } catch (err) {
-      new Notice("[ChatGPT MD] Error inferring title from messages");
-      throw new Error("[ChatGPT MD] Error inferring title from messages" + err);
+      // Use the error service for consistent error handling
+      this.errorService.handleApiError(err, this.getServiceType(), {
+        showNotification: true,
+        logToConsole: true,
+        context: {
+          operation: "inferTitleFromMessages",
+          model: settings.model || DEFAULT_OPENROUTER_CONFIG.model,
+          url: settings.url || DEFAULT_OPENROUTER_CONFIG.url,
+        },
+      });
+      return "";
     }
   };
+
+  /**
+   * Show a notification when title inference fails
+   * Override of the base class method to use NotificationService
+   */
+  protected showNoTitleInferredNotification(): void {
+    this.notificationService.showWarning(`[${this.getServiceType()}] Could not infer title`);
+  }
 }
