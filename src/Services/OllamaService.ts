@@ -6,6 +6,8 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { BaseAiService, IAiApiService, OllamaModel } from "src/Services/AiService";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
+import { StreamService } from "./StreamService";
+import { EditorUpdateService } from "./EditorUpdateService";
 
 export interface OllamaStreamPayload {
   model: string;
@@ -52,11 +54,11 @@ export const fetchAvailableOllamaModels = async () => {
 };
 
 export class OllamaService extends BaseAiService implements IAiApiService {
-  private errorService: ErrorService;
-  private notificationService: NotificationService;
+  protected errorService: ErrorService;
+  protected notificationService: NotificationService;
 
   constructor(streamManager: StreamManager, errorService?: ErrorService, notificationService?: NotificationService) {
-    super(streamManager);
+    super(streamManager, errorService, notificationService);
     this.notificationService = notificationService || new NotificationService();
     this.errorService = errorService || new ErrorService(this.notificationService);
   }
@@ -116,7 +118,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
   ): Promise<{ fullstr: string; mode: "streaming" }> {
     try {
       const payload = this.createPayload(config, messages);
-      const response = await this.streamManager.stream(
+      const response = await this.streamService.stream(
         editor,
         `${config.url}chat`,
         payload,
@@ -129,7 +131,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
       );
       return { fullstr: response, mode: "streaming" };
     } catch (err) {
-      // The error is already handled by the StreamManager, which uses ErrorService
+      // The error is already handled by the StreamService, which uses ErrorService
       // Just return the error message for the chat
       const errorMessage = `Error: ${err}`;
       return { fullstr: errorMessage, mode: "streaming" };
