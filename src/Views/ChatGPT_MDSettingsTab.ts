@@ -1,5 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
-import ChatGPT_MD from "src/main";
+import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { ChatGPT_MDSettings, DEFAULT_CHAT_FRONT_MATTER } from "src/Models/Config";
 import { DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 
@@ -13,12 +12,17 @@ interface SettingDefinition {
   group: string;
 }
 
-export class ChatGPT_MDSettingsTab extends PluginSettingTab {
-  plugin: ChatGPT_MD;
+interface SettingsProvider {
+  settings: ChatGPT_MDSettings;
+  saveSettings: () => Promise<void>;
+}
 
-  constructor(app: App, plugin: ChatGPT_MD) {
+export class ChatGPT_MDSettingsTab extends PluginSettingTab {
+  settingsProvider: SettingsProvider;
+
+  constructor(app: App, plugin: Plugin, settingsProvider: SettingsProvider) {
     super(app, plugin);
-    this.plugin = plugin;
+    this.settingsProvider = settingsProvider;
   }
 
   display(): void {
@@ -160,36 +164,36 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
       setting.addText((text) =>
         text
           .setPlaceholder(schema.placeholder || "")
-          .setValue(String(this.plugin.settings[schema.id]))
+          .setValue(String(this.settingsProvider.settings[schema.id]))
           .onChange(async (value) => {
-            (this.plugin.settings[schema.id] as string) = value;
-            await this.plugin.saveSettings();
+            (this.settingsProvider.settings[schema.id] as string) = value;
+            await this.settingsProvider.saveSettings();
           })
       );
     } else if (schema.type === "textarea") {
       setting.addTextArea((text) =>
         text
           .setPlaceholder(schema.placeholder || "")
-          .setValue(String(this.plugin.settings[schema.id] || schema.placeholder))
+          .setValue(String(this.settingsProvider.settings[schema.id] || schema.placeholder))
           .onChange(async (value) => {
-            (this.plugin.settings[schema.id] as string) = value;
-            await this.plugin.saveSettings();
+            (this.settingsProvider.settings[schema.id] as string) = value;
+            await this.settingsProvider.saveSettings();
           })
       );
     } else if (schema.type === "toggle") {
       setting.addToggle((toggle) =>
-        toggle.setValue(Boolean(this.plugin.settings[schema.id])).onChange(async (value) => {
-          (this.plugin.settings[schema.id] as boolean) = value;
-          await this.plugin.saveSettings();
+        toggle.setValue(Boolean(this.settingsProvider.settings[schema.id])).onChange(async (value) => {
+          (this.settingsProvider.settings[schema.id] as boolean) = value;
+          await this.settingsProvider.saveSettings();
         })
       );
     } else if (schema.type === "dropdown" && schema.options) {
       setting.addDropdown((dropdown) => {
         dropdown.addOptions(schema.options || {});
-        dropdown.setValue(String(this.plugin.settings[schema.id]));
+        dropdown.setValue(String(this.settingsProvider.settings[schema.id]));
         dropdown.onChange(async (value) => {
-          (this.plugin.settings[schema.id] as string) = value;
-          await this.plugin.saveSettings();
+          (this.settingsProvider.settings[schema.id] as string) = value;
+          await this.settingsProvider.saveSettings();
         });
       });
     }
