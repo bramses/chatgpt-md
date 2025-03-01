@@ -15,7 +15,10 @@ import { IAiApiService } from "src/Services/AiService";
 import { OpenAiService } from "src/Services/OpenAiService";
 import { OllamaService } from "src/Services/OllamaService";
 import { OpenRouterService } from "src/Services/OpenRouterService";
-import { AI_SERVICE_OPENAI, AI_SERVICE_OLLAMA, AI_SERVICE_OPENROUTER } from "src/Constants";
+import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
+import { ApiService } from "src/Services/ApiService";
+import { ApiAuthService } from "src/Services/ApiAuthService";
+import { ApiResponseParser } from "src/Services/ApiResponseParser";
 
 /**
  * Provides access to all services used by the plugin
@@ -36,6 +39,9 @@ export class ServiceLocator {
   private notificationService: NotificationService;
   private errorService: ErrorService;
   private editorUpdateService: EditorUpdateService;
+  private apiService: ApiService;
+  private apiAuthService: ApiAuthService;
+  private apiResponseParser: ApiResponseParser;
 
   constructor(app: App, settings: ChatGPT_MDSettings) {
     this.app = app;
@@ -53,7 +59,20 @@ export class ServiceLocator {
     this.notificationService = new NotificationService();
     this.errorService = new ErrorService(this.notificationService);
     this.editorUpdateService = new EditorUpdateService(this.notificationService);
-    this.streamService = new StreamService(this.errorService, this.notificationService, this.editorUpdateService);
+
+    // Initialize API services
+    this.apiService = new ApiService(this.errorService, this.notificationService);
+    this.apiAuthService = new ApiAuthService(this.notificationService);
+    this.apiResponseParser = new ApiResponseParser(this.editorUpdateService, this.notificationService);
+
+    // Initialize streaming services
+    this.streamService = new StreamService(
+      this.errorService,
+      this.notificationService,
+      this.editorUpdateService,
+      this.apiService,
+      this.apiResponseParser
+    );
     this.streamManager = new StreamManager(this.errorService, this.notificationService);
 
     // Initialize specialized services
@@ -83,11 +102,35 @@ export class ServiceLocator {
 
     switch (serviceType) {
       case AI_SERVICE_OPENAI:
-        return new OpenAiService(streamManager, this.errorService, this.notificationService);
+        return new OpenAiService(
+          streamManager,
+          this.errorService,
+          this.notificationService,
+          this.apiService,
+          this.apiAuthService,
+          this.apiResponseParser,
+          this.editorUpdateService
+        );
       case AI_SERVICE_OLLAMA:
-        return new OllamaService(streamManager, this.errorService, this.notificationService);
+        return new OllamaService(
+          streamManager,
+          this.errorService,
+          this.notificationService,
+          this.apiService,
+          this.apiAuthService,
+          this.apiResponseParser,
+          this.editorUpdateService
+        );
       case AI_SERVICE_OPENROUTER:
-        return new OpenRouterService(streamManager, this.errorService, this.notificationService);
+        return new OpenRouterService(
+          streamManager,
+          this.errorService,
+          this.notificationService,
+          this.apiService,
+          this.apiAuthService,
+          this.apiResponseParser,
+          this.editorUpdateService
+        );
       default:
         throw new Error(`Unsupported API type: ${serviceType}`);
     }
@@ -136,5 +179,17 @@ export class ServiceLocator {
 
   getEditorUpdateService(): EditorUpdateService {
     return this.editorUpdateService;
+  }
+
+  getApiService(): ApiService {
+    return this.apiService;
+  }
+
+  getApiAuthService(): ApiAuthService {
+    return this.apiAuthService;
+  }
+
+  getApiResponseParser(): ApiResponseParser {
+    return this.apiResponseParser;
   }
 }

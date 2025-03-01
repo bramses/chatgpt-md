@@ -1,14 +1,16 @@
 import { Message } from "src/Models/Message";
-import { Editor, MarkdownView, Notice } from "obsidian";
+import { Editor, MarkdownView } from "obsidian";
 import { StreamManager } from "src/managers/StreamManager";
 import { StreamService } from "./StreamService";
 import { EditorUpdateService } from "./EditorUpdateService";
 import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
 import { EditorService } from "src/Services/EditorService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { isValidApiKey } from "src/Utilities/SettingsUtils";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
+import { ApiService } from "./ApiService";
+import { ApiAuthService } from "./ApiAuthService";
+import { ApiResponseParser } from "./ApiResponseParser";
 
 /**
  * Interface defining the contract for AI service implementations
@@ -39,6 +41,9 @@ export interface IAiApiService {
 export abstract class BaseAiService implements IAiApiService {
   protected streamService: StreamService;
   protected editorUpdateService: EditorUpdateService;
+  protected apiService: ApiService;
+  protected apiAuthService: ApiAuthService;
+  protected apiResponseParser: ApiResponseParser;
 
   constructor(
     protected streamManager: StreamManager,
@@ -49,6 +54,9 @@ export abstract class BaseAiService implements IAiApiService {
     this.errorService = errorService || new ErrorService(this.notificationService);
     this.editorUpdateService = new EditorUpdateService(this.notificationService);
     this.streamService = new StreamService(this.errorService, this.notificationService, this.editorUpdateService);
+    this.apiService = new ApiService(this.errorService, this.notificationService);
+    this.apiAuthService = new ApiAuthService(this.notificationService);
+    this.apiResponseParser = new ApiResponseParser(this.editorUpdateService, this.notificationService);
   }
 
   /**
@@ -98,24 +106,28 @@ export abstract class BaseAiService implements IAiApiService {
     messages: string[],
     editorService: EditorService
   ): Promise<any> {
-    if (!view.file) {
-      throw new Error("No active file found");
-    }
+    try {
+      if (!view.file) {
+        throw new Error("No active file found");
+      }
 
-    console.log(`[${this.getServiceType()}] auto inferring title from messages`);
+      // Get the API key from settings
+      const apiKey = this.getApiKeyFromSettings(settings);
 
-    // Get the appropriate API key from settings
-    const apiKey = this.getApiKeyFromSettings(settings);
+      // Infer the title
+      const title = await this.inferTitleFromMessages(apiKey, messages, settings);
 
-    const inferredTitle = await this.inferTitleFromMessages(apiKey, messages, settings);
-
-    if (inferredTitle) {
-      console.log(`[${this.getServiceType()}] automatically inferred title: ${inferredTitle}. Changing file name...`);
-      await editorService.writeInferredTitle(view, inferredTitle);
-      return inferredTitle;
-    } else {
+      if (title) {
+        // Update the title in the editor
+        await editorService.writeInferredTitle(view, title);
+        return title;
+      } else {
+        this.showNoTitleInferredNotification();
+        return "";
+      }
+    } catch (error) {
       this.showNoTitleInferredNotification();
-      return null;
+      return "";
     }
   }
 
@@ -123,7 +135,9 @@ export abstract class BaseAiService implements IAiApiService {
    * Show a notification when title inference fails
    */
   protected showNoTitleInferredNotification(): void {
-    new Notice(`[${this.getServiceType()}] Could not infer title`);
+    if (this.notificationService) {
+      this.notificationService.showWarning("Could not infer title. Using default title.");
+    }
   }
 
   /**
@@ -132,7 +146,7 @@ export abstract class BaseAiService implements IAiApiService {
   abstract getApiKeyFromSettings(settings: ChatGPT_MDSettings): string;
 
   /**
-   * Call the API in streaming mode
+   * Call the AI API in streaming mode
    */
   protected abstract callStreamingAPI(
     apiKey: string | undefined,
@@ -144,7 +158,7 @@ export abstract class BaseAiService implements IAiApiService {
   ): Promise<{ fullstr: string; mode: "streaming" }>;
 
   /**
-   * Call the API in non-streaming mode
+   * Call the AI API in non-streaming mode
    */
   protected abstract callNonStreamingAPI(apiKey: string | undefined, messages: Message[], config: any): Promise<any>;
 
@@ -154,19 +168,12 @@ export abstract class BaseAiService implements IAiApiService {
   protected abstract inferTitleFromMessages(apiKey: string, messages: string[], settings: any): Promise<string>;
 
   /**
-   * Validate the API key
-   */
-  protected validateApiKey(apiKey: string | undefined, serviceName: string): void {
-    if (!isValidApiKey(apiKey)) {
-      throw new Error(`${serviceName} API key is missing. Please add your ${serviceName} API key in the settings.`);
-    }
-  }
-
-  /**
-   * Stop the current streaming operation
+   * Stop streaming
    */
   public stopStreaming(): void {
-    this.streamService.stopStreaming();
+    if (this.apiService) {
+      this.apiService.stopStreaming();
+    }
   }
 }
 
@@ -182,8 +189,8 @@ export interface OllamaModel {
 }
 
 /**
- * Factory function to create the appropriate AI service based on the service type
- * Note: This function is implemented in main.ts to avoid circular dependencies
+ * Factory function to create an AI service instance based on the service type
+ * This function is implemented in main.ts to avoid circular dependencies
  */
 export const getAiApiService = (
   streamManager: StreamManager,
@@ -196,26 +203,20 @@ export const getAiApiService = (
 };
 
 /**
- * Determines the AI provider from a URL and model
+ * Determine the AI provider from a URL or model
  */
 export const aiProviderFromUrl = (url?: string, model?: string): string => {
-  const trimmedUrl = (url ?? "").trim().toLowerCase();
-  const trimmedModel = (model ?? "").trim().toLowerCase();
-
-  if (trimmedModel.includes("@")) {
-    const provider = trimmedModel.split("@")[0];
-    if (["local", AI_SERVICE_OLLAMA].includes(provider)) return AI_SERVICE_OLLAMA;
-    if (provider === AI_SERVICE_OPENAI) return AI_SERVICE_OPENAI;
-    if (provider === AI_SERVICE_OPENROUTER) return AI_SERVICE_OPENROUTER;
-  }
-
-  if (trimmedUrl.startsWith("http://localhost") || trimmedUrl.startsWith("http://127.0.0.1")) {
-    return AI_SERVICE_OLLAMA;
-  }
-
-  if (trimmedUrl.includes("openrouter.ai")) {
+  if (model?.includes(AI_SERVICE_OPENROUTER)) {
     return AI_SERVICE_OPENROUTER;
   }
-
+  if (model?.includes("local")) {
+    return AI_SERVICE_OLLAMA;
+  }
+  if (url?.includes("openrouter")) {
+    return AI_SERVICE_OPENROUTER;
+  }
+  if (url?.includes("localhost") || url?.includes("127.0.0.1")) {
+    return AI_SERVICE_OLLAMA;
+  }
   return AI_SERVICE_OPENAI;
 };
