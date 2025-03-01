@@ -1,10 +1,10 @@
 import { Editor } from "obsidian";
 import {
+  escapeRegExp,
   extractRoleAndMessage,
   removeCommentsFromMessages,
   removeYAMLFrontMatter,
   splitMessages,
-  escapeRegExp,
 } from "src/Utilities/TextHelpers";
 import {
   HORIZONTAL_LINE_MD,

@@ -1,6 +1,6 @@
 import { Message } from "src/Models/Message";
 import { Editor, MarkdownView, Notice } from "obsidian";
-import { StreamManager } from "src/stream";
+import { StreamManager } from "src/managers/StreamManager";
 import { StreamService } from "./StreamService";
 import { EditorUpdateService } from "./EditorUpdateService";
 import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";

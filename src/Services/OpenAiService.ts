@@ -1,5 +1,5 @@
 import { Editor, requestUrl } from "obsidian";
-import { StreamManager } from "src/stream";
+import { StreamManager } from "src/managers/StreamManager";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENAI, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
@@ -7,8 +7,6 @@ import { BaseAiService, IAiApiService, OpenAiModel } from "src/Services/AiServic
 import { isValidApiKey } from "src/Utilities/SettingsUtils";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
-import { StreamService } from "./StreamService";
-import { EditorUpdateService } from "./EditorUpdateService";
 
 export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) => {
   try {
@@ -44,8 +42,8 @@ export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) =>
 };
 
 export class OpenAiService extends BaseAiService implements IAiApiService {
-  private errorService: ErrorService;
-  private notificationService: NotificationService;
+  protected errorService: ErrorService;
+  protected notificationService: NotificationService;
 
   constructor(streamManager: StreamManager, errorService?: ErrorService, notificationService?: NotificationService) {
     super(streamManager, errorService, notificationService);

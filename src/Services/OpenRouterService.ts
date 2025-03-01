@@ -1,5 +1,5 @@
 import { Editor, requestUrl } from "obsidian";
-import { StreamManager } from "src/stream";
+import { StreamManager } from "src/managers/StreamManager";
 import { Message } from "src/Models/Message";
 import { NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
@@ -7,8 +7,6 @@ import { BaseAiService, IAiApiService } from "src/Services/AiService";
 import { isValidApiKey } from "src/Utilities/SettingsUtils";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
-import { StreamService } from "./StreamService";
-import { EditorUpdateService } from "./EditorUpdateService";
 
 // Define a constant for OpenRouter service
 export const AI_SERVICE_OPENROUTER = "openrouter";
