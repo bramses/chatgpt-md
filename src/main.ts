@@ -5,10 +5,9 @@ import { ChatGPT_MDSettings, DEFAULT_SETTINGS } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
 import { FileService } from "src/Services/FileService";
 import { EditorContentService } from "src/Services/EditorContentService";
-import { MessageProcessingService } from "src/Services/MessageProcessingService";
+import { MessageService } from "src/Services/MessageService";
 import { TemplateService } from "src/Services/TemplateService";
 import { FrontmatterService } from "src/Services/FrontmatterService";
-import { ResponseProcessingService } from "src/Services/ResponseProcessingService";
 import { StreamService } from "src/Services/StreamService";
 import { StreamManager } from "src/managers/StreamManager";
 import {
@@ -101,10 +100,9 @@ export default class ChatGPT_MD extends Plugin {
   editorUpdateService: EditorUpdateService;
   fileService: FileService;
   editorContentService: EditorContentService;
-  messageProcessingService: MessageProcessingService;
+  messageService: MessageService;
   templateService: TemplateService;
   frontmatterService: FrontmatterService;
-  responseProcessingService: ResponseProcessingService;
 
   async onload() {
     this.statusBarItemEl = this.addStatusBarItem();
@@ -120,20 +118,18 @@ export default class ChatGPT_MD extends Plugin {
     // Initialize specialized services
     this.fileService = new FileService(this.app);
     this.editorContentService = new EditorContentService();
-    this.messageProcessingService = new MessageProcessingService(this.fileService);
+    this.messageService = new MessageService(this.fileService, this.notificationService);
     this.frontmatterService = new FrontmatterService(this.app);
     this.templateService = new TemplateService(this.app, this.fileService, this.editorContentService);
-    this.responseProcessingService = new ResponseProcessingService(this.editorContentService);
 
     // Initialize the EditorService with all specialized services
     this.editorService = new EditorService(
       this.app,
       this.fileService,
       this.editorContentService,
-      this.messageProcessingService,
+      this.messageService,
       this.templateService,
-      this.frontmatterService,
-      this.responseProcessingService
+      this.frontmatterService
     );
 
     this.addCommand({

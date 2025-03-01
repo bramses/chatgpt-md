@@ -3,10 +3,10 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { YAML_FRONTMATTER_REGEX } from "src/Constants";
 import { FileService } from "./FileService";
 import { EditorContentService } from "./EditorContentService";
-import { MessageProcessingService } from "./MessageProcessingService";
+import { MessageService } from "./MessageService";
 import { TemplateService } from "./TemplateService";
 import { FrontmatterService } from "./FrontmatterService";
-import { ResponseProcessingService } from "./ResponseProcessingService";
+import { NotificationService } from "./NotificationService";
 import { Message } from "src/Models/Message";
 
 /**
@@ -16,28 +16,25 @@ import { Message } from "src/Models/Message";
 export class EditorService {
   private fileService: FileService;
   private editorContentService: EditorContentService;
-  private messageProcessingService: MessageProcessingService;
+  private messageService: MessageService;
   private templateService: TemplateService;
   private frontmatterService: FrontmatterService;
-  private responseProcessingService: ResponseProcessingService;
 
   constructor(
     private app: App,
     fileService?: FileService,
     editorContentService?: EditorContentService,
-    messageProcessingService?: MessageProcessingService,
+    messageService?: MessageService,
     templateService?: TemplateService,
-    frontmatterService?: FrontmatterService,
-    responseProcessingService?: ResponseProcessingService
+    frontmatterService?: FrontmatterService
   ) {
     // Initialize services if not provided
     this.fileService = fileService || new FileService(app);
     this.editorContentService = editorContentService || new EditorContentService();
-    this.messageProcessingService = messageProcessingService || new MessageProcessingService(this.fileService);
+    const notificationService = new NotificationService();
+    this.messageService = messageService || new MessageService(this.fileService, notificationService);
     this.frontmatterService = frontmatterService || new FrontmatterService(app);
     this.templateService = templateService || new TemplateService(app, this.fileService, this.editorContentService);
-    this.responseProcessingService =
-      responseProcessingService || new ResponseProcessingService(this.editorContentService);
   }
 
   // FileService delegations
@@ -72,7 +69,7 @@ export class EditorService {
     return this.editorContentService.getHeadingPrefix(headingLevel);
   }
 
-  // MessageProcessingService delegations
+  // MessageService delegations
 
   async getMessagesFromEditor(
     editor: Editor,
@@ -81,7 +78,7 @@ export class EditorService {
     messages: string[];
     messagesWithRole: Message[];
   }> {
-    return this.messageProcessingService.getMessagesFromEditor(editor, settings);
+    return this.messageService.getMessagesFromEditor(editor, settings);
   }
 
   // TemplateService delegations
@@ -103,7 +100,7 @@ export class EditorService {
   // ResponseProcessingService delegations
 
   processResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings): void {
-    this.responseProcessingService.processResponse(editor, response, settings);
+    this.messageService.processResponse(editor, response, settings);
   }
 
   /**
