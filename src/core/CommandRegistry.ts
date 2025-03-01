@@ -10,6 +10,7 @@ import { fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
+  AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
   CALL_CHATGPT_API_COMMAND_ID,
@@ -115,12 +116,30 @@ export class CommandRegistry {
             isTitleTimestampFormat(view?.file?.basename, settings.dateFormat) &&
             messagesWithRoleAndMessage.length > MIN_AUTO_INFER_MESSAGES
           ) {
-            // Create a settings object with the correct API key
+            // Create a settings object with the correct API key and model
             const settingsWithApiKey = {
               ...frontmatter,
               // Use the utility function to get the correct API key
               openrouterApiKey: getApiKeyForService(settings, AI_SERVICE_OPENROUTER),
             };
+
+            // Ensure model is set for title inference
+            if (!settingsWithApiKey.model) {
+              console.log("[ChatGPT MD] Model not set for auto title inference, using default model");
+              if (frontmatter.aiService === AI_SERVICE_OPENAI) {
+                settingsWithApiKey.model = "gpt-4";
+              } else if (frontmatter.aiService === AI_SERVICE_OLLAMA) {
+                settingsWithApiKey.model = "llama2";
+              } else if (frontmatter.aiService === AI_SERVICE_OPENROUTER) {
+                settingsWithApiKey.model = "anthropic/claude-3-opus:beta";
+              }
+            }
+
+            console.log("[ChatGPT MD] Auto-inferring title with settings:", {
+              aiService: frontmatter.aiService,
+              model: settingsWithApiKey.model,
+            });
+
             await this.aiService.inferTitle(view, settingsWithApiKey, messages, editorService);
           }
         } catch (err) {
@@ -253,14 +272,32 @@ export class CommandRegistry {
         const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
         this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
 
+        // Ensure model is set
+        if (!frontmatter.model) {
+          console.log("[ChatGPT MD] Model not set in frontmatter, using default model");
+          if (frontmatter.aiService === AI_SERVICE_OPENAI) {
+            frontmatter.model = "gpt-4";
+          } else if (frontmatter.aiService === AI_SERVICE_OLLAMA) {
+            frontmatter.model = "llama2";
+          } else if (frontmatter.aiService === AI_SERVICE_OPENROUTER) {
+            frontmatter.model = "anthropic/claude-3-opus:beta";
+          }
+        }
+
         this.updateStatusBar(`Calling ${frontmatter.model}`);
         const { messages } = await editorService.getMessagesFromEditor(editor, settings);
 
         // Use the utility function to get the correct API key
         const settingsWithApiKey = {
           ...settings,
+          ...frontmatter,
           openrouterApiKey: getApiKeyForService(settings, AI_SERVICE_OPENROUTER),
         };
+
+        console.log("[ChatGPT MD] Inferring title with settings:", {
+          aiService: frontmatter.aiService,
+          model: settingsWithApiKey.model,
+        });
 
         await this.aiService.inferTitle(view, settingsWithApiKey, messages, editorService);
 

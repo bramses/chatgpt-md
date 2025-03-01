@@ -106,7 +106,12 @@ export class ErrorService {
 
     // Return message for chat if requested
     if (options.returnForChat) {
-      return chatMessage;
+      // Format the error message for chat display with proper URL formatting
+      return `I am sorry, I could not answer your request because of an error, here is what went wrong-
+
+${error instanceof Object && error.error ? error.error.message : error?.message || error || "undefined"}
+
+Model- ${model}, URL- ${url}`;
     }
 
     // Throw error for caller to handle
@@ -119,7 +124,10 @@ export class ErrorService {
   private formatContextInfo(model: string, url: string): string {
     const parts = [];
     if (model) parts.push(`Model: ${model}`);
-    if (url) parts.push(`URL: ${url}`);
+    if (url) {
+      // Ensure URL is displayed correctly without replacing special characters
+      parts.push(`URL: ${url}`);
+    }
     return parts.length > 0 ? parts.join(", ") : "";
   }
 
@@ -132,7 +140,12 @@ export class ErrorService {
     this.notificationService.showNotification(errorMessage);
     console.error(errorMessage, { url, defaultUrl, serviceName });
 
-    return `I am sorry, there was an error connecting to the custom URL: ${url}. Please check your settings.`;
+    // Format the URL properly for display in the chat message
+    return `I am sorry, I could not answer your request because of an error, here is what went wrong-
+
+Error connecting to the custom URL.
+
+Model- ${serviceName === "ollama" ? "llama2" : "unknown"}, URL- ${url}`;
   }
 
   /**

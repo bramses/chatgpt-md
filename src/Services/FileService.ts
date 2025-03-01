@@ -16,11 +16,14 @@ export class FileService {
       throw new Error("No file is currently open");
     }
 
+    // Sanitize the title to remove invalid characters
+    const sanitizedTitle = this.sanitizeFileName(title);
+
     const currentFolder = file.parent?.path ?? "/";
-    let newFileName = `${currentFolder}/${title}.md`;
+    let newFileName = `${currentFolder}/${sanitizedTitle}.md`;
 
     for (let i = 1; await this.app.vault.adapter.exists(newFileName); i++) {
-      newFileName = `${currentFolder}/${title} (${i}).md`;
+      newFileName = `${currentFolder}/${sanitizedTitle} (${i}).md`;
     }
 
     try {
@@ -30,6 +33,17 @@ export class FileService {
       console.log("[ChatGPT MD] Error writing inferred title to editor", err);
       throw err;
     }
+  }
+
+  /**
+   * Sanitize a file name by removing or replacing invalid characters
+   * @param fileName The file name to sanitize
+   * @returns The sanitized file name
+   */
+  sanitizeFileName(fileName: string): string {
+    // Replace characters that are invalid in file names
+    // These include: \ / : * ? " < > |
+    return fileName.replace(/[\\/:*?"<>|]/g, "-");
   }
 
   /**

@@ -1,5 +1,4 @@
 import { Plugin } from "obsidian";
-import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ServiceLocator } from "./ServiceLocator";
 import { CommandRegistry } from "./CommandRegistry";
 import { SettingsManager } from "./SettingsManager";

@@ -1,4 +1,4 @@
-import { Editor, requestUrl } from "obsidian";
+import { Editor } from "obsidian";
 import { StreamManager } from "src/managers/StreamManager";
 import { Message } from "src/Models/Message";
 import { NEWLINE, ROLE_USER } from "src/Constants";
@@ -7,6 +7,10 @@ import { BaseAiService, IAiApiService } from "src/Services/AiService";
 import { isValidApiKey } from "src/Utilities/SettingsUtils";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
+import { ApiService } from "./ApiService";
+import { ApiAuthService } from "./ApiAuthService";
+import { ApiResponseParser } from "./ApiResponseParser";
+import { EditorUpdateService } from "./EditorUpdateService";
 
 // Define a constant for OpenRouter service
 export const AI_SERVICE_OPENROUTER = "openrouter";
@@ -75,21 +79,18 @@ export const fetchAvailableOpenRouterModels = async (apiKey: string) => {
       return [];
     }
 
-    const response = await fetch(`${DEFAULT_OPENROUTER_CONFIG.url}v1/models`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/bramses/chatgpt-md",
-        "X-Title": "Obsidian ChatGPT MD Plugin",
-      },
-    });
-    if (!response.ok) throw new Error("Failed to fetch models");
+    // Use ApiService for the API request
+    const apiService = new ApiService();
+    const apiAuthService = new ApiAuthService();
+    const headers = apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENROUTER);
 
-    const json = await response.json();
-    const models = json.data;
+    const models = await apiService.makeGetRequest(
+      `${DEFAULT_OPENROUTER_CONFIG.url}v1/models`,
+      headers,
+      AI_SERVICE_OPENROUTER
+    );
 
-    return models
+    return models.data
       .sort((a: OpenRouterModel, b: OpenRouterModel) => {
         if (a.id < b.id) return 1;
         if (a.id > b.id) return -1;
@@ -105,11 +106,28 @@ export const fetchAvailableOpenRouterModels = async (apiKey: string) => {
 export class OpenRouterService extends BaseAiService implements IAiApiService {
   protected errorService: ErrorService;
   protected notificationService: NotificationService;
+  protected apiService: ApiService;
+  protected apiAuthService: ApiAuthService;
+  protected apiResponseParser: ApiResponseParser;
+  protected editorUpdateService: EditorUpdateService;
 
-  constructor(streamManager: StreamManager, errorService?: ErrorService, notificationService?: NotificationService) {
+  constructor(
+    streamManager: StreamManager,
+    errorService?: ErrorService,
+    notificationService?: NotificationService,
+    apiService?: ApiService,
+    apiAuthService?: ApiAuthService,
+    apiResponseParser?: ApiResponseParser,
+    editorUpdateService?: EditorUpdateService
+  ) {
     super(streamManager, errorService, notificationService);
     this.notificationService = notificationService || new NotificationService();
     this.errorService = errorService || new ErrorService(this.notificationService);
+    this.editorUpdateService = editorUpdateService || new EditorUpdateService(this.notificationService);
+    this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
+    this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
+    this.apiResponseParser =
+      apiResponseParser || new ApiResponseParser(this.editorUpdateService, this.notificationService);
   }
 
   getServiceType(): string {
@@ -176,27 +194,36 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     setAtCursor?: boolean | undefined
   ): Promise<{ fullstr: string; mode: "streaming" }> {
     try {
-      // Validate API key
-      this.validateApiKey(apiKey, "OpenRouter");
+      // Validate API key using ApiAuthService
+      this.apiAuthService.validateApiKey(apiKey, "OpenRouter");
 
+      // Create payload and headers
       const payload = this.createPayload(config, messages);
-      const response = await this.streamService.stream(
-        editor,
+      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
+
+      // Insert assistant header
+      const initialCursor = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, payload.model);
+
+      // Make streaming request using ApiService
+      const response = await this.apiService.makeStreamingRequest(
         `${config.url}v1/chat/completions`,
         payload,
-        {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": "https://github.com/bramses/chatgpt-md",
-          "X-Title": "Obsidian ChatGPT MD Plugin",
-        },
-        config.aiService,
-        setAtCursor,
-        headingPrefix
+        headers,
+        this.getServiceType()
       );
-      return { fullstr: response, mode: "streaming" };
+
+      // Process the streaming response using ApiResponseParser
+      const fullstr = await this.apiResponseParser.processStreamResponse(
+        response,
+        this.getServiceType(),
+        editor,
+        initialCursor,
+        setAtCursor
+      );
+
+      return { fullstr, mode: "streaming" };
     } catch (err) {
-      // The error is already handled by the StreamService, which uses ErrorService
+      // The error is already handled by the ApiService, which uses ErrorService
       // Just return the error message for the chat
       const errorMessage = `Error: ${err}`;
       return { fullstr: errorMessage, mode: "streaming" };
@@ -211,35 +238,22 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     try {
       console.log(`[ChatGPT MD] "no stream"`, config);
 
-      // Validate API key
-      this.validateApiKey(apiKey, "OpenRouter");
+      // Validate API key using ApiAuthService
+      this.apiAuthService.validateApiKey(apiKey, "OpenRouter");
 
       config.stream = false;
 
+      // Create payload and headers
       const payload = this.createPayload(config, messages);
-      const responseUrl = await requestUrl({
-        url: `${config.url}v1/chat/completions`,
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://github.com/bramses/chatgpt-md",
-          "X-Title": "Obsidian ChatGPT MD Plugin",
-        },
-        contentType: "application/json",
-        body: JSON.stringify(payload),
-        throw: false,
-      });
-      const data = responseUrl.json;
-      if (data?.error) {
-        // Use the error service to handle the error consistently
-        return this.errorService.handleApiError({ error: data.error }, this.getServiceType(), {
-          returnForChat: true,
-          showNotification: true,
-          context: { model: config.model, url: config.url },
-        });
-      }
-      return data.choices[0].message.content;
+      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
+
+      // Make non-streaming request using ApiService
+      return await this.apiService.makeNonStreamingRequest(
+        `${config.url}v1/chat/completions`,
+        payload,
+        headers,
+        this.getServiceType()
+      );
     } catch (err) {
       // Use the error service to handle the error consistently
       return this.errorService.handleApiError(err, this.getServiceType(), {
@@ -256,38 +270,32 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
         this.notificationService.showWarning("Not enough messages to infer title. Minimum 2 messages.");
         return "";
       }
-      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${settings.inferTitleLanguage}. \nMessages:${NEWLINE}${JSON.stringify(
+      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon (:), back slash (\\), forward slash (/), asterisk (*), question mark (?), double quote ("), less than (<), greater than (>), or pipe (|) as these are invalid in file names. Just return the title. Write the title in ${settings.inferTitleLanguage}. \nMessages:${NEWLINE}${JSON.stringify(
         messages
       )}`;
 
+      // Ensure model is set
       const config = {
         ...DEFAULT_OPENROUTER_CONFIG,
         ...settings,
-        openrouterApiKey: apiKey || settings.openrouterApiKey || "",
       };
 
-      // Use the apiKey directly
+      // If model is not set in settings, use the default model
+      if (!config.model) {
+        console.log("[ChatGPT MD] Model not set for title inference, using default model");
+        config.model = DEFAULT_OPENROUTER_CONFIG.model;
+      }
+
+      console.log("[ChatGPT MD] Inferring title with model:", config.model);
       return await this.callNonStreamingAPI(apiKey, [{ role: ROLE_USER, content: prompt }], config);
     } catch (err) {
-      // Use the error service for consistent error handling
-      this.errorService.handleApiError(err, this.getServiceType(), {
-        showNotification: true,
-        logToConsole: true,
-        context: {
-          operation: "inferTitleFromMessages",
-          model: settings.model || DEFAULT_OPENROUTER_CONFIG.model,
-          url: settings.url || DEFAULT_OPENROUTER_CONFIG.url,
-        },
-      });
+      console.error("[ChatGPT MD] Error inferring title:", err);
+      this.showNoTitleInferredNotification();
       return "";
     }
   };
 
-  /**
-   * Show a notification when title inference fails
-   * Override of the base class method to use NotificationService
-   */
   protected showNoTitleInferredNotification(): void {
-    this.notificationService.showWarning(`[${this.getServiceType()}] Could not infer title`);
+    this.notificationService.showWarning("Could not infer title. Using default title.");
   }
 }
