@@ -196,6 +196,20 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     } catch (err) {
       // Use the error service to handle the error consistently
       console.error(`[ChatGPT MD] Ollama API error:`, err);
+
+      // Check if this is a title inference call (based on message content)
+      const isTitleInference =
+        messages.length === 1 &&
+        messages[0].content &&
+        typeof messages[0].content === "string" &&
+        messages[0].content.includes("Infer title from the summary");
+
+      if (isTitleInference) {
+        // For title inference, just throw the error to be caught by the caller
+        throw err;
+      }
+
+      // For regular chat, return the error message
       return this.errorService.handleApiError(err, this.getServiceType(), {
         returnForChat: true,
         showNotification: true,
@@ -227,7 +241,23 @@ export class OllamaService extends BaseAiService implements IAiApiService {
       }
 
       console.log("[ChatGPT MD] Inferring title with model:", config.model);
-      return await this.callNonStreamingAPI("", [{ role: ROLE_USER, content: prompt }], config);
+
+      try {
+        // Use a separate try/catch block for the API call to handle errors without returning them to the chat
+        const result = await this.callNonStreamingAPI("", [{ role: ROLE_USER, content: prompt }], config);
+
+        // Check if the result is an error message
+        if (this.isErrorMessage(result)) {
+          console.error("[ChatGPT MD] Error in title inference response:", result);
+          return "";
+        }
+
+        return result;
+      } catch (apiError) {
+        // Log the error but don't return it to the chat
+        console.error("[ChatGPT MD] Error calling API for title inference:", apiError);
+        return "";
+      }
     } catch (err) {
       console.error("[ChatGPT MD] Error inferring title:", err);
       this.showNoTitleInferredNotification();
@@ -236,6 +266,6 @@ export class OllamaService extends BaseAiService implements IAiApiService {
   };
 
   protected showNoTitleInferredNotification(): void {
-    this.notificationService.showWarning("Could not infer title. Using default title.");
+    this.notificationService.showWarning("Could not infer title. The file name was not changed.");
   }
 }
