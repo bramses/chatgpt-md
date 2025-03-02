@@ -117,7 +117,15 @@ export abstract class BaseAiService implements IAiApiService {
       // Infer the title
       const title = await this.inferTitleFromMessages(apiKey, messages, settings);
 
-      if (title) {
+      // Check if the result is an error message
+      if (this.isErrorMessage(title)) {
+        console.error("[ChatGPT MD] Error detected in title inference result:", title);
+        this.showNoTitleInferredNotification();
+        return "";
+      }
+
+      // Only update the title if we got a valid non-empty title
+      if (title && title.trim().length > 0) {
         // Update the title in the editor
         await editorService.writeInferredTitle(view, title);
         return title;
@@ -126,9 +134,41 @@ export abstract class BaseAiService implements IAiApiService {
         return "";
       }
     } catch (error) {
+      console.error("[ChatGPT MD] Error in inferTitle:", error);
       this.showNoTitleInferredNotification();
       return "";
     }
+  }
+
+  /**
+   * Check if a string is an error message
+   * @param text The text to check
+   * @returns True if the text appears to be an error message
+   */
+  protected isErrorMessage(text: string): boolean {
+    if (!text || typeof text !== "string") {
+      return false;
+    }
+
+    // Common error message patterns
+    const errorPatterns = [
+      "I am sorry",
+      "I could not answer",
+      "because of an error",
+      "what went wrong",
+      "Error:",
+      "error occurred",
+      "failed",
+      "invalid",
+      "unauthorized",
+      "not found",
+      "API key",
+      "Model-",
+      "URL-",
+    ];
+
+    // Check if the text contains any error patterns
+    return errorPatterns.some((pattern) => text.includes(pattern));
   }
 
   /**
@@ -136,7 +176,7 @@ export abstract class BaseAiService implements IAiApiService {
    */
   protected showNoTitleInferredNotification(): void {
     if (this.notificationService) {
-      this.notificationService.showWarning("Could not infer title. Using default title.");
+      this.notificationService.showWarning("Could not infer title. The file name was not changed.");
     }
   }
 
