@@ -1,372 +1,112 @@
-import { App, Editor, MarkdownView, Notice } from "obsidian";
-import { createFolderModal } from "src/Utilities/ModalHelpers";
-import {
-  escapeRegExp,
-  extractRoleAndMessage,
-  getHeaderRole,
-  getHeadingPrefix,
-  parseSettingsFrontmatter,
-  removeCommentsFromMessages,
-  removeYAMLFrontMatter,
-  splitMessages,
-  unfinishedCodeBlock,
-} from "src/Utilities/TextHelpers";
+import { App, Editor, MarkdownView } from "obsidian";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { ChatTemplatesSuggestModal } from "src/Views/ChatTemplatesSuggestModal";
-import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
-import {
-  AI_SERVICE_OPENAI,
-  CHAT_FOLDER_TYPE,
-  CHAT_TEMPLATE_FOLDER_TYPE,
-  DEFAULT_DATE_FORMAT,
-  DEFAULT_HEADING_LEVEL,
-  HORIZONTAL_LINE_CLASS,
-  HORIZONTAL_LINE_MD,
-  MARKDOWN_LINKS_REGEX,
-  MAX_HEADING_LEVEL,
-  NEWLINE,
-  ROLE_ASSISTANT,
-  ROLE_DEVELOPER,
-  ROLE_IDENTIFIER,
-  ROLE_SYSTEM,
-  ROLE_USER,
-  WIKI_LINKS_REGEX,
-  YAML_FRONTMATTER_REGEX,
-} from "src/Constants";
-import { DEFAULT_OLLAMA_API_CONFIG } from "src/Services/OllamaService";
-import { aiProviderFromUrl } from "./AiService";
+import { YAML_FRONTMATTER_REGEX } from "src/Constants";
+import { FileService } from "./FileService";
+import { EditorContentService } from "./EditorContentService";
+import { MessageService } from "./MessageService";
+import { TemplateService } from "./TemplateService";
+import { FrontmatterService } from "./FrontmatterService";
+import { NotificationService } from "./NotificationService";
+import { Message } from "src/Models/Message";
 
+/**
+ * Service responsible for editor operations
+ * @deprecated Use the specialized services instead
+ */
 export class EditorService {
-  constructor(private app: App) {}
+  private fileService: FileService;
+  private editorContentService: EditorContentService;
+  private messageService: MessageService;
+  private templateService: TemplateService;
+  private frontmatterService: FrontmatterService;
+
+  constructor(
+    private app: App,
+    fileService?: FileService,
+    editorContentService?: EditorContentService,
+    messageService?: MessageService,
+    templateService?: TemplateService,
+    frontmatterService?: FrontmatterService
+  ) {
+    // Initialize services if not provided
+    this.fileService = fileService || new FileService(app);
+    this.editorContentService = editorContentService || new EditorContentService();
+    const notificationService = new NotificationService();
+    this.messageService = messageService || new MessageService(this.fileService, notificationService);
+    this.frontmatterService = frontmatterService || new FrontmatterService(app);
+    this.templateService = templateService || new TemplateService(app, this.fileService, this.editorContentService);
+  }
+
+  // FileService delegations
 
   async writeInferredTitle(view: MarkdownView, title: string): Promise<void> {
-    const file = view.file;
-    if (!file) {
-      throw new Error("No file is currently open");
-    }
-
-    const currentFolder = file.parent?.path ?? "/";
-    let newFileName = `${currentFolder}/${title}.md`;
-
-    for (let i = 1; await this.app.vault.adapter.exists(newFileName); i++) {
-      newFileName = `${currentFolder}/${title} (${i}).md`;
-    }
-
-    try {
-      await this.app.fileManager.renameFile(file, newFileName);
-    } catch (err) {
-      new Notice("[ChatGPT MD] Error writing inferred title to editor");
-      console.log("[ChatGPT MD] Error writing inferred title to editor", err);
-      throw err;
-    }
+    return this.fileService.writeInferredTitle(view, title);
   }
 
-  private async ensureFolderExists(folderPath: string, folderType: string): Promise<boolean> {
-    const exists = await this.app.vault.adapter.exists(folderPath);
-
-    if (!exists) {
-      const result = await createFolderModal(this.app, folderType, folderPath);
-      if (!result) {
-        new Notice(
-          `[ChatGPT MD] No ${folderType} found. One must be created to use the plugin. Set one in settings and make sure it exists.`
-        );
-        return false;
-      }
-    }
-
-    return true;
+  async ensureFolderExists(folderPath: string, folderType: string): Promise<boolean> {
+    return this.fileService.ensureFolderExists(folderPath, folderType);
   }
+
+  getDate(date: Date, format: string): string {
+    return this.fileService.formatDate(date, format);
+  }
+
+  // EditorContentService delegations
 
   addHorizontalRule(editor: Editor, role: string, headingLevel: number): void {
-    const formattedContent = `${NEWLINE}<hr class="${HORIZONTAL_LINE_CLASS}">${NEWLINE}${getHeadingPrefix(headingLevel)}${ROLE_IDENTIFIER}${role}${NEWLINE}`;
-
-    const currentPosition = editor.getCursor();
-
-    editor.replaceRange(formattedContent, currentPosition);
-    editor.setCursor(currentPosition.line + formattedContent.split("\n").length - 1, 0);
-  }
-
-  async createNewChatWithHighlightedText(editor: Editor, settings: ChatGPT_MDSettings): Promise<void> {
-    try {
-      const selectedText = editor.getSelection();
-
-      if (!settings.chatFolder || settings.chatFolder.trim() === "") {
-        new Notice(`[ChatGPT MD] No chat folder value found. Please set one in settings.`);
-        return;
-      }
-
-      const chatFolderExists = await this.ensureFolderExists(settings.chatFolder, CHAT_FOLDER_TYPE);
-      if (!chatFolderExists) {
-        return;
-      }
-
-      const fileName = `${this.getDate(new Date(), settings.dateFormat)}.md`;
-      const filePath = `${settings.chatFolder}/${fileName}`;
-
-      const newFile = await this.app.vault.create(filePath, selectedText);
-
-      await this.app.workspace.openLinkText(newFile.basename, "", true, { state: { mode: "source" } });
-      const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-
-      if (!activeView) {
-        new Notice("No active markdown editor found.");
-        return;
-      }
-
-      activeView.editor.focus();
-      this.moveCursorToEnd(activeView.editor);
-    } catch (err) {
-      console.error(`[ChatGPT MD] Error in Create new chat with highlighted text`, err);
-      new Notice(`[ChatGPT MD] Error in Create new chat with highlighted text, check console`);
-    }
-  }
-
-  private appendMessage(editor: Editor, message: string, headingLevel: number): void {
-    const headingPrefix = getHeadingPrefix(headingLevel);
-    const assistantRoleHeader = getHeaderRole(headingPrefix, ROLE_ASSISTANT);
-    const userRoleHeader = getHeaderRole(headingPrefix, ROLE_USER);
-
-    editor.replaceRange(`${assistantRoleHeader}${message}${userRoleHeader}`, editor.getCursor());
+    this.editorContentService.addHorizontalRule(editor, role, headingLevel);
   }
 
   clearChat(editor: Editor): void {
-    const content = editor.getValue();
-    const frontmatterMatches = content.match(YAML_FRONTMATTER_REGEX);
-
-    if (frontmatterMatches?.length) {
-      const [frontmatter] = frontmatterMatches;
-
-      // Clear editor and restore frontmatter
-      editor.setValue(frontmatter);
-
-      // Position cursor at the end of the document
-      editor.setCursor({ line: editor.lastLine() + 1, ch: 0 });
-    } else {
-      // Clear editor
-      editor.setValue("");
-    }
+    this.editorContentService.clearChat(editor);
   }
 
   moveCursorToEnd(editor: Editor): void {
-    try {
-      const length = editor.lastLine();
-
-      const newCursor = {
-        line: length + 1,
-        ch: 0,
-      };
-      editor.setCursor(newCursor);
-    } catch (err) {
-      throw new Error("Error moving cursor to end of file" + err);
-    }
+    this.editorContentService.moveCursorToEnd(editor);
   }
 
-  private findLinksInMessage(message: string): { link: string; title: string }[] {
-    const regexes = [
-      { regex: WIKI_LINKS_REGEX, fullMatchIndex: 0, titleIndex: 1 },
-      { regex: MARKDOWN_LINKS_REGEX, fullMatchIndex: 0, titleIndex: 2 },
-    ];
-
-    const links: { link: string; title: string }[] = [];
-    const seenTitles = new Set<string>();
-
-    for (const { regex, fullMatchIndex, titleIndex } of regexes) {
-      for (const match of message.matchAll(regex)) {
-        const fullLink = match[fullMatchIndex];
-        const linkTitle = match[titleIndex];
-
-        if (linkTitle && !seenTitles.has(linkTitle)) {
-          links.push({ link: fullLink, title: linkTitle });
-          seenTitles.add(linkTitle);
-        }
-      }
-    }
-
-    return links;
+  getHeadingPrefix(headingLevel: number): string {
+    return this.editorContentService.getHeadingPrefix(headingLevel);
   }
 
-  private getLinkedNoteContent = async (linkPath: string) => {
-    try {
-      const file = this.app.metadataCache.getFirstLinkpathDest(linkPath, "");
-
-      return file ? await this.app.vault.read(file) : null;
-    } catch (error) {
-      console.error(`Error reading linked note: ${linkPath}`, error);
-      return null;
-    }
-  };
-
-  private cleanMessagesFromNote(editor: Editor) {
-    const messages = splitMessages(removeYAMLFrontMatter(editor.getValue()));
-    return messages.map(removeCommentsFromMessages);
-  }
+  // MessageService delegations
 
   async getMessagesFromEditor(
     editor: Editor,
     settings: ChatGPT_MDSettings
   ): Promise<{
     messages: string[];
-    messagesWithRole: { role: string; content: string }[];
+    messagesWithRole: Message[];
   }> {
-    let messages = this.cleanMessagesFromNote(editor);
-
-    messages = await Promise.all(
-      messages.map(async (message) => {
-        const links = this.findLinksInMessage(message);
-        for (const link of links) {
-          try {
-            let content = await this.getLinkedNoteContent(link.title);
-
-            if (content) {
-              // remove the assistant and user delimiters
-              // if the inlined note was already a chat
-              const regex = new RegExp(
-                `${NEWLINE}${HORIZONTAL_LINE_MD}${NEWLINE}#+ ${ROLE_IDENTIFIER}(?:${ROLE_USER}|${ROLE_ASSISTANT}).*$`,
-                "gm"
-              );
-              content = content?.replace(regex, "").replace(YAML_FRONTMATTER_REGEX, "");
-
-              message = message.replace(
-                new RegExp(escapeRegExp(link.link), "g"),
-                `${NEWLINE}${link.title}${NEWLINE}${content}${NEWLINE}`
-              );
-            } else {
-              console.warn(`Error fetching linked note content for: ${link.link}`);
-            }
-          } catch (error) {
-            console.error(error);
-          }
-        }
-
-        return message;
-      })
-    );
-
-    // Extract roles from each message
-    const messagesWithRole = messages.map(extractRoleAndMessage);
-
-    // Add system commands to the beginning of the list if they exist
-    const frontmatter = this.getFrontmatter(null, settings, this.app);
-    if (frontmatter.system_commands) {
-      const role = frontmatter.aiService === AI_SERVICE_OPENAI ? ROLE_DEVELOPER : ROLE_SYSTEM;
-      frontmatter.system_commands.forEach((command) => messagesWithRole.unshift({ role, content: command }));
-    }
-
-    return { messages, messagesWithRole };
+    return this.messageService.getMessagesFromEditor(editor, settings);
   }
 
-  async createNewChatFromTemplate(settings: ChatGPT_MDSettings, titleDate: string): Promise<void> {
-    const { chatFolder, chatTemplateFolder } = settings;
+  // TemplateService delegations
 
-    if (!chatFolder || !chatFolder.trim()) {
-      new Notice(`[ChatGPT MD] No chat folder value found. Please set one in settings.`);
-      return;
-    }
-
-    if (!(await this.ensureFolderExists(chatFolder, CHAT_FOLDER_TYPE))) {
-      return;
-    }
-
-    if (!chatTemplateFolder || !chatTemplateFolder.trim()) {
-      new Notice(`[ChatGPT MD] No chat template folder value found. Please set one in settings.`);
-      return;
-    }
-
-    if (!(await this.ensureFolderExists(chatTemplateFolder, CHAT_TEMPLATE_FOLDER_TYPE))) {
-      return;
-    }
-
-    new ChatTemplatesSuggestModal(this.app, settings, titleDate).open();
+  async createNewChatFromTemplate(settings: ChatGPT_MDSettings, fileName: string): Promise<void> {
+    return this.templateService.createNewChatFromTemplate(settings, fileName);
   }
 
-  getDate(date: Date, format = DEFAULT_DATE_FORMAT): string {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hour = date.getHours();
-    const minute = date.getMinutes();
-    const second = date.getSeconds();
-
-    const paddedMonth = month.toString().padStart(2, "0");
-    const paddedDay = day.toString().padStart(2, "0");
-    const paddedHour = hour.toString().padStart(2, "0");
-    const paddedMinute = minute.toString().padStart(2, "0");
-    const paddedSecond = second.toString().padStart(2, "0");
-
-    return format
-      .replace("YYYY", year.toString())
-      .replace("MM", paddedMonth)
-      .replace("DD", paddedDay)
-      .replace("hh", paddedHour)
-      .replace("mm", paddedMinute)
-      .replace("ss", paddedSecond);
+  async createNewChatWithHighlightedText(editor: Editor, settings: ChatGPT_MDSettings): Promise<void> {
+    return this.templateService.createNewChatWithHighlightedText(editor, settings);
   }
 
-  getFrontmatter(view: MarkdownView | null, settings: ChatGPT_MDSettings, app: App) {
-    const activeFile = view?.file || app.workspace.getActiveFile();
-    if (!activeFile) {
-      throw new Error("No active file found");
-    }
+  // FrontmatterService delegations
 
-    // get the settings frontmatter
-    const settingsFrontmatter = parseSettingsFrontmatter(settings.defaultChatFrontmatter);
-    // merge with frontmatter from current file
-    const noteFrontmatter = app.metadataCache.getFileCache(activeFile)?.frontmatter || {};
-    const metaMatter = {
-      ...settingsFrontmatter,
-      ...noteFrontmatter,
-    };
-
-    if (!noteFrontmatter.url) {
-      delete metaMatter.url;
-    }
-
-    const aiService = aiProviderFromUrl(metaMatter.url, metaMatter.model);
-
-    const defaultConfig = aiService == AI_SERVICE_OPENAI ? DEFAULT_OPENAI_CONFIG : DEFAULT_OLLAMA_API_CONFIG;
-
-    return {
-      ...defaultConfig,
-      ...metaMatter,
-      model: metaMatter.model.split("@")[1] || metaMatter.model,
-      aiService: aiService,
-      stream: metaMatter.stream ?? settings.stream ?? defaultConfig.stream,
-      title: view?.file?.basename ?? defaultConfig.title,
-    };
+  getFrontmatter(view: MarkdownView, settings: ChatGPT_MDSettings, app: App): any {
+    return this.frontmatterService.getFrontmatter(view, settings);
   }
 
-  getHeadingPrefix(headingLevel: number): string {
-    if (headingLevel === DEFAULT_HEADING_LEVEL) {
-      return "";
-    } else if (headingLevel > MAX_HEADING_LEVEL) {
-      return "#".repeat(MAX_HEADING_LEVEL) + " ";
-    }
-    return "#".repeat(headingLevel) + " ";
+  // ResponseProcessingService delegations
+
+  processResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings): void {
+    this.messageService.processResponse(editor, response, settings);
   }
 
-  async processResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings) {
-    if (response.mode === "streaming") {
-      const newLine = getHeaderRole(this.getHeadingPrefix(settings.headingLevel), ROLE_USER);
-      editor.replaceRange(newLine, editor.getCursor());
-
-      // move cursor to end of completion
-      const cursor = editor.getCursor();
-      const newCursor = {
-        line: cursor.line,
-        ch: cursor.ch + newLine.length,
-      };
-      editor.setCursor(newCursor);
-    } else {
-      let responseStr = response;
-      if (unfinishedCodeBlock(responseStr)) {
-        responseStr = responseStr + "\n```";
-      }
-
-      this.appendMessage(editor, responseStr, settings.headingLevel);
-    }
-  }
-
-  setModel(editor: Editor, modelName: string) {
+  /**
+   * Set the model in the front matter of the active file
+   */
+  setModel(editor: Editor, modelName: string): void {
     const content = editor.getValue();
 
     const frontmatterMatches = content.match(YAML_FRONTMATTER_REGEX);
