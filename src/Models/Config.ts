@@ -14,29 +14,92 @@ n: ${DEFAULT_OPENAI_CONFIG.n}
 model: ${DEFAULT_OPENAI_CONFIG.model}
 ---`;
 
-export interface ChatGPT_MDSettings {
+/**
+ * API key settings
+ */
+export interface ApiKeySettings {
+  /** API Key for OpenAI */
   apiKey: string;
-  defaultChatFrontmatter: string;
-  stream: boolean;
-  chatTemplateFolder: string;
+  /** API Key for OpenRouter */
+  openrouterApiKey: string;
+}
+
+/**
+ * Folder settings
+ */
+export interface FolderSettings {
+  /** Path to folder for chat files */
   chatFolder: string;
+  /** Path to folder for chat file templates */
+  chatTemplateFolder: string;
+}
+
+/**
+ * Chat behavior settings
+ */
+export interface ChatBehaviorSettings {
+  /** Whether to stream responses from the AI */
+  stream: boolean;
+  /** Whether to generate text at cursor instead of end of file */
   generateAtCursor: boolean;
+  /** Whether to automatically infer title after 4 messages have been exchanged */
   autoInferTitle: boolean;
+}
+
+/**
+ * Formatting settings
+ */
+export interface FormattingSettings {
+  /** Date format for chat files */
   dateFormat: string;
+  /** Heading level for messages */
   headingLevel: number;
+  /** Language to use for title inference */
   inferTitleLanguage: string;
+}
+
+/**
+ * Chat template settings
+ */
+export interface TemplateSettings {
+  /** Default frontmatter for new chat files */
+  defaultChatFrontmatter: string;
+  /** System commands to include in the chat */
   system_commands?: string[] | null;
 }
 
+/**
+ * Combined settings interface
+ */
+export interface ChatGPT_MDSettings
+  extends ApiKeySettings,
+    FolderSettings,
+    ChatBehaviorSettings,
+    FormattingSettings,
+    TemplateSettings {}
+
+/**
+ * Default settings
+ */
 export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
+  // API Keys
   apiKey: "default",
-  defaultChatFrontmatter: DEFAULT_CHAT_FRONT_MATTER,
-  stream: true,
-  chatTemplateFolder: "ChatGPT_MD/templates",
+  openrouterApiKey: "",
+
+  // Folders
   chatFolder: "ChatGPT_MD/chats",
+  chatTemplateFolder: "ChatGPT_MD/templates",
+
+  // Chat Behavior
+  stream: true,
   generateAtCursor: false,
   autoInferTitle: false,
+
+  // Formatting
   dateFormat: DEFAULT_DATE_FORMAT,
   headingLevel: 0,
   inferTitleLanguage: "English",
+
+  // Templates
+  defaultChatFrontmatter: DEFAULT_CHAT_FRONT_MATTER,
 };

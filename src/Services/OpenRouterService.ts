@@ -1,9 +1,10 @@
 import { Editor } from "obsidian";
 import { StreamManager } from "src/managers/StreamManager";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_OLLAMA, NEWLINE, ROLE_USER } from "src/Constants";
+import { NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { BaseAiService, IAiApiService, OllamaModel } from "src/Services/AiService";
+import { BaseAiService, IAiApiService } from "src/Services/AiService";
+import { isValidApiKey } from "src/Utilities/SettingsUtils";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
 import { ApiService } from "./ApiService";
@@ -11,53 +12,98 @@ import { ApiAuthService } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { EditorUpdateService } from "./EditorUpdateService";
 
-export interface OllamaStreamPayload {
-  model: string;
-  messages: Message[];
-  stream?: boolean;
+// Define a constant for OpenRouter service
+export const AI_SERVICE_OPENROUTER = "openrouter";
+
+export interface OpenRouterModel {
+  id: string;
+  name: string;
+  context_length: number;
+  pricing: {
+    prompt: number;
+    completion: number;
+  };
 }
 
-export interface OllamaConfig {
-  aiService: string;
+export interface OpenRouterStreamPayload {
   model: string;
-  url: string;
+  messages: Array<Message>;
+  temperature: number;
+  top_p: number;
+  presence_penalty: number;
+  frequency_penalty: number;
+  stop: string[] | null;
+  max_tokens: number;
   stream: boolean;
-  title?: string;
-  system_commands?: string[] | null;
 }
 
-export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
-  aiService: AI_SERVICE_OLLAMA,
-  model: "llama2",
-  url: "http://localhost:11434/api/",
+export interface OpenRouterConfig {
+  aiService: string;
+  frequency_penalty: number;
+  max_tokens: number;
+  model: string;
+  openrouterApiKey: string;
+  presence_penalty: number;
+  stop: string[] | null;
+  stream: boolean;
+  system_commands: string[] | null;
+  tags: string[] | null;
+  temperature: number;
+  title: string;
+  top_p: number;
+  url: string;
+}
+
+export const DEFAULT_OPENROUTER_CONFIG: OpenRouterConfig = {
+  aiService: AI_SERVICE_OPENROUTER,
+  frequency_penalty: 0.5,
+  max_tokens: 300,
+  model: "anthropic/claude-3-opus:beta",
+  openrouterApiKey: "",
+  presence_penalty: 0.5,
+  stop: null,
   stream: true,
-  title: "Untitled",
   system_commands: null,
+  tags: [],
+  temperature: 0.3,
+  title: "Untitled",
+  top_p: 1,
+  url: "https://openrouter.ai/api/",
 };
 
-export const fetchAvailableOllamaModels = async () => {
+export const fetchAvailableOpenRouterModels = async (apiKey: string) => {
   try {
+    // Check if API key is empty or undefined
+    if (!isValidApiKey(apiKey)) {
+      console.error("OpenRouter API key is missing. Please add your OpenRouter API key in the settings.");
+      return [];
+    }
+
     // Use ApiService for the API request
     const apiService = new ApiService();
-    const headers = { "Content-Type": "application/json" };
+    const apiAuthService = new ApiAuthService();
+    const headers = apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENROUTER);
 
-    const json = await apiService.makeGetRequest(`${DEFAULT_OLLAMA_CONFIG.url}tags`, headers, AI_SERVICE_OLLAMA);
-    const models = json.models;
+    const models = await apiService.makeGetRequest(
+      `${DEFAULT_OPENROUTER_CONFIG.url}v1/models`,
+      headers,
+      AI_SERVICE_OPENROUTER
+    );
 
-    return models
-      .sort((a: OllamaModel, b: OllamaModel) => {
-        if (a.name < b.name) return 1;
-        if (a.name > b.name) return -1;
+    return models.data
+      .sort((a: OpenRouterModel, b: OpenRouterModel) => {
+        if (a.id < b.id) return 1;
+        if (a.id > b.id) return -1;
         return 0;
       })
-      .map((model: OllamaModel) => `local@${model.name}`);
+      .map((model: OpenRouterModel) => `${AI_SERVICE_OPENROUTER}@${model.id}`);
   } catch (error) {
     console.error("Error fetching models:", error);
     return [];
   }
 };
 
-export class OllamaService extends BaseAiService implements IAiApiService {
+export class OpenRouterService extends BaseAiService implements IAiApiService {
   protected errorService: ErrorService;
   protected notificationService: NotificationService;
   protected apiService: ApiService;
@@ -85,40 +131,50 @@ export class OllamaService extends BaseAiService implements IAiApiService {
   }
 
   getServiceType(): string {
-    return AI_SERVICE_OLLAMA;
+    return AI_SERVICE_OPENROUTER;
   }
 
-  getDefaultConfig(): OllamaConfig {
-    return DEFAULT_OLLAMA_CONFIG;
+  getDefaultConfig(): OpenRouterConfig {
+    return DEFAULT_OPENROUTER_CONFIG;
   }
 
   getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
-    return ""; // Ollama doesn't use an API key
+    return settings.openrouterApiKey;
   }
 
-  createPayload(config: OllamaConfig, messages: Message[]): OllamaStreamPayload {
+  createPayload(config: OpenRouterConfig, messages: Message[]): OpenRouterStreamPayload {
     // Remove the provider prefix if it exists in the model name
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
     return {
       model: modelName,
       messages,
+      max_tokens: config.max_tokens,
+      temperature: config.temperature,
+      top_p: config.top_p,
+      presence_penalty: config.presence_penalty,
+      frequency_penalty: config.frequency_penalty,
       stream: config.stream,
+      stop: config.stop,
     };
   }
 
-  handleAPIError(err: any, config: OllamaConfig, prefix: string): never {
+  handleAPIError(err: any, config: OpenRouterConfig, prefix: string): never {
     // Use the new ErrorService to handle errors
     const context = {
       model: config.model,
       url: config.url,
-      defaultUrl: DEFAULT_OLLAMA_CONFIG.url,
+      defaultUrl: DEFAULT_OPENROUTER_CONFIG.url,
       aiService: this.getServiceType(),
     };
 
     // Special handling for custom URL errors
-    if (err instanceof Object && config.url !== DEFAULT_OLLAMA_CONFIG.url) {
-      return this.errorService.handleUrlError(config.url, DEFAULT_OLLAMA_CONFIG.url, this.getServiceType()) as never;
+    if (err instanceof Object && config.url !== DEFAULT_OPENROUTER_CONFIG.url) {
+      return this.errorService.handleUrlError(
+        config.url,
+        DEFAULT_OPENROUTER_CONFIG.url,
+        this.getServiceType()
+      ) as never;
     }
 
     // Use the centralized error handling
@@ -132,22 +188,25 @@ export class OllamaService extends BaseAiService implements IAiApiService {
   protected async callStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
-    config: OllamaConfig,
+    config: OpenRouterConfig,
     editor: Editor,
     headingPrefix: string,
-    setAtCursor?: boolean
+    setAtCursor?: boolean | undefined
   ): Promise<{ fullstr: string; mode: "streaming" }> {
     try {
+      // Validate API key using ApiAuthService
+      this.apiAuthService.validateApiKey(apiKey, "OpenRouter");
+
       // Create payload and headers
       const payload = this.createPayload(config, messages);
-      const headers = { "Content-Type": "application/json" };
+      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
 
       // Insert assistant header
       const initialCursor = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, payload.model);
 
       // Make streaming request using ApiService
       const response = await this.apiService.makeStreamingRequest(
-        `${config.url}chat`,
+        `${config.url}v1/chat/completions`,
         payload,
         headers,
         this.getServiceType()
@@ -166,7 +225,6 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     } catch (err) {
       // The error is already handled by the ApiService, which uses ErrorService
       // Just return the error message for the chat
-      console.error(`[ChatGPT MD] Ollama streaming error:`, err);
       const errorMessage = `Error: ${err}`;
       return { fullstr: errorMessage, mode: "streaming" };
     }
@@ -175,27 +233,30 @@ export class OllamaService extends BaseAiService implements IAiApiService {
   protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
-    config: OllamaConfig
+    config: OpenRouterConfig
   ): Promise<any> {
     try {
       console.log(`[ChatGPT MD] "no stream"`, config);
+
+      // Validate API key using ApiAuthService
+      this.apiAuthService.validateApiKey(apiKey, "OpenRouter");
 
       config.stream = false;
 
       // Create payload and headers
       const payload = this.createPayload(config, messages);
-      const headers = { "Content-Type": "application/json" };
+      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
 
       // Make non-streaming request using ApiService
       return await this.apiService.makeNonStreamingRequest(
-        `${config.url}chat`,
+        `${config.url}v1/chat/completions`,
         payload,
         headers,
         this.getServiceType()
       );
     } catch (err) {
       // Use the error service to handle the error consistently
-      console.error(`[ChatGPT MD] Ollama API error:`, err);
+      console.error(`[ChatGPT MD] OpenRouter API error:`, err);
 
       // Check if this is a title inference call (based on message content)
       const isTitleInference =
@@ -230,21 +291,21 @@ export class OllamaService extends BaseAiService implements IAiApiService {
 
       // Ensure model is set
       const config = {
-        ...DEFAULT_OLLAMA_CONFIG,
+        ...DEFAULT_OPENROUTER_CONFIG,
         ...settings,
       };
 
       // If model is not set in settings, use the default model
       if (!config.model) {
         console.log("[ChatGPT MD] Model not set for title inference, using default model");
-        config.model = DEFAULT_OLLAMA_CONFIG.model;
+        config.model = DEFAULT_OPENROUTER_CONFIG.model;
       }
 
       console.log("[ChatGPT MD] Inferring title with model:", config.model);
 
       try {
         // Use a separate try/catch block for the API call to handle errors without returning them to the chat
-        const result = await this.callNonStreamingAPI("", [{ role: ROLE_USER, content: prompt }], config);
+        const result = await this.callNonStreamingAPI(apiKey, [{ role: ROLE_USER, content: prompt }], config);
 
         // Check if the result is an error message
         if (this.isErrorMessage(result)) {

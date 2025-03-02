@@ -1,34 +1,50 @@
-import { Editor, MarkdownView, Notice, requestUrl } from "obsidian";
-import { StreamManager } from "src/stream";
+import { Editor } from "obsidian";
+import { StreamManager } from "src/managers/StreamManager";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_OPENAI, CHAT_ERROR_RESPONSE, NEWLINE, ROLE_USER } from "src/Constants";
+import { AI_SERVICE_OPENAI, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { EditorService } from "src/Services/EditorService";
-import { IAiApiService, OpenAiModel } from "src/Services/AiService";
+import { BaseAiService, IAiApiService, OpenAiModel } from "src/Services/AiService";
+import { isValidApiKey } from "src/Utilities/SettingsUtils";
+import { ErrorService } from "./ErrorService";
+import { NotificationService } from "./NotificationService";
+import { ApiService } from "./ApiService";
+import { ApiAuthService } from "./ApiAuthService";
+import { ApiResponseParser } from "./ApiResponseParser";
+import { EditorUpdateService } from "./EditorUpdateService";
+
+export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
+  aiService: AI_SERVICE_OPENAI,
+  frequency_penalty: 0.5,
+  max_tokens: 300,
+  model: "gpt-4",
+  n: 1,
+  presence_penalty: 0.5,
+  stop: null,
+  stream: true,
+  system_commands: null,
+  tags: [],
+  temperature: 0.3,
+  title: "Untitled",
+  top_p: 1,
+  url: "https://api.openai.com/",
+};
 
 export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) => {
   try {
-    const response = await fetch(`${DEFAULT_OPENAI_CONFIG.url}v1/models`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-    });
-    if (!response.ok) throw new Error("Failed to fetch models");
+    if (!isValidApiKey(apiKey)) {
+      console.error("OpenAI API key is missing. Please add your OpenAI API key in the settings.");
+      return [];
+    }
 
-    const json = await response.json();
-    const models = json.data;
+    // Use ApiService for the API request
+    const apiService = new ApiService();
+    const apiAuthService = new ApiAuthService();
+    const headers = apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENAI);
 
-    return models
-      .filter(
-        (model: OpenAiModel) =>
-          model.id.includes("gpt") &&
-          !model.id.includes("audio") &&
-          !model.id.includes("realtime") &&
-          !model.id.includes("instruct") &&
-          !model.id.includes("chatgpt")
-      )
+    const models = await apiService.makeGetRequest(`${DEFAULT_OPENAI_CONFIG.url}v1/models`, headers, AI_SERVICE_OPENAI);
+
+    return models.data
+      .filter((model: OpenAiModel) => model.id.includes("gpt"))
       .sort((a: OpenAiModel, b: OpenAiModel) => {
         if (a.id < b.id) return 1;
         if (a.id > b.id) return -1;
@@ -41,65 +57,51 @@ export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) =>
   }
 };
 
-export class OpenAiService implements IAiApiService {
-  constructor(private streamManager: StreamManager) {}
+export class OpenAiService extends BaseAiService implements IAiApiService {
+  protected errorService: ErrorService;
+  protected notificationService: NotificationService;
+  protected apiService: ApiService;
+  protected apiAuthService: ApiAuthService;
+  protected apiResponseParser: ApiResponseParser;
+  protected editorUpdateService: EditorUpdateService;
 
-  async callAIAPI(
-    messages: Message[],
-    options: Partial<OpenAIConfig> = {},
-    headingPrefix: string,
-    editor?: Editor,
-    setAtCursor?: boolean,
-    apiKey?: string
-  ): Promise<any> {
-    const config: OpenAIConfig = { ...DEFAULT_OPENAI_CONFIG, ...options };
-    return options.stream && editor
-      ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor)
-      : this.callNonStreamingAPI(apiKey, messages, config);
+  constructor(
+    streamManager: StreamManager,
+    errorService?: ErrorService,
+    notificationService?: NotificationService,
+    apiService?: ApiService,
+    apiAuthService?: ApiAuthService,
+    apiResponseParser?: ApiResponseParser,
+    editorUpdateService?: EditorUpdateService
+  ) {
+    super(streamManager, errorService, notificationService);
+    this.notificationService = notificationService || new NotificationService();
+    this.errorService = errorService || new ErrorService(this.notificationService);
+    this.editorUpdateService = editorUpdateService || new EditorUpdateService(this.notificationService);
+    this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
+    this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
+    this.apiResponseParser =
+      apiResponseParser || new ApiResponseParser(this.editorUpdateService, this.notificationService);
   }
 
-  async inferTitle(
-    view: MarkdownView,
-    settings: ChatGPT_MDSettings,
-    messages: string[],
-    editorService: EditorService
-  ): Promise<any> {
-    if (!view.file) {
-      throw new Error("No active file found");
-    }
-
-    console.log("[ChatGPT MD] auto inferring title from messages");
-
-    const inferredTitle = await this.inferTitleFromMessages(settings.apiKey, messages, settings);
-
-    if (inferredTitle) {
-      console.log(`[ChatGPT MD] automatically inferred title: ${inferredTitle}. Changing file name...`);
-      await editorService.writeInferredTitle(view, inferredTitle);
-    } else {
-      new Notice("[ChatGPT MD] Could not infer title", 5000);
-    }
+  getServiceType(): string {
+    return AI_SERVICE_OPENAI;
   }
 
-  private handleAPIError(err: any, config: OpenAIConfig, prefix: string) {
-    if (err instanceof Object) {
-      if (err.error) {
-        new Notice(`${prefix} :: ${err.error.message}`);
-        throw new Error(JSON.stringify(err.error));
-      }
-      if (config.url !== DEFAULT_OPENAI_CONFIG.url) {
-        new Notice(`${prefix} calling specified url: ${config.url}`);
-        throw new Error(`${prefix} calling specified url: ${config.url}`);
-      }
-      new Notice(`${prefix} :: ${JSON.stringify(err)}`);
-      throw new Error(JSON.stringify(err));
-    }
-    new Notice(`${prefix} calling ${config.model}, see console for details`);
-    throw new Error(`${prefix} see error: ${err}`);
+  getDefaultConfig(): OpenAIConfig {
+    return DEFAULT_OPENAI_CONFIG;
   }
 
-  private createPayload(config: OpenAIConfig, messages: Message[]): OpenAIStreamPayload {
+  getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
+    return settings.apiKey;
+  }
+
+  createPayload(config: OpenAIConfig, messages: Message[]): OpenAIStreamPayload {
+    // Remove the provider prefix if it exists in the model name
+    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
+
     return {
-      model: config.model,
+      model: modelName,
       messages,
       max_completion_tokens: config.max_tokens,
       temperature: config.temperature,
@@ -112,7 +114,29 @@ export class OpenAiService implements IAiApiService {
     };
   }
 
-  private async callStreamingAPI(
+  handleAPIError(err: any, config: OpenAIConfig, prefix: string): never {
+    // Use the new ErrorService to handle errors
+    const context = {
+      model: config.model,
+      url: config.url,
+      defaultUrl: DEFAULT_OPENAI_CONFIG.url,
+      aiService: this.getServiceType(),
+    };
+
+    // Special handling for custom URL errors
+    if (err instanceof Object && config.url !== DEFAULT_OPENAI_CONFIG.url) {
+      return this.errorService.handleUrlError(config.url, DEFAULT_OPENAI_CONFIG.url, this.getServiceType()) as never;
+    }
+
+    // Use the centralized error handling
+    return this.errorService.handleApiError(err, this.getServiceType(), {
+      context,
+      showNotification: true,
+      logToConsole: true,
+    }) as never;
+  }
+
+  protected async callStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
     config: OpenAIConfig,
@@ -121,29 +145,43 @@ export class OpenAiService implements IAiApiService {
     setAtCursor?: boolean | undefined
   ): Promise<{ fullstr: string; mode: "streaming" }> {
     try {
+      // Validate API key using ApiAuthService
+      this.apiAuthService.validateApiKey(apiKey, "OpenAI");
+
+      // Create payload and headers
       const payload = this.createPayload(config, messages);
-      const response = await this.streamManager.stream(
-        editor,
+      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
+
+      // Insert assistant header
+      const initialCursor = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, payload.model);
+
+      // Make streaming request using ApiService
+      const response = await this.apiService.makeStreamingRequest(
         `${config.url}v1/chat/completions`,
         payload,
-        {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        config.aiService,
-        setAtCursor,
-        headingPrefix
+        headers,
+        this.getServiceType()
       );
-      return { fullstr: response, mode: "streaming" };
-    } catch (err) {
-      this.handleAPIError(err, config, "[ChatGPT MD] Stream = True Error");
 
-      const response = `${CHAT_ERROR_RESPONSE}${NEWLINE}${err}`;
-      return { fullstr: response, mode: "streaming" };
+      // Process the streaming response using ApiResponseParser
+      const fullstr = await this.apiResponseParser.processStreamResponse(
+        response,
+        this.getServiceType(),
+        editor,
+        initialCursor,
+        setAtCursor
+      );
+
+      return { fullstr, mode: "streaming" };
+    } catch (err) {
+      // The error is already handled by the ApiService, which uses ErrorService
+      // Just return the error message for the chat
+      const errorMessage = `Error: ${err}`;
+      return { fullstr: errorMessage, mode: "streaming" };
     }
   }
 
-  private async callNonStreamingAPI(
+  protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
     config: OpenAIConfig
@@ -151,49 +189,97 @@ export class OpenAiService implements IAiApiService {
     try {
       console.log(`[ChatGPT MD] "no stream"`, config);
 
+      // Validate API key using ApiAuthService
+      this.apiAuthService.validateApiKey(apiKey, "OpenAI");
+
       config.stream = false;
 
+      // Create payload and headers
       const payload = this.createPayload(config, messages);
-      const responseUrl = await requestUrl({
-        url: `${config.url}v1/chat/completions`,
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        contentType: "application/json",
-        body: JSON.stringify(payload),
-        throw: false,
-      });
-      const data = responseUrl.json;
-      if (data?.error) {
-        new Notice(`[ChatGPT MD] Stream = False Error :: ${data.error.message}`);
-        throw new Error(JSON.stringify(data.error));
-      }
-      return data.choices[0].message.content;
+      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
+
+      // Make non-streaming request using ApiService
+      return await this.apiService.makeNonStreamingRequest(
+        `${config.url}v1/chat/completions`,
+        payload,
+        headers,
+        this.getServiceType()
+      );
     } catch (err) {
-      this.handleAPIError(err, config, "[ChatGPT MD] Error");
+      // Use the error service to handle the error consistently
+      console.error(`[ChatGPT MD] OpenAI API error:`, err);
+
+      // Check if this is a title inference call (based on message content)
+      const isTitleInference =
+        messages.length === 1 &&
+        messages[0].content &&
+        typeof messages[0].content === "string" &&
+        messages[0].content.includes("Infer title from the summary");
+
+      if (isTitleInference) {
+        // For title inference, just throw the error to be caught by the caller
+        throw err;
+      }
+
+      // For regular chat, return the error message
+      return this.errorService.handleApiError(err, this.getServiceType(), {
+        returnForChat: true,
+        showNotification: true,
+        context: { model: config.model, url: config.url },
+      });
     }
   }
 
-  private inferTitleFromMessages = async (apiKey: string, messages: string[], settings: any) => {
+  protected inferTitleFromMessages = async (apiKey: string, messages: string[], settings: any): Promise<string> => {
     try {
       if (messages.length < 2) {
-        new Notice("Not enough messages to infer title. Minimum 2 messages.");
+        this.notificationService.showWarning("Not enough messages to infer title. Minimum 2 messages.");
         return "";
       }
-      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon, back slash or forward slash. Just return the title. Write the title in ${settings.inferTitleLanguage}. \nMessages:${NEWLINE}${JSON.stringify(
+      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon (:), back slash (\\), forward slash (/), asterisk (*), question mark (?), double quote ("), less than (<), greater than (>), or pipe (|) as these are invalid in file names. Just return the title. Write the title in ${settings.inferTitleLanguage}. \nMessages:${NEWLINE}${JSON.stringify(
         messages
       )}`;
 
-      const config = { ...DEFAULT_OPENAI_CONFIG, ...settings };
+      // Ensure model is set
+      const config = {
+        ...DEFAULT_OPENAI_CONFIG,
+        ...settings,
+      };
 
-      return await this.callNonStreamingAPI(settings.apiKey, [{ role: ROLE_USER, content: prompt }], config);
+      // If model is not set in settings, use the default model
+      if (!config.model) {
+        console.log("[ChatGPT MD] Model not set for title inference, using default model");
+        config.model = DEFAULT_OPENAI_CONFIG.model;
+      }
+
+      console.log("[ChatGPT MD] Inferring title with model:", config.model);
+
+      try {
+        // Use a separate try/catch block for the API call to handle errors without returning them to the chat
+        const result = await this.callNonStreamingAPI(apiKey, [{ role: ROLE_USER, content: prompt }], config);
+
+        // Check if the result is an error message
+        if (this.isErrorMessage(result)) {
+          console.error("[ChatGPT MD] Error in title inference response:", result);
+          return "";
+        }
+
+        return result;
+      } catch (apiError) {
+        // Log the error but don't return it to the chat
+        console.error("[ChatGPT MD] Error calling API for title inference:", apiError);
+        return "";
+      }
     } catch (err) {
-      new Notice("[ChatGPT MD] Error inferring title from messages");
-      throw new Error("[ChatGPT MD] Error inferring title from messages" + err);
+      console.error("[ChatGPT MD] Error inferring title:", err);
+      this.showNoTitleInferredNotification();
+      return "";
     }
   };
+
+  protected showNoTitleInferredNotification(): void {
+    this.notificationService.showWarning("Could not infer title. The file name was not changed.");
+  }
 }
 
 export interface OpenAIStreamPayload {
@@ -225,20 +311,3 @@ export interface OpenAIConfig {
   top_p: number;
   url: string;
 }
-
-export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
-  aiService: AI_SERVICE_OPENAI,
-  frequency_penalty: 0.5,
-  max_tokens: 300,
-  model: "gpt-4o-mini",
-  n: 1,
-  presence_penalty: 0.5,
-  stop: null,
-  stream: true,
-  system_commands: null,
-  tags: [],
-  temperature: 0.3,
-  title: "Untitled",
-  top_p: 1,
-  url: "https://api.openai.com/",
-};

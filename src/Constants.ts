@@ -1,5 +1,6 @@
 export const AI_SERVICE_OLLAMA = "ollama";
 export const AI_SERVICE_OPENAI = "openai";
+export const AI_SERVICE_OPENROUTER = "openrouter";
 
 export const ADD_COMMENT_BLOCK_COMMAND_ID = "add-comment-block";
 export const ADD_HR_COMMAND_ID = "add-hr";
