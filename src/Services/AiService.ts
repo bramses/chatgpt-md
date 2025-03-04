@@ -25,7 +25,8 @@ export interface IAiApiService {
     headingPrefix: string,
     editor?: Editor,
     setAtCursor?: boolean,
-    apiKey?: string
+    apiKey?: string,
+    settings?: ChatGPT_MDSettings
   ): Promise<any>;
 
   /**
@@ -88,9 +89,15 @@ export abstract class BaseAiService implements IAiApiService {
     headingPrefix: string,
     editor?: Editor,
     setAtCursor?: boolean,
-    apiKey?: string
+    apiKey?: string,
+    settings?: ChatGPT_MDSettings
   ): Promise<any> {
     const config = { ...this.getDefaultConfig(), ...options };
+
+    // Use URL from settings if available
+    if (settings) {
+      config.url = this.getUrlFromSettings(settings);
+    }
 
     return options.stream && editor
       ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor)
@@ -184,6 +191,11 @@ export abstract class BaseAiService implements IAiApiService {
    * Get the API key from settings
    */
   abstract getApiKeyFromSettings(settings: ChatGPT_MDSettings): string;
+
+  /**
+   * Get the service URL from settings
+   */
+  abstract getUrlFromSettings(settings: ChatGPT_MDSettings): string;
 
   /**
    * Call the AI API in streaming mode

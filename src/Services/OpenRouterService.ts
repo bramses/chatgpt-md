@@ -142,6 +142,10 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     return settings.openrouterApiKey;
   }
 
+  getUrlFromSettings(settings: ChatGPT_MDSettings): string {
+    return settings.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url;
+  }
+
   createPayload(config: OpenRouterConfig, messages: Message[]): OpenRouterStreamPayload {
     // Remove the provider prefix if it exists in the model name
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;

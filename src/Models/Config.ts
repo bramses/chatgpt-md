@@ -1,5 +1,7 @@
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import { DEFAULT_DATE_FORMAT } from "../Constants";
+import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
+import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 
 export const DEFAULT_CHAT_FRONT_MATTER = `---
 system_commands: ['I am a helpful assistant.']
@@ -69,6 +71,18 @@ export interface TemplateSettings {
 }
 
 /**
+ * Service URL settings
+ */
+export interface ServiceUrlSettings {
+  /** URL for OpenAI API */
+  openaiUrl: string;
+  /** URL for OpenRouter API */
+  openrouterUrl: string;
+  /** URL for Ollama API */
+  ollamaUrl: string;
+}
+
+/**
  * Combined settings interface
  */
 export interface ChatGPT_MDSettings
@@ -76,7 +90,8 @@ export interface ChatGPT_MDSettings
     FolderSettings,
     ChatBehaviorSettings,
     FormattingSettings,
-    TemplateSettings {}
+    TemplateSettings,
+    ServiceUrlSettings {}
 
 /**
  * Default settings
@@ -85,6 +100,11 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   // API Keys
   apiKey: "default",
   openrouterApiKey: "",
+
+  // Service URLs
+  openaiUrl: DEFAULT_OPENAI_CONFIG.url,
+  openrouterUrl: DEFAULT_OPENROUTER_CONFIG.url,
+  ollamaUrl: DEFAULT_OLLAMA_CONFIG.url,
 
   // Folders
   chatFolder: "ChatGPT_MD/chats",

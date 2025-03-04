@@ -96,6 +96,10 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     return ""; // Ollama doesn't use an API key
   }
 
+  getUrlFromSettings(settings: ChatGPT_MDSettings): string {
+    return settings.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url;
+  }
+
   createPayload(config: OllamaConfig, messages: Message[]): OllamaStreamPayload {
     // Remove the provider prefix if it exists in the model name
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
