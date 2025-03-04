@@ -1,6 +1,9 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { ChatGPT_MDSettings, DEFAULT_CHAT_FRONT_MATTER } from "src/Models/Config";
 import { DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
+import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
+import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
+import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 
 interface SettingDefinition {
   id: keyof ChatGPT_MDSettings;
@@ -49,24 +52,42 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "API Keys",
       },
 
-      // Folders
+      // Service URLs
       {
-        id: "chatFolder",
-        name: "Chat Folder",
-        description: "Path to folder for chat files",
+        id: "openaiUrl",
+        name: "OpenAI API URL",
+        description: `URL for OpenAI API\nDefault URL: ${DEFAULT_OPENAI_CONFIG.url}`,
         type: "text",
-        group: "Folders",
+        placeholder: DEFAULT_OPENAI_CONFIG.url,
+        group: "Service URLs",
       },
       {
-        id: "chatTemplateFolder",
-        name: "Chat Template Folder",
-        description: "Path to folder for chat file templates",
+        id: "openrouterUrl",
+        name: "OpenRouter.ai API URL",
+        description: `URL for OpenRouter.ai API\nDefault URL: ${DEFAULT_OPENROUTER_CONFIG.url}`,
         type: "text",
-        placeholder: "chat-templates",
-        group: "Folders",
+        placeholder: DEFAULT_OPENROUTER_CONFIG.url,
+        group: "Service URLs",
+      },
+      {
+        id: "ollamaUrl",
+        name: "Ollama API URL",
+        description: `URL for Ollama API\nDefault URL: ${DEFAULT_OLLAMA_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_OLLAMA_CONFIG.url,
+        group: "Service URLs",
       },
 
       // Chat Behavior
+      {
+        id: "defaultChatFrontmatter",
+        name: "Default Chat Frontmatter",
+        description:
+          "Default frontmatter for new chat files. You can change/use all of the settings exposed by the OpenAI API here: https://platform.openai.com/docs/api-reference/chat/create",
+        type: "textarea",
+        placeholder: DEFAULT_CHAT_FRONT_MATTER,
+        group: "Chat Behavior",
+      },
       {
         id: "stream",
         name: "Stream",
@@ -87,6 +108,23 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         description: "Automatically infer title after 4 messages have been exchanged",
         type: "toggle",
         group: "Chat Behavior",
+      },
+
+      // Folders
+      {
+        id: "chatFolder",
+        name: "Chat Folder",
+        description: "Path to folder for chat files",
+        type: "text",
+        group: "Folders",
+      },
+      {
+        id: "chatTemplateFolder",
+        name: "Chat Template Folder",
+        description: "Path to folder for chat file templates",
+        type: "text",
+        placeholder: "chat-templates",
+        group: "Folders",
       },
 
       // Formatting
@@ -125,15 +163,6 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
       },
 
       // Templates
-      {
-        id: "defaultChatFrontmatter",
-        name: "Default Chat Frontmatter",
-        description:
-          "Default frontmatter for new chat files. You can change/use all of the settings exposed by the OpenAI API here: https://platform.openai.com/docs/api-reference/chat/create",
-        type: "textarea",
-        placeholder: DEFAULT_CHAT_FRONT_MATTER,
-        group: "Templates",
-      },
     ];
 
     // Group settings by category
@@ -158,28 +187,45 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
   }
 
   createSettingElement(container: HTMLElement, schema: SettingDefinition) {
+    // Regular handling for all settings
     const setting = new Setting(container).setName(schema.name).setDesc(schema.description);
 
     if (schema.type === "text") {
-      setting.addText((text) =>
+      setting.addText((text) => {
         text
           .setPlaceholder(schema.placeholder || "")
           .setValue(String(this.settingsProvider.settings[schema.id]))
           .onChange(async (value) => {
             (this.settingsProvider.settings[schema.id] as string) = value;
             await this.settingsProvider.saveSettings();
-          })
-      );
+          });
+
+        // Set width to match textarea
+        text.inputEl.style.width = "300px";
+
+        return text;
+      });
     } else if (schema.type === "textarea") {
-      setting.addTextArea((text) =>
+      setting.addTextArea((text) => {
         text
           .setPlaceholder(schema.placeholder || "")
           .setValue(String(this.settingsProvider.settings[schema.id] || schema.placeholder))
           .onChange(async (value) => {
             (this.settingsProvider.settings[schema.id] as string) = value;
             await this.settingsProvider.saveSettings();
-          })
-      );
+          });
+
+        // Set width for all textareas
+        text.inputEl.style.width = "300px";
+
+        // Special height for defaultChatFrontmatter
+        if (schema.id === "defaultChatFrontmatter") {
+          text.inputEl.style.height = "260px";
+          text.inputEl.style.minHeight = "260px";
+        }
+
+        return text;
+      });
     } else if (schema.type === "toggle") {
       setting.addToggle((toggle) =>
         toggle.setValue(Boolean(this.settingsProvider.settings[schema.id])).onChange(async (value) => {
@@ -195,6 +241,11 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
           (this.settingsProvider.settings[schema.id] as string) = value;
           await this.settingsProvider.saveSettings();
         });
+
+        // Set width to match textarea
+        dropdown.selectEl.style.width = "300px";
+
+        return dropdown;
       });
     }
   }

@@ -106,7 +106,8 @@ export class CommandRegistry {
             editorService.getHeadingPrefix(settings.headingLevel),
             editor,
             settings.generateAtCursor,
-            apiKeyToUse
+            apiKeyToUse,
+            settings
           );
 
           await editorService.processResponse(editor, response, settings);

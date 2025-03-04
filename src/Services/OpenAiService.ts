@@ -96,6 +96,10 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     return settings.apiKey;
   }
 
+  getUrlFromSettings(settings: ChatGPT_MDSettings): string {
+    return settings.openaiUrl || DEFAULT_OPENAI_CONFIG.url;
+  }
+
   createPayload(config: OpenAIConfig, messages: Message[]): OpenAIStreamPayload {
     // Remove the provider prefix if it exists in the model name
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
