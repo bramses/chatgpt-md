@@ -61,7 +61,15 @@ export class ChatTemplatesSuggestModal extends SuggestModal<ChatTemplate> {
   async onChooseSuggestion(template: ChatTemplate, evt: MouseEvent | KeyboardEvent) {
     new Notice(`Selected ${template.title}`);
     const templateText = await this.app.vault.read(template.file);
-    // use template text to create new file in chat folder
+
+    // Check if the template already has frontmatter
+    let finalContent = templateText;
+    const hasFrontmatter = /^---\n[\s\S]*?\n---/.test(templateText);
+
+    // If template doesn't have frontmatter, add the default frontmatter from settings
+    if (!hasFrontmatter && this.settings.defaultChatFrontmatter) {
+      finalContent = this.settings.defaultChatFrontmatter + "\n\n" + templateText;
+    }
 
     const newFileName = `${this.titleDate} ${template.title}`;
     let newFilePath = normalizePath(`${this.settings.chatFolder}/${newFileName}.md`);
@@ -73,7 +81,7 @@ export class ChatTemplatesSuggestModal extends SuggestModal<ChatTemplate> {
     }
 
     try {
-      const file = await this.app.vault.create(newFilePath, templateText);
+      const file = await this.app.vault.create(newFilePath, finalContent);
       // open new file
       await this.app.workspace.openLinkText(file.basename, "", true);
     } catch (error) {
