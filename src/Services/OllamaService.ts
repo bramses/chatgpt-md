@@ -140,14 +140,14 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean
-  ): Promise<{ fullstr: string; mode: "streaming" }> {
+  ): Promise<{ fullstr: string; mode: "streaming"; wasAborted?: boolean }> {
     try {
       // Create payload and headers
       const payload = this.createPayload(config, messages);
       const headers = { "Content-Type": "application/json" };
 
       // Insert assistant header
-      const initialCursor = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, payload.model);
+      const cursorPositions = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, payload.model);
 
       // Make streaming request using ApiService
       const response = await this.apiService.makeStreamingRequest(
@@ -158,15 +158,17 @@ export class OllamaService extends BaseAiService implements IAiApiService {
       );
 
       // Process the streaming response using ApiResponseParser
-      const fullstr = await this.apiResponseParser.processStreamResponse(
+      const result = await this.apiResponseParser.processStreamResponse(
         response,
         this.getServiceType(),
         editor,
-        initialCursor,
-        setAtCursor
+        cursorPositions,
+        setAtCursor,
+        this.apiService
       );
 
-      return { fullstr, mode: "streaming" };
+      // Use the helper method to process the result
+      return this.processStreamingResult(result);
     } catch (err) {
       // The error is already handled by the ApiService, which uses ErrorService
       // Just return the error message for the chat

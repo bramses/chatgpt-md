@@ -10,6 +10,7 @@ import { NotificationService } from "./NotificationService";
  */
 export class ApiService {
   private abortController: AbortController | null = null;
+  private wasStreamingAborted: boolean = false;
   private errorService: ErrorService;
   private notificationService: NotificationService;
   private apiAuthService: ApiAuthService;
@@ -176,8 +177,23 @@ export class ApiService {
    */
   stopStreaming(): void {
     if (this.abortController) {
+      this.wasStreamingAborted = true;
       this.abortController.abort();
       this.abortController = null;
     }
+  }
+
+  /**
+   * Check if streaming was aborted
+   */
+  wasAborted(): boolean {
+    return this.wasStreamingAborted;
+  }
+
+  /**
+   * Reset the aborted flag
+   */
+  resetAbortedFlag(): void {
+    this.wasStreamingAborted = false;
   }
 }

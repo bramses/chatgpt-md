@@ -207,7 +207,7 @@ export abstract class BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean
-  ): Promise<{ fullstr: string; mode: "streaming" }>;
+  ): Promise<{ fullstr: string; mode: "streaming"; wasAborted?: boolean }>;
 
   /**
    * Call the AI API in non-streaming mode
@@ -226,6 +226,28 @@ export abstract class BaseAiService implements IAiApiService {
     if (this.apiService) {
       this.apiService.stopStreaming();
     }
+  }
+
+  /**
+   * Process streaming result and handle aborted case
+   * This centralizes the common logic for all AI services
+   */
+  protected processStreamingResult(result: { text: string; wasAborted: boolean }): {
+    fullstr: string;
+    mode: "streaming";
+    wasAborted?: boolean;
+  } {
+    // If streaming was aborted and text is empty, return empty string with wasAborted flag
+    if (result.wasAborted && result.text === "") {
+      return { fullstr: "", mode: "streaming", wasAborted: true };
+    }
+
+    // Normal case - return the text with wasAborted flag
+    return {
+      fullstr: result.text,
+      mode: "streaming",
+      wasAborted: result.wasAborted,
+    };
   }
 }
 
