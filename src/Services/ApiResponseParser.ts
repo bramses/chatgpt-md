@@ -3,6 +3,7 @@ import { Editor } from "obsidian";
 import { EditorUpdateService } from "./EditorUpdateService";
 import { NotificationService } from "./NotificationService";
 import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
+import { ApiService } from "./ApiService";
 
 /**
  * ApiResponseParser handles parsing of API responses
@@ -190,21 +191,27 @@ export class ApiResponseParser {
    * @param response The response object
    * @param serviceType The AI service type
    * @param editor The editor instance
-   * @param initialCursor The initial cursor position
+   * @param initialCursor The initial cursor position before inserting the assistant header
    * @param setAtCursor Whether to set the text at cursor
-   * @returns The complete text
+   * @param apiService The API service instance to check if streaming was aborted
+   * @returns The complete text and whether streaming was aborted
    */
   async processStreamResponse(
     response: Response,
     serviceType: string,
     editor: Editor,
-    initialCursor: { line: number; ch: number },
-    setAtCursor?: boolean
-  ): Promise<string> {
+    cursorPositions: {
+      initialCursor: { line: number; ch: number };
+      newCursor: { line: number; ch: number };
+    },
+    setAtCursor?: boolean,
+    apiService?: ApiService
+  ): Promise<{ text: string; wasAborted: boolean }> {
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let done = false;
     let text = "";
+    let wasAborted = false;
 
     try {
       while (!done) {
@@ -219,35 +226,49 @@ export class ApiResponseParser {
         for (const line of lines) {
           if (line.startsWith("data: [DONE]")) continue;
           if (line.startsWith("data:")) {
-            text = this.processStreamLine(line, text, editor, initialCursor, serviceType, setAtCursor);
+            text = this.processStreamLine(line, text, editor, cursorPositions.newCursor, serviceType, setAtCursor);
           } else if (line.trim() !== "") {
             // For Ollama and other non-OpenAI formats
-            text = this.processStreamLine(line, text, editor, initialCursor, serviceType, setAtCursor);
+            text = this.processStreamLine(line, text, editor, cursorPositions.newCursor, serviceType, setAtCursor);
           }
         }
       }
-
-      // Check for unfinished code blocks and add closing backticks if needed
-      if (unfinishedCodeBlock(text)) {
-        // Add closing code block
-        const cursor = editor.getCursor();
-        editor.replaceRange("\n```", cursor);
-        text += "\n```";
-      }
-
-      // Clean up any trailing content if not setting at cursor
-      if (!setAtCursor) {
-        const cursor = editor.getCursor();
-        editor.replaceRange("", cursor, {
-          line: Infinity,
-          ch: Infinity,
-        });
-      }
-
-      return text;
     } catch (error) {
       console.error("Error processing stream:", error);
-      return text;
     }
+
+    // Check if streaming was aborted - moved outside try/catch for cleaner code
+    if (apiService && apiService.wasAborted()) {
+      wasAborted = true;
+      apiService.resetAbortedFlag();
+
+      // Remove the partial assistant response by restoring the editor to its state before the response
+      if (!setAtCursor) {
+        // Remove everything from the initial cursor position (before the assistant header) to the current cursor position
+        editor.replaceRange("", cursorPositions.initialCursor, editor.getCursor());
+      }
+
+      return { text: "", wasAborted };
+    }
+
+    // Handle normal completion (not aborted)
+    // Check for unfinished code blocks and add closing backticks if needed
+    if (unfinishedCodeBlock(text)) {
+      // Add closing code block
+      const cursor = editor.getCursor();
+      editor.replaceRange("\n```", cursor);
+      text += "\n```";
+    }
+
+    // Clean up any trailing content if not setting at cursor
+    if (!setAtCursor) {
+      const cursor = editor.getCursor();
+      editor.replaceRange("", cursor, {
+        line: Infinity,
+        ch: Infinity,
+      });
+    }
+
+    return { text, wasAborted };
   }
 }

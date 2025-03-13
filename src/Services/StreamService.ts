@@ -51,19 +51,22 @@ export class StreamService {
       console.log(`[ChatGPT MD] "stream" (via StreamService)`, options);
 
       // Insert assistant header
-      const initialCursor = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, options.model);
+      const cursorPositions = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, options.model);
 
       // Make the API request using ApiService
       const response = await this.apiService.makeStreamingRequest(url, options, headers, aiService);
 
       // Process the stream using ApiResponseParser
-      return await this.apiResponseParser.processStreamResponse(
+      const result = await this.apiResponseParser.processStreamResponse(
         response,
         aiService,
         editor,
-        initialCursor,
-        setAtCursor
+        cursorPositions,
+        setAtCursor,
+        this.apiService
       );
+
+      return result.text;
     } catch (error) {
       // Handle the error and update the editor
       const errorMessage = this.errorService.handleApiError(error, aiService, {

@@ -196,7 +196,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean | undefined
-  ): Promise<{ fullstr: string; mode: "streaming" }> {
+  ): Promise<{ fullstr: string; mode: "streaming"; wasAborted?: boolean }> {
     try {
       // Validate API key using ApiAuthService
       this.apiAuthService.validateApiKey(apiKey, "OpenRouter");
@@ -206,7 +206,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
 
       // Insert assistant header
-      const initialCursor = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, payload.model);
+      const cursorPositions = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, payload.model);
 
       // Make streaming request using ApiService
       const response = await this.apiService.makeStreamingRequest(
@@ -217,15 +217,17 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       );
 
       // Process the streaming response using ApiResponseParser
-      const fullstr = await this.apiResponseParser.processStreamResponse(
+      const result = await this.apiResponseParser.processStreamResponse(
         response,
         this.getServiceType(),
         editor,
-        initialCursor,
-        setAtCursor
+        cursorPositions,
+        setAtCursor,
+        this.apiService
       );
 
-      return { fullstr, mode: "streaming" };
+      // Use the helper method to process the result
+      return this.processStreamingResult(result);
     } catch (err) {
       // The error is already handled by the ApiService, which uses ErrorService
       // Just return the error message for the chat

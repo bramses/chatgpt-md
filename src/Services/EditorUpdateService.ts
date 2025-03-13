@@ -42,18 +42,31 @@ export class EditorUpdateService {
   /**
    * Insert the assistant header at the current cursor position
    */
-  insertAssistantHeader(editor: Editor, headingPrefix: string, model: string): { line: number; ch: number } {
+  insertAssistantHeader(
+    editor: Editor,
+    headingPrefix: string,
+    model: string
+  ): {
+    initialCursor: { line: number; ch: number };
+    newCursor: { line: number; ch: number };
+  } {
     const newLine = getHeaderRole(headingPrefix, ROLE_ASSISTANT, model);
 
-    editor.replaceRange(newLine, editor.getCursor());
+    // Store the initial cursor position before inserting the header
+    const initialCursor = {
+      line: editor.getCursor().line,
+      ch: editor.getCursor().ch,
+    };
 
-    const cursor = editor.getCursor();
+    editor.replaceRange(newLine, initialCursor);
+
     const newCursor = {
-      line: cursor.line,
-      ch: cursor.ch + newLine.length,
+      line: initialCursor.line,
+      ch: initialCursor.ch + newLine.length,
     };
     editor.setCursor(newCursor);
-    return newCursor;
+
+    return { initialCursor, newCursor };
   }
 
   /**
