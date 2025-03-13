@@ -70,7 +70,18 @@ export class TemplateService {
       const fileName = `${this.fileService.formatDate(new Date(), settings.dateFormat)}.md`;
       const filePath = `${settings.chatFolder}/${fileName}`;
 
-      const newFile = await this.fileService.createNewFile(filePath, selectedText);
+      // Apply default frontmatter from settings
+      let content = "";
+      if (settings.defaultChatFrontmatter) {
+        content = settings.defaultChatFrontmatter + "\n\n";
+      }
+
+      // Add the selected text after the frontmatter
+      if (selectedText) {
+        content += selectedText;
+      }
+
+      const newFile = await this.fileService.createNewFile(filePath, content);
 
       await this.app.workspace.openLinkText(newFile.basename, "", true, { state: { mode: "source" } });
       const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);

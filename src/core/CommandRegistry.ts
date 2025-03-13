@@ -110,7 +110,7 @@ export class CommandRegistry {
             settings
           );
 
-          await editorService.processResponse(editor, response, settings);
+          editorService.processResponse(editor, response, settings);
 
           if (
             settings.autoInferTitle &&
