@@ -1,6 +1,6 @@
 import { Editor, MarkdownView, Notice, Platform, Plugin } from "obsidian";
 import { ServiceLocator } from "./ServiceLocator";
-import { SettingsManager } from "./SettingsManager";
+import { SettingsManager } from "../managers/SettingsManager";
 import { IAiApiService } from "src/Services/AiService";
 import { AiModelSuggestModal } from "src/Views/AiModelSuggestModel";
 import { getApiKeyForService, isValidApiKey } from "src/Utilities/SettingsUtils";
@@ -69,7 +69,7 @@ export class CommandRegistry {
       icon: "message-circle",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsManager.getSettings();
+        const settings = await this.settingsManager.loadSettings();
         const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
 
         this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
@@ -160,7 +160,7 @@ export class CommandRegistry {
       icon: "list",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsManager.getSettings();
+        const settings = await this.settingsManager.loadSettings();
 
         const aiModelSuggestModal = new AiModelSuggestModal(this.plugin.app, editor, editorService);
         aiModelSuggestModal.open();
@@ -196,9 +196,9 @@ export class CommandRegistry {
       id: ADD_HR_COMMAND_ID,
       name: "Add divider",
       icon: "minus",
-      editorCallback: (editor: Editor, _view: MarkdownView) => {
+      editorCallback: async (editor: Editor, _view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsManager.getSettings();
+        const settings = await this.settingsManager.loadSettings();
         editorService.addHorizontalRule(editor, ROLE_USER, settings.headingLevel);
       },
     });
@@ -262,7 +262,7 @@ export class CommandRegistry {
       icon: "subtitles",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsManager.getSettings();
+        const settings = await this.settingsManager.loadSettings();
 
         // get frontmatter
         const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
@@ -310,9 +310,9 @@ export class CommandRegistry {
       id: MOVE_TO_CHAT_COMMAND_ID,
       name: "Create new chat with highlighted text",
       icon: "highlighter",
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
+      editorCallback: async (editor: Editor, _view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsManager.getSettings();
+        const settings = await this.settingsManager.loadSettings();
 
         try {
           await editorService.createNewChatWithHighlightedText(editor, settings);
@@ -334,7 +334,7 @@ export class CommandRegistry {
       icon: "layout-template",
       callback: async () => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsManager.getSettings();
+        const settings = await this.settingsManager.loadSettings();
 
         if (settings.dateFormat) {
           await editorService.createNewChatFromTemplate(
