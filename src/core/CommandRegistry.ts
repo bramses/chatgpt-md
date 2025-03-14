@@ -34,19 +34,14 @@ export class CommandRegistry {
   private plugin: Plugin;
   private serviceLocator: ServiceLocator;
   private settingsManager: SettingsManager;
-  private updateStatusBar: (text: string) => void;
   private aiService: IAiApiService | null = null;
+  private statusBarItemEl: HTMLElement;
 
-  constructor(
-    plugin: Plugin,
-    serviceLocator: ServiceLocator,
-    settingsManager: SettingsManager,
-    updateStatusBar: (text: string) => void
-  ) {
+  constructor(plugin: Plugin, serviceLocator: ServiceLocator, settingsManager: SettingsManager) {
     this.plugin = plugin;
     this.serviceLocator = serviceLocator;
     this.settingsManager = settingsManager;
-    this.updateStatusBar = updateStatusBar;
+    this.statusBarItemEl = plugin.addStatusBarItem();
   }
 
   /**
@@ -396,5 +391,11 @@ export class CommandRegistry {
       console.error("Error fetching models:", error);
       throw error;
     }
+  }
+  /**
+   * Update the status bar with the given text
+   */
+  private updateStatusBar(text: string) {
+    this.statusBarItemEl.setText(`[ChatGPT MD] ${text}`);
   }
 }
