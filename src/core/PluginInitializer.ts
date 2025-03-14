@@ -12,11 +12,9 @@ export class PluginInitializer {
   private serviceLocator: ServiceLocator;
   private commandRegistry: CommandRegistry;
   private settingsManager: SettingsManager;
-  private statusBarItemEl: HTMLElement;
 
   constructor(plugin: Plugin) {
     this.plugin = plugin;
-    this.statusBarItemEl = plugin.addStatusBarItem();
   }
 
   /**
@@ -35,12 +33,7 @@ export class PluginInitializer {
     this.serviceLocator = new ServiceLocator(this.plugin.app, settings);
 
     // Initialize command registry
-    this.commandRegistry = new CommandRegistry(
-      this.plugin,
-      this.serviceLocator,
-      this.settingsManager,
-      this.updateStatusBar.bind(this)
-    );
+    this.commandRegistry = new CommandRegistry(this.plugin, this.serviceLocator, this.settingsManager);
 
     // Register commands
     this.commandRegistry.registerCommands();
@@ -58,12 +51,5 @@ export class PluginInitializer {
       commandRegistry: this.commandRegistry,
       settingsManager: this.settingsManager,
     };
-  }
-
-  /**
-   * Update the status bar with the given text
-   */
-  private updateStatusBar(text: string) {
-    this.statusBarItemEl.setText(`[ChatGPT MD] ${text}`);
   }
 }
