@@ -1,5 +1,4 @@
 import { Editor } from "obsidian";
-import { StreamManager } from "src/managers/StreamManager";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_OLLAMA, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
@@ -66,7 +65,6 @@ export class OllamaService extends BaseAiService implements IAiApiService {
   protected editorUpdateService: EditorUpdateService;
 
   constructor(
-    streamManager: StreamManager,
     errorService?: ErrorService,
     notificationService?: NotificationService,
     apiService?: ApiService,
@@ -74,7 +72,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     apiResponseParser?: ApiResponseParser,
     editorUpdateService?: EditorUpdateService
   ) {
-    super(streamManager, errorService, notificationService);
+    super(errorService, notificationService);
     this.notificationService = notificationService || new NotificationService();
     this.errorService = errorService || new ErrorService(this.notificationService);
     this.editorUpdateService = editorUpdateService || new EditorUpdateService(this.notificationService);
@@ -92,7 +90,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     return DEFAULT_OLLAMA_CONFIG;
   }
 
-  getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
+  getApiKeyFromSettings(_settings: ChatGPT_MDSettings): string {
     return ""; // Ollama doesn't use an API key
   }
 
@@ -140,7 +138,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean
-  ): Promise<{ fullstr: string; mode: "streaming"; wasAborted?: boolean }> {
+  ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
     try {
       // Create payload and headers
       const payload = this.createPayload(config, messages);
@@ -174,7 +172,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
       // Just return the error message for the chat
       console.error(`[ChatGPT MD] Ollama streaming error:`, err);
       const errorMessage = `Error: ${err}`;
-      return { fullstr: errorMessage, mode: "streaming" };
+      return { fullString: errorMessage, mode: "streaming" };
     }
   }
 
@@ -205,10 +203,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
 
       // Check if this is a title inference call (based on message content)
       const isTitleInference =
-        messages.length === 1 &&
-        messages[0].content &&
-        typeof messages[0].content === "string" &&
-        messages[0].content.includes("Infer title from the summary");
+        messages.length === 1 && messages[0].content && messages[0].content.includes("Infer title from the summary");
 
       if (isTitleInference) {
         // For title inference, just throw the error to be caught by the caller
@@ -250,15 +245,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
 
       try {
         // Use a separate try/catch block for the API call to handle errors without returning them to the chat
-        const result = await this.callNonStreamingAPI("", [{ role: ROLE_USER, content: prompt }], config);
-
-        // Check if the result is an error message
-        if (this.isErrorMessage(result)) {
-          console.error("[ChatGPT MD] Error in title inference response:", result);
-          return "";
-        }
-
-        return result;
+        return await this.callNonStreamingAPI("", [{ role: ROLE_USER, content: prompt }], config);
       } catch (apiError) {
         // Log the error but don't return it to the chat
         console.error("[ChatGPT MD] Error calling API for title inference:", apiError);

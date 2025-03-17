@@ -245,8 +245,8 @@ export class CommandRegistry {
           // @ts-ignore - Call the stopStreaming method
           this.aiService.stopStreaming();
         } else {
-          // Fallback to the old method
-          this.serviceLocator.getStreamService().stopStreaming();
+          // No active AI service to stop streaming
+          this.serviceLocator.getNotificationService().showWarning("No active streaming request to stop");
         }
       },
     });
