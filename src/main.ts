@@ -12,8 +12,7 @@ export default class ChatGPT_MD extends Plugin {
     this.settingsManager = new SettingsManager(this);
     await this.settingsManager.addSettingTab();
 
-    const settings = await this.settingsManager.loadSettings();
-    this.serviceLocator = new ServiceLocator(this.app, settings);
+    this.serviceLocator = new ServiceLocator(this.app);
 
     this.commandRegistry = new CommandRegistry(this, this.serviceLocator, this.settingsManager);
     this.commandRegistry.registerCommands();

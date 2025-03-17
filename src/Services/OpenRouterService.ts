@@ -1,5 +1,4 @@
 import { Editor } from "obsidian";
-import { StreamManager } from "src/managers/StreamManager";
 import { Message } from "src/Models/Message";
 import { NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
@@ -112,7 +111,6 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
   protected editorUpdateService: EditorUpdateService;
 
   constructor(
-    streamManager: StreamManager,
     errorService?: ErrorService,
     notificationService?: NotificationService,
     apiService?: ApiService,
@@ -120,7 +118,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     apiResponseParser?: ApiResponseParser,
     editorUpdateService?: EditorUpdateService
   ) {
-    super(streamManager, errorService, notificationService);
+    super(errorService, notificationService);
     this.notificationService = notificationService || new NotificationService();
     this.errorService = errorService || new ErrorService(this.notificationService);
     this.editorUpdateService = editorUpdateService || new EditorUpdateService(this.notificationService);
@@ -196,7 +194,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean | undefined
-  ): Promise<{ fullstr: string; mode: "streaming"; wasAborted?: boolean }> {
+  ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
     try {
       // Validate API key using ApiAuthService
       this.apiAuthService.validateApiKey(apiKey, "OpenRouter");
@@ -232,7 +230,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       // The error is already handled by the ApiService, which uses ErrorService
       // Just return the error message for the chat
       const errorMessage = `Error: ${err}`;
-      return { fullstr: errorMessage, mode: "streaming" };
+      return { fullString: errorMessage, mode: "streaming" };
     }
   }
 
@@ -266,10 +264,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
 
       // Check if this is a title inference call (based on message content)
       const isTitleInference =
-        messages.length === 1 &&
-        messages[0].content &&
-        typeof messages[0].content === "string" &&
-        messages[0].content.includes("Infer title from the summary");
+        messages.length === 1 && messages[0].content && messages[0].content.includes("Infer title from the summary");
 
       if (isTitleInference) {
         // For title inference, just throw the error to be caught by the caller
@@ -311,15 +306,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
 
       try {
         // Use a separate try/catch block for the API call to handle errors without returning them to the chat
-        const result = await this.callNonStreamingAPI(apiKey, [{ role: ROLE_USER, content: prompt }], config);
-
-        // Check if the result is an error message
-        if (this.isErrorMessage(result)) {
-          console.error("[ChatGPT MD] Error in title inference response:", result);
-          return "";
-        }
-
-        return result;
+        return await this.callNonStreamingAPI(apiKey, [{ role: ROLE_USER, content: prompt }], config);
       } catch (apiError) {
         // Log the error but don't return it to the chat
         console.error("[ChatGPT MD] Error calling API for title inference:", apiError);

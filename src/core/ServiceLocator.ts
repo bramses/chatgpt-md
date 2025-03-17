@@ -1,13 +1,10 @@
 import { App } from "obsidian";
-import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
 import { FileService } from "src/Services/FileService";
 import { EditorContentService } from "src/Services/EditorContentService";
 import { MessageService } from "src/Services/MessageService";
 import { TemplateService } from "src/Services/TemplateService";
 import { FrontmatterService } from "src/Services/FrontmatterService";
-import { StreamService } from "src/Services/StreamService";
-import { StreamManager } from "src/managers/StreamManager";
 import { NotificationService } from "src/Services/NotificationService";
 import { ErrorService } from "src/Services/ErrorService";
 import { EditorUpdateService } from "src/Services/EditorUpdateService";
@@ -24,8 +21,7 @@ import { ApiResponseParser } from "src/Services/ApiResponseParser";
  * Provides access to all services used by the plugin
  */
 export class ServiceLocator {
-  private app: App;
-  private settings: ChatGPT_MDSettings;
+  private readonly app: App;
 
   // Services
   private fileService: FileService;
@@ -34,8 +30,6 @@ export class ServiceLocator {
   private templateService: TemplateService;
   private frontmatterService: FrontmatterService;
   private editorService: EditorService;
-  private streamService: StreamService;
-  private streamManager: StreamManager;
   private notificationService: NotificationService;
   private errorService: ErrorService;
   private editorUpdateService: EditorUpdateService;
@@ -43,9 +37,8 @@ export class ServiceLocator {
   private apiAuthService: ApiAuthService;
   private apiResponseParser: ApiResponseParser;
 
-  constructor(app: App, settings: ChatGPT_MDSettings) {
+  constructor(app: App) {
     this.app = app;
-    this.settings = settings;
 
     // Initialize services
     this.initializeServices();
@@ -64,16 +57,6 @@ export class ServiceLocator {
     this.apiService = new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = new ApiAuthService(this.notificationService);
     this.apiResponseParser = new ApiResponseParser(this.editorUpdateService, this.notificationService);
-
-    // Initialize streaming services
-    this.streamService = new StreamService(
-      this.errorService,
-      this.notificationService,
-      this.editorUpdateService,
-      this.apiService,
-      this.apiResponseParser
-    );
-    this.streamManager = new StreamManager(this.errorService, this.notificationService);
 
     // Initialize specialized services
     this.fileService = new FileService(this.app);
@@ -97,13 +80,9 @@ export class ServiceLocator {
    * Get an AI API service based on the service type
    */
   getAiApiService(serviceType: string): IAiApiService {
-    // Create a StreamManager for backward compatibility
-    const streamManager = new StreamManager(this.errorService, this.notificationService);
-
     switch (serviceType) {
       case AI_SERVICE_OPENAI:
         return new OpenAiService(
-          streamManager,
           this.errorService,
           this.notificationService,
           this.apiService,
@@ -113,7 +92,6 @@ export class ServiceLocator {
         );
       case AI_SERVICE_OLLAMA:
         return new OllamaService(
-          streamManager,
           this.errorService,
           this.notificationService,
           this.apiService,
@@ -123,7 +101,6 @@ export class ServiceLocator {
         );
       case AI_SERVICE_OPENROUTER:
         return new OpenRouterService(
-          streamManager,
           this.errorService,
           this.notificationService,
           this.apiService,
@@ -159,14 +136,6 @@ export class ServiceLocator {
 
   getEditorService(): EditorService {
     return this.editorService;
-  }
-
-  getStreamService(): StreamService {
-    return this.streamService;
-  }
-
-  getStreamManager(): StreamManager {
-    return this.streamManager;
   }
 
   getNotificationService(): NotificationService {
