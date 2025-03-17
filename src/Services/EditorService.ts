@@ -11,7 +11,6 @@ import { Message } from "src/Models/Message";
 
 /**
  * Service responsible for editor operations
- * @deprecated Use the specialized services instead
  */
 export class EditorService {
   private fileService: FileService;

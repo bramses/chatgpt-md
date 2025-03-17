@@ -1,19 +1,16 @@
 import { Editor } from "obsidian";
 import { Message } from "src/Models/Message";
-import { NEWLINE, ROLE_USER } from "src/Constants";
+import { AI_SERVICE_OPENROUTER, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { BaseAiService, IAiApiService } from "src/Services/AiService";
+import { BaseAiService, IAiApiService, StreamingResponse } from "src/Services/AiService";
 import { isValidApiKey } from "src/Utilities/SettingsUtils";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
 import { ApiService } from "./ApiService";
 import { ApiAuthService } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
-import { EditorUpdateService } from "./EditorUpdateService";
 
 // Define a constant for OpenRouter service
-export const AI_SERVICE_OPENROUTER = "openrouter";
-
 export interface OpenRouterModel {
   id: string;
   name: string;
@@ -108,24 +105,19 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
   protected apiService: ApiService;
   protected apiAuthService: ApiAuthService;
   protected apiResponseParser: ApiResponseParser;
-  protected editorUpdateService: EditorUpdateService;
 
   constructor(
     errorService?: ErrorService,
     notificationService?: NotificationService,
     apiService?: ApiService,
     apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser,
-    editorUpdateService?: EditorUpdateService
+    apiResponseParser?: ApiResponseParser
   ) {
     super(errorService, notificationService);
-    this.notificationService = notificationService || new NotificationService();
     this.errorService = errorService || new ErrorService(this.notificationService);
-    this.editorUpdateService = editorUpdateService || new EditorUpdateService(this.notificationService);
     this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
-    this.apiResponseParser =
-      apiResponseParser || new ApiResponseParser(this.editorUpdateService, this.notificationService);
+    this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
   }
 
   getServiceType(): string {
@@ -194,7 +186,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean | undefined
-  ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
+  ): Promise<StreamingResponse> {
     try {
       // Validate API key using ApiAuthService
       this.apiAuthService.validateApiKey(apiKey, "OpenRouter");
@@ -204,7 +196,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
 
       // Insert assistant header
-      const cursorPositions = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, payload.model);
+      const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
 
       // Make streaming request using ApiService
       const response = await this.apiService.makeStreamingRequest(

@@ -2,13 +2,12 @@ import { Editor } from "obsidian";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_OLLAMA, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { BaseAiService, IAiApiService, OllamaModel } from "src/Services/AiService";
+import { BaseAiService, IAiApiService, OllamaModel, StreamingResponse } from "src/Services/AiService";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
 import { ApiService } from "./ApiService";
 import { ApiAuthService } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
-import { EditorUpdateService } from "./EditorUpdateService";
 
 export interface OllamaStreamPayload {
   model: string;
@@ -62,24 +61,19 @@ export class OllamaService extends BaseAiService implements IAiApiService {
   protected apiService: ApiService;
   protected apiAuthService: ApiAuthService;
   protected apiResponseParser: ApiResponseParser;
-  protected editorUpdateService: EditorUpdateService;
 
   constructor(
     errorService?: ErrorService,
     notificationService?: NotificationService,
     apiService?: ApiService,
     apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser,
-    editorUpdateService?: EditorUpdateService
+    apiResponseParser?: ApiResponseParser
   ) {
     super(errorService, notificationService);
-    this.notificationService = notificationService || new NotificationService();
     this.errorService = errorService || new ErrorService(this.notificationService);
-    this.editorUpdateService = editorUpdateService || new EditorUpdateService(this.notificationService);
     this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
-    this.apiResponseParser =
-      apiResponseParser || new ApiResponseParser(this.editorUpdateService, this.notificationService);
+    this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
   }
 
   getServiceType(): string {
@@ -137,15 +131,15 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     config: OllamaConfig,
     editor: Editor,
     headingPrefix: string,
-    setAtCursor?: boolean
-  ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
+    setAtCursor?: boolean | undefined
+  ): Promise<StreamingResponse> {
     try {
       // Create payload and headers
       const payload = this.createPayload(config, messages);
-      const headers = { "Content-Type": "application/json" };
+      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
 
       // Insert assistant header
-      const cursorPositions = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, payload.model);
+      const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
 
       // Make streaming request using ApiService
       const response = await this.apiService.makeStreamingRequest(

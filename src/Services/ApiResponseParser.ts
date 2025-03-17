@@ -1,8 +1,7 @@
-import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
+import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER, ROLE_ASSISTANT } from "src/Constants";
 import { Editor } from "obsidian";
-import { EditorUpdateService } from "./EditorUpdateService";
 import { NotificationService } from "./NotificationService";
-import { unfinishedCodeBlock } from "src/Utilities/TextHelpers";
+import { getHeaderRole, unfinishedCodeBlock } from "src/Utilities/TextHelpers";
 import { ApiService } from "./ApiService";
 
 /**
@@ -10,12 +9,40 @@ import { ApiService } from "./ApiService";
  * It centralizes response parsing logic for different API formats
  */
 export class ApiResponseParser {
-  private editorUpdateService: EditorUpdateService;
   private notificationService: NotificationService;
 
-  constructor(editorUpdateService?: EditorUpdateService, notificationService?: NotificationService) {
+  constructor(notificationService?: NotificationService) {
     this.notificationService = notificationService || new NotificationService();
-    this.editorUpdateService = editorUpdateService || new EditorUpdateService(this.notificationService);
+  }
+
+  /**
+   * Insert the assistant header at the current cursor position
+   */
+  insertAssistantHeader(
+    editor: Editor,
+    headingPrefix: string,
+    model: string
+  ): {
+    initialCursor: { line: number; ch: number };
+    newCursor: { line: number; ch: number };
+  } {
+    const newLine = getHeaderRole(headingPrefix, ROLE_ASSISTANT, model);
+
+    // Store the initial cursor position before inserting the header
+    const initialCursor = {
+      line: editor.getCursor().line,
+      ch: editor.getCursor().ch,
+    };
+
+    editor.replaceRange(newLine, initialCursor);
+
+    const newCursor = {
+      line: initialCursor.line,
+      ch: initialCursor.ch + newLine.length,
+    };
+    editor.setCursor(newCursor);
+
+    return { initialCursor, newCursor };
   }
 
   /**

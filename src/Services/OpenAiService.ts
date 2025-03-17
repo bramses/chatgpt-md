@@ -9,7 +9,6 @@ import { NotificationService } from "./NotificationService";
 import { ApiService } from "./ApiService";
 import { ApiAuthService } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
-import { EditorUpdateService } from "./EditorUpdateService";
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   aiService: AI_SERVICE_OPENAI,
@@ -62,24 +61,19 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
   protected apiService: ApiService;
   protected apiAuthService: ApiAuthService;
   protected apiResponseParser: ApiResponseParser;
-  protected editorUpdateService: EditorUpdateService;
 
   constructor(
     errorService?: ErrorService,
     notificationService?: NotificationService,
     apiService?: ApiService,
     apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser,
-    editorUpdateService?: EditorUpdateService
+    apiResponseParser?: ApiResponseParser
   ) {
     super(errorService, notificationService);
-    this.notificationService = notificationService || new NotificationService();
     this.errorService = errorService || new ErrorService(this.notificationService);
-    this.editorUpdateService = editorUpdateService || new EditorUpdateService(this.notificationService);
     this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
-    this.apiResponseParser =
-      apiResponseParser || new ApiResponseParser(this.editorUpdateService, this.notificationService);
+    this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
   }
 
   getServiceType(): string {
@@ -155,7 +149,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
       const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
 
       // Insert assistant header
-      const cursorPositions = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, payload.model);
+      const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
 
       // Make streaming request using ApiService
       const response = await this.apiService.makeStreamingRequest(

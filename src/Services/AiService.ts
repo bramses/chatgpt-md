@@ -3,9 +3,8 @@ import { Message } from "src/Models/Message";
 import { ApiService } from "./ApiService";
 import { ApiAuthService } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
-import { EditorUpdateService } from "./EditorUpdateService";
+import { EditorService } from "./EditorService";
 import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
-import { EditorService } from "src/Services/EditorService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
@@ -56,7 +55,6 @@ export type StreamingResponse = {
  * Contains common functionality and defines abstract methods that must be implemented by subclasses
  */
 export abstract class BaseAiService implements IAiApiService {
-  protected editorUpdateService: EditorUpdateService;
   protected apiService: ApiService;
   protected apiAuthService: ApiAuthService;
   protected apiResponseParser: ApiResponseParser;
@@ -66,10 +64,9 @@ export abstract class BaseAiService implements IAiApiService {
   constructor(errorService?: ErrorService, notificationService?: NotificationService) {
     this.notificationService = notificationService ?? new NotificationService();
     this.errorService = errorService ?? new ErrorService(this.notificationService);
-    this.editorUpdateService = new EditorUpdateService(this.notificationService);
     this.apiService = new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = new ApiAuthService(this.notificationService);
-    this.apiResponseParser = new ApiResponseParser(this.editorUpdateService, this.notificationService);
+    this.apiResponseParser = new ApiResponseParser(this.notificationService);
   }
 
   /**
