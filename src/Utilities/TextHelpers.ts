@@ -1,5 +1,6 @@
 import {
   HORIZONTAL_LINE_MD,
+  MAX_HEADING_LEVEL,
   NEWLINE,
   ROLE_ASSISTANT,
   ROLE_DEVELOPER,
@@ -86,8 +87,8 @@ export const isTitleTimestampFormat = (title: string = "", dateFormat: string): 
 export const getHeadingPrefix = (headingLevel: number) => {
   if (headingLevel === 0) {
     return "";
-  } else if (headingLevel > 6) {
-    return "#".repeat(6) + " ";
+  } else if (headingLevel > MAX_HEADING_LEVEL) {
+    return "#".repeat(MAX_HEADING_LEVEL) + " ";
   }
   return "#".repeat(headingLevel) + " ";
 };

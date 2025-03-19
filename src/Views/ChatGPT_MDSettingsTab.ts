@@ -1,6 +1,6 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
-import { ChatGPT_MDSettings, DEFAULT_CHAT_FRONT_MATTER } from "src/Models/Config";
-import { DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
+import { ChatGPT_MDSettings } from "src/Models/Config";
+import { DEFAULT_CHAT_FRONT_MATTER, DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
@@ -40,7 +40,7 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         name: "OpenAI API Key",
         description: "API Key for OpenAI",
         type: "text",
-        placeholder: "some-api-key",
+        placeholder: "your openAI API Key",
         group: "API Keys",
       },
       {
@@ -48,7 +48,7 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         name: "OpenRouter.ai API Key",
         description: "API Key for OpenRouter.ai",
         type: "text",
-        placeholder: "some-api-key",
+        placeholder: "your openRouter API Key",
         group: "API Keys",
       },
 

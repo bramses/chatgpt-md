@@ -25,7 +25,7 @@ import {
   ROLE_USER,
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
-import { isTitleTimestampFormat } from "src/Utilities/TextHelpers";
+import { getHeadingPrefix, isTitleTimestampFormat } from "src/Utilities/TextHelpers";
 
 /**
  * Registers and manages commands for the plugin
@@ -98,7 +98,7 @@ export class CommandRegistry {
           const response = await this.aiService.callAIAPI(
             messagesWithRoleAndMessage,
             frontmatter,
-            editorService.getHeadingPrefix(settings.headingLevel),
+            getHeadingPrefix(settings.headingLevel),
             editor,
             settings.generateAtCursor,
             apiKeyToUse,
