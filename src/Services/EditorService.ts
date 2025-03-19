@@ -64,10 +64,6 @@ export class EditorService {
     this.editorContentService.moveCursorToEnd(editor);
   }
 
-  getHeadingPrefix(headingLevel: number): string {
-    return this.editorContentService.getHeadingPrefix(headingLevel);
-  }
-
   // MessageService delegations
 
   async getMessagesFromEditor(

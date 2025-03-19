@@ -31,8 +31,9 @@ export const MARKDOWN_LINKS_REGEX = /\[([^\]]+)\]\(([^()]+)\)/g;
 export const COMMENT_BLOCK_START = `=begin-chatgpt-md-comment${NEWLINE}`;
 export const COMMENT_BLOCK_END = `=end-chatgpt-md-comment`;
 
-export const DEFAULT_HEADING_LEVEL = 0;
+export const DEFAULT_HEADING_LEVEL = 3;
 export const MAX_HEADING_LEVEL = 6;
+export const DEFAULT_INFER_TITLE_LANGUAGE = "English";
 export const MIN_AUTO_INFER_MESSAGES = 4;
 export const DEFAULT_DATE_FORMAT = "YYYYMMDDhhmmss";
 
@@ -46,3 +47,16 @@ export const ROLE_ASSISTANT = "assistant";
 export const ROLE_DEVELOPER = "developer";
 export const ROLE_SYSTEM = "system";
 export const ROLE_USER = "user";
+
+export const DEFAULT_CHAT_FRONT_MATTER = `---
+system_commands: ['I am a helpful assistant.']
+temperature: 0.3
+top_p: 1
+max_tokens: 300
+presence_penalty: 0.5
+frequency_penalty: 0.5
+stream: true
+stop: null
+n: 1
+model: gpt-4o-mini
+---`;
