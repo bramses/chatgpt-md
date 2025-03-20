@@ -13,6 +13,7 @@ import {
   WIKI_LINKS_REGEX,
   YAML_FRONTMATTER_REGEX,
 } from "src/Constants";
+import { getHeadingPrefix } from "../Utilities/TextHelpers";
 
 /**
  * Service responsible for all message-related operations
@@ -207,18 +208,6 @@ export class MessageService {
   }
 
   /**
-   * Get heading prefix for a given heading level
-   */
-  getHeadingPrefix(headingLevel: number): string {
-    if (headingLevel === 0) {
-      return "";
-    } else if (headingLevel > 6) {
-      return "#".repeat(6) + " ";
-    }
-    return "#".repeat(headingLevel) + " ";
-  }
-
-  /**
    * Check if a code block is unfinished
    */
   unfinishedCodeBlock(text: string): boolean {
@@ -230,7 +219,7 @@ export class MessageService {
    * Format a message for display
    */
   formatMessage(message: Message, headingLevel: number, model?: string): string {
-    const headingPrefix = this.getHeadingPrefix(headingLevel);
+    const headingPrefix = getHeadingPrefix(headingLevel);
     const roleHeader = this.getHeaderRole(headingPrefix, message.role, model);
     return `${roleHeader}${message.content}`;
   }
@@ -239,7 +228,7 @@ export class MessageService {
    * Append a message to the editor
    */
   appendMessage(editor: Editor, message: string, headingLevel: number): void {
-    const headingPrefix = this.getHeadingPrefix(headingLevel);
+    const headingPrefix = getHeadingPrefix(headingLevel);
     const assistantRoleHeader = this.getHeaderRole(headingPrefix, ROLE_ASSISTANT);
     const userRoleHeader = this.getHeaderRole(headingPrefix, ROLE_USER);
 
@@ -251,7 +240,10 @@ export class MessageService {
    */
   processResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings): void {
     if (response.mode === "streaming") {
-      this.processStreamingResponse(editor, settings);
+      // Only add user section if streaming was not aborted
+      if (!response.wasAborted) {
+        this.processStreamingResponse(editor, settings);
+      }
     } else {
       this.processStandardResponse(editor, response, settings);
     }
@@ -261,7 +253,7 @@ export class MessageService {
    * Process a streaming response
    */
   private processStreamingResponse(editor: Editor, settings: ChatGPT_MDSettings): void {
-    const headingPrefix = this.getHeadingPrefix(settings.headingLevel);
+    const headingPrefix = getHeadingPrefix(settings.headingLevel);
     const newLine = this.getHeaderRole(headingPrefix, ROLE_USER);
     editor.replaceRange(newLine, editor.getCursor());
 

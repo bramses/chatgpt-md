@@ -39,10 +39,18 @@ export class FrontmatterService {
         defaultConfig = DEFAULT_OPENAI_CONFIG;
     }
 
-    // Merge the default config with the frontmatter and settings
+    // Parse default frontmatter from settings if it exists
+    let defaultFrontmatterSettings = {};
+    if (settings.defaultChatFrontmatter) {
+      defaultFrontmatterSettings = parseSettingsFrontmatter(settings.defaultChatFrontmatter);
+    }
+
+    // Merge the default config with the settings, default frontmatter, and file frontmatter
+    // Order of precedence: defaultConfig < settings < defaultFrontmatterSettings < frontmatter
     return {
       ...defaultConfig,
       ...settings,
+      ...defaultFrontmatterSettings,
       ...frontmatter,
       aiService,
     };
@@ -52,6 +60,32 @@ export class FrontmatterService {
    * Generate frontmatter for a new chat
    */
   generateFrontmatter(settings: ChatGPT_MDSettings, additionalSettings: Record<string, any> = {}): string {
+    // If default frontmatter exists in settings, use it as a base
+    if (settings.defaultChatFrontmatter) {
+      // If there are additional settings, merge them with the default frontmatter
+      if (Object.keys(additionalSettings).length > 0) {
+        const defaultFrontmatter = parseSettingsFrontmatter(settings.defaultChatFrontmatter);
+        const mergedFrontmatter = { ...defaultFrontmatter, ...additionalSettings };
+
+        // Convert to YAML
+        const frontmatterLines = Object.entries(mergedFrontmatter).map(([key, value]) => {
+          if (value === null || value === undefined) {
+            return `${key}:`;
+          }
+          if (typeof value === "string") {
+            return `${key}: "${value}"`;
+          }
+          return `${key}: ${value}`;
+        });
+
+        return `---\n${frontmatterLines.join("\n")}\n---\n\n`;
+      }
+
+      // If no additional settings, return the default frontmatter as is
+      return settings.defaultChatFrontmatter + "\n\n";
+    }
+
+    // If no default frontmatter in settings, generate one from scratch
     // Determine the AI service type
     const aiService = additionalSettings.aiService || AI_SERVICE_OPENAI;
 

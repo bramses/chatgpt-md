@@ -75,13 +75,6 @@ export class EditorContentService {
   }
 
   /**
-   * Get the heading prefix for a given heading level
-   */
-  getHeadingPrefix(headingLevel: number): string {
-    return getHeadingPrefix(headingLevel);
-  }
-
-  /**
    * Add a comment block at the cursor position
    */
   addCommentBlock(editor: Editor, commentStart: string, commentEnd: string): void {

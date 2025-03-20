@@ -11,7 +11,6 @@ import { Message } from "src/Models/Message";
 
 /**
  * Service responsible for editor operations
- * @deprecated Use the specialized services instead
  */
 export class EditorService {
   private fileService: FileService;
@@ -63,10 +62,6 @@ export class EditorService {
 
   moveCursorToEnd(editor: Editor): void {
     this.editorContentService.moveCursorToEnd(editor);
-  }
-
-  getHeadingPrefix(headingLevel: number): string {
-    return this.editorContentService.getHeadingPrefix(headingLevel);
   }
 
   // MessageService delegations

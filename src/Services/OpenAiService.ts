@@ -1,5 +1,4 @@
 import { Editor } from "obsidian";
-import { StreamManager } from "src/managers/StreamManager";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENAI, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
@@ -10,7 +9,6 @@ import { NotificationService } from "./NotificationService";
 import { ApiService } from "./ApiService";
 import { ApiAuthService } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
-import { EditorUpdateService } from "./EditorUpdateService";
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   aiService: AI_SERVICE_OPENAI,
@@ -63,25 +61,19 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
   protected apiService: ApiService;
   protected apiAuthService: ApiAuthService;
   protected apiResponseParser: ApiResponseParser;
-  protected editorUpdateService: EditorUpdateService;
 
   constructor(
-    streamManager: StreamManager,
     errorService?: ErrorService,
     notificationService?: NotificationService,
     apiService?: ApiService,
     apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser,
-    editorUpdateService?: EditorUpdateService
+    apiResponseParser?: ApiResponseParser
   ) {
-    super(streamManager, errorService, notificationService);
-    this.notificationService = notificationService || new NotificationService();
+    super(errorService, notificationService);
     this.errorService = errorService || new ErrorService(this.notificationService);
-    this.editorUpdateService = editorUpdateService || new EditorUpdateService(this.notificationService);
     this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
-    this.apiResponseParser =
-      apiResponseParser || new ApiResponseParser(this.editorUpdateService, this.notificationService);
+    this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
   }
 
   getServiceType(): string {
@@ -147,7 +139,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean | undefined
-  ): Promise<{ fullstr: string; mode: "streaming" }> {
+  ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
     try {
       // Validate API key using ApiAuthService
       this.apiAuthService.validateApiKey(apiKey, "OpenAI");
@@ -157,7 +149,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
       const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
 
       // Insert assistant header
-      const initialCursor = this.editorUpdateService.insertAssistantHeader(editor, headingPrefix, payload.model);
+      const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
 
       // Make streaming request using ApiService
       const response = await this.apiService.makeStreamingRequest(
@@ -168,20 +160,22 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
       );
 
       // Process the streaming response using ApiResponseParser
-      const fullstr = await this.apiResponseParser.processStreamResponse(
+      const result = await this.apiResponseParser.processStreamResponse(
         response,
         this.getServiceType(),
         editor,
-        initialCursor,
-        setAtCursor
+        cursorPositions,
+        setAtCursor,
+        this.apiService
       );
 
-      return { fullstr, mode: "streaming" };
+      // Use the helper method to process the result
+      return this.processStreamingResult(result);
     } catch (err) {
       // The error is already handled by the ApiService, which uses ErrorService
       // Just return the error message for the chat
       const errorMessage = `Error: ${err}`;
-      return { fullstr: errorMessage, mode: "streaming" };
+      return { fullString: errorMessage, mode: "streaming" };
     }
   }
 
@@ -260,15 +254,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
 
       try {
         // Use a separate try/catch block for the API call to handle errors without returning them to the chat
-        const result = await this.callNonStreamingAPI(apiKey, [{ role: ROLE_USER, content: prompt }], config);
-
-        // Check if the result is an error message
-        if (this.isErrorMessage(result)) {
-          console.error("[ChatGPT MD] Error in title inference response:", result);
-          return "";
-        }
-
-        return result;
+        return await this.callNonStreamingAPI(apiKey, [{ role: ROLE_USER, content: prompt }], config);
       } catch (apiError) {
         // Log the error but don't return it to the chat
         console.error("[ChatGPT MD] Error calling API for title inference:", apiError);

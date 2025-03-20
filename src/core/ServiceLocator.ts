@@ -1,53 +1,46 @@
-import { App } from "obsidian";
-import { ChatGPT_MDSettings } from "src/Models/Config";
-import { EditorService } from "src/Services/EditorService";
+import { App, Plugin } from "obsidian";
 import { FileService } from "src/Services/FileService";
 import { EditorContentService } from "src/Services/EditorContentService";
 import { MessageService } from "src/Services/MessageService";
 import { TemplateService } from "src/Services/TemplateService";
 import { FrontmatterService } from "src/Services/FrontmatterService";
-import { StreamService } from "src/Services/StreamService";
-import { StreamManager } from "src/managers/StreamManager";
+import { EditorService } from "src/Services/EditorService";
 import { NotificationService } from "src/Services/NotificationService";
 import { ErrorService } from "src/Services/ErrorService";
-import { EditorUpdateService } from "src/Services/EditorUpdateService";
+import { ApiService } from "src/Services/ApiService";
+import { ApiAuthService } from "src/Services/ApiAuthService";
+import { ApiResponseParser } from "src/Services/ApiResponseParser";
 import { IAiApiService } from "src/Services/AiService";
 import { OpenAiService } from "src/Services/OpenAiService";
 import { OllamaService } from "src/Services/OllamaService";
 import { OpenRouterService } from "src/Services/OpenRouterService";
 import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
-import { ApiService } from "src/Services/ApiService";
-import { ApiAuthService } from "src/Services/ApiAuthService";
-import { ApiResponseParser } from "src/Services/ApiResponseParser";
+import { SettingsService } from "src/Services/SettingsService";
 
 /**
- * Provides access to all services used by the plugin
+ * ServiceLocator is responsible for creating and providing access to services
+ * It centralizes service creation and dependency injection
  */
 export class ServiceLocator {
-  private app: App;
-  private settings: ChatGPT_MDSettings;
+  private readonly app: App;
+  private readonly plugin: Plugin;
 
-  // Services
   private fileService: FileService;
   private editorContentService: EditorContentService;
   private messageService: MessageService;
   private templateService: TemplateService;
   private frontmatterService: FrontmatterService;
   private editorService: EditorService;
-  private streamService: StreamService;
-  private streamManager: StreamManager;
   private notificationService: NotificationService;
   private errorService: ErrorService;
-  private editorUpdateService: EditorUpdateService;
   private apiService: ApiService;
   private apiAuthService: ApiAuthService;
   private apiResponseParser: ApiResponseParser;
+  private settingsService: SettingsService;
 
-  constructor(app: App, settings: ChatGPT_MDSettings) {
+  constructor(app: App, plugin: Plugin) {
     this.app = app;
-    this.settings = settings;
-
-    // Initialize services
+    this.plugin = plugin;
     this.initializeServices();
   }
 
@@ -58,22 +51,11 @@ export class ServiceLocator {
     // Initialize basic services
     this.notificationService = new NotificationService();
     this.errorService = new ErrorService(this.notificationService);
-    this.editorUpdateService = new EditorUpdateService(this.notificationService);
 
     // Initialize API services
     this.apiService = new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = new ApiAuthService(this.notificationService);
-    this.apiResponseParser = new ApiResponseParser(this.editorUpdateService, this.notificationService);
-
-    // Initialize streaming services
-    this.streamService = new StreamService(
-      this.errorService,
-      this.notificationService,
-      this.editorUpdateService,
-      this.apiService,
-      this.apiResponseParser
-    );
-    this.streamManager = new StreamManager(this.errorService, this.notificationService);
+    this.apiResponseParser = new ApiResponseParser(this.notificationService);
 
     // Initialize specialized services
     this.fileService = new FileService(this.app);
@@ -91,48 +73,42 @@ export class ServiceLocator {
       this.templateService,
       this.frontmatterService
     );
+
+    // Initialize settings service
+    this.settingsService = new SettingsService(this.plugin, this.notificationService, this.errorService);
   }
 
   /**
    * Get an AI API service based on the service type
    */
   getAiApiService(serviceType: string): IAiApiService {
-    // Create a StreamManager for backward compatibility
-    const streamManager = new StreamManager(this.errorService, this.notificationService);
-
     switch (serviceType) {
       case AI_SERVICE_OPENAI:
         return new OpenAiService(
-          streamManager,
           this.errorService,
           this.notificationService,
           this.apiService,
           this.apiAuthService,
-          this.apiResponseParser,
-          this.editorUpdateService
+          this.apiResponseParser
         );
       case AI_SERVICE_OLLAMA:
         return new OllamaService(
-          streamManager,
           this.errorService,
           this.notificationService,
           this.apiService,
           this.apiAuthService,
-          this.apiResponseParser,
-          this.editorUpdateService
+          this.apiResponseParser
         );
       case AI_SERVICE_OPENROUTER:
         return new OpenRouterService(
-          streamManager,
           this.errorService,
           this.notificationService,
           this.apiService,
           this.apiAuthService,
-          this.apiResponseParser,
-          this.editorUpdateService
+          this.apiResponseParser
         );
       default:
-        throw new Error(`Unsupported API type: ${serviceType}`);
+        throw new Error(`Unknown AI service type: ${serviceType}`);
     }
   }
 
@@ -161,24 +137,12 @@ export class ServiceLocator {
     return this.editorService;
   }
 
-  getStreamService(): StreamService {
-    return this.streamService;
-  }
-
-  getStreamManager(): StreamManager {
-    return this.streamManager;
-  }
-
   getNotificationService(): NotificationService {
     return this.notificationService;
   }
 
   getErrorService(): ErrorService {
     return this.errorService;
-  }
-
-  getEditorUpdateService(): EditorUpdateService {
-    return this.editorUpdateService;
   }
 
   getApiService(): ApiService {
@@ -191,5 +155,12 @@ export class ServiceLocator {
 
   getApiResponseParser(): ApiResponseParser {
     return this.apiResponseParser;
+  }
+
+  /**
+   * Get the settings service
+   */
+  getSettingsService(): SettingsService {
+    return this.settingsService;
   }
 }

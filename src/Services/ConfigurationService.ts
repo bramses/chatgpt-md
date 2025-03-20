@@ -1,7 +1,7 @@
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { AiServiceConfig, AiServiceConfigFactory } from "./AiServiceConfigFactory";
-import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI } from "src/Constants";
-import { AI_SERVICE_OPENROUTER, OpenRouterConfig } from "./OpenRouterService";
+import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
+import { OpenRouterConfig } from "./OpenRouterService";
 import { isValidApiKey } from "src/Utilities/SettingsUtils";
 import { OpenAIConfig } from "./OpenAiService";
 import { OllamaConfig } from "./OllamaService";
