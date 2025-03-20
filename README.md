@@ -1,8 +1,15 @@
 # ChatGPT MD
 
-🚀 A seamless integration of openAIs GPT LLMs and Ollama into Obsidian.
+🚀 A seamless integration of chatGPT, OpenRouter.ai and local LLMs via Ollama into Obsidian.
 
 ![Chatting with links about vacation plans](images/chat-with-link.gif)
+
+## What's New in v2.1.0 🚀
+- We've added support for **OpenRouter.ai** as an LLM provider in our Obsidian plugin.
+Set an OpenRouter.ai API key in the settings, and you can access a wide range of models like 
+**Gemini, DeepSeek, Llama, Perplexity** and many more (full list: https://openrouter.ai/models).
+- The new command `ChatGPT MD: Select Model` allows you to select from all available LLMs (openAI, Ollama, OpenRouter.ai) 
+and set the current model for your note.
 
 ## A simple and quick Start 🏁
 Get started in just a few simple steps:
