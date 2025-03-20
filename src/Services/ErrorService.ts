@@ -61,6 +61,7 @@ export class ErrorService {
     // Extract context information if available
     const model = options.context?.model || "";
     const url = options.context?.url || "";
+    const status = options.context?.status;
     const contextInfo = this.formatContextInfo(model, url);
 
     // Determine error type and messages
@@ -81,6 +82,19 @@ export class ErrorService {
         errorType = ErrorType.NOT_FOUND_ERROR;
         errorMessage = `${prefix}: Resource not found (404)${contextInfo ? ` - ${contextInfo}` : ""}`;
         chatMessage = `${CHAT_ERROR_MESSAGE_404}${contextInfo ? `${NEWLINE}${contextInfo}` : ""}`;
+      } else if (
+        serviceName === "openrouter" &&
+        (status === 400 || error.status === 400 || error.error?.status === 400)
+      ) {
+        errorType = ErrorType.VALIDATION_ERROR;
+        errorMessage = `${prefix}: Bad Request (400)${contextInfo ? ` - ${contextInfo}` : ""}`;
+
+        // Special handling for OpenRouter model errors
+        if (error.error?.message?.includes("model") || error.message?.includes("model")) {
+          chatMessage = `I am sorry, I could not answer your request because of an error with the model.`;
+        } else {
+          chatMessage = `I am sorry, your request contained invalid parameters (400).`;
+        }
       } else if (error.error) {
         errorType = ErrorType.API_ERROR;
         errorMessage = `${prefix}: ${error.error.message}${contextInfo ? ` - ${contextInfo}` : ""}`;
@@ -106,10 +120,104 @@ export class ErrorService {
 
     // Return message for chat if requested
     if (options.returnForChat) {
+      // For 404 errors, provide a more specific message
+      if (errorType === ErrorType.NOT_FOUND_ERROR) {
+        let errorMessage =
+          "I am sorry, I could not answer your request because of an error, here is what went wrong-\n\n";
+
+        // Extract the error message if available
+        let errorDetail = "";
+        if (error.error?.message) {
+          errorDetail = error.error.message;
+        } else if (error.message) {
+          errorDetail = error.message;
+        } else {
+          errorDetail = "Resource not found (404)";
+        }
+
+        // Add the error detail
+        errorMessage += `${errorDetail}\n\n`;
+
+        if (serviceName === "ollama") {
+          errorMessage += `The Ollama API could not find the requested resource. Please check if:
+1. Ollama is running locally
+2. The model "${model}" is installed in Ollama
+3. The URL "${url}" is correct\n\n`;
+        } else if (serviceName === "openrouter") {
+          errorMessage += `The OpenRouter API could not find the requested resource. Please check if:
+1. Your OpenRouter API key is correct
+2. The model "${model}" is available on OpenRouter
+3. The URL "${url}" is correct\n\n`;
+        } else if (serviceName === "openai") {
+          errorMessage += `The OpenAI API could not find the requested resource. Please check if:
+1. Your OpenAI API key is correct and has sufficient credits
+2. The model "${model}" is available and spelled correctly
+3. The URL "${url}" is correct\n\n`;
+        } else {
+          errorMessage += `Please check your URL or model name in the settings or frontmatter.\n\n`;
+        }
+
+        errorMessage += `Model- ${model}, URL- ${url}`;
+        return errorMessage;
+      }
+
+      // For 400 errors from OpenRouter, provide model-specific guidance
+      if (serviceName === "openrouter" && (status === 400 || error.status === 400 || error.error?.status === 400)) {
+        let errorMessage =
+          "I am sorry, I could not answer your request because of an error, here is what went wrong-\n\n";
+
+        // Extract the error message if available
+        let errorDetail = "";
+        if (error.error?.message) {
+          errorDetail = error.error.message;
+        } else if (error.message) {
+          errorDetail = error.message;
+        } else {
+          errorDetail = "Bad Request (400)";
+        }
+
+        // Add the error detail
+        errorMessage += `${errorDetail}\n\n`;
+
+        // If it seems to be a model-related error, add specific guidance
+        if (errorDetail.toLowerCase().includes("model")) {
+          errorMessage += `The model "${model}" may not be available on OpenRouter. Please check:
+1. That you've spelled the model name correctly
+2. That the model exists on OpenRouter
+3. That you have access to this model with your current plan\n\n`;
+        } else {
+          errorMessage += "Your request contained invalid parameters. Please check your settings or frontmatter.\n\n";
+        }
+
+        errorMessage += `Model- ${model}, URL- ${url}`;
+        return errorMessage;
+      }
+
       // Format the error message for chat display with proper URL formatting
+      let errorDetail = "undefined";
+      if (error instanceof Object) {
+        if (error.error?.message) {
+          errorDetail = error.error.message;
+        } else if (error.message) {
+          errorDetail = error.message;
+        } else if (error.statusText) {
+          errorDetail = `${error.status || ""} ${error.statusText}`;
+        } else if (typeof error === "string") {
+          errorDetail = error;
+        } else {
+          try {
+            errorDetail = JSON.stringify(error);
+          } catch (e) {
+            errorDetail = "Error could not be formatted";
+          }
+        }
+      } else if (error) {
+        errorDetail = String(error);
+      }
+
       return `I am sorry, I could not answer your request because of an error, here is what went wrong-
 
-${error instanceof Object && error.error ? error.error.message : error?.message || error || "undefined"}
+${errorDetail}
 
 Model- ${model}, URL- ${url}`;
     }

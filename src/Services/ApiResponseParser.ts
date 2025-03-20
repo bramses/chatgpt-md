@@ -224,7 +224,7 @@ export class ApiResponseParser {
    * @returns The complete text and whether streaming was aborted
    */
   async processStreamResponse(
-    response: Response,
+    response: Response | string,
     serviceType: string,
     editor: Editor,
     cursorPositions: {
@@ -234,6 +234,21 @@ export class ApiResponseParser {
     setAtCursor?: boolean,
     apiService?: ApiService
   ): Promise<{ text: string; wasAborted: boolean }> {
+    // If response is a string (like an error message), display it directly
+    if (typeof response === "string") {
+      // Insert the error message at the current cursor position
+      const cursor = editor.getCursor();
+      editor.replaceRange(response, cursor);
+
+      // Move cursor after the error message
+      editor.setCursor({
+        line: cursor.line + response.split("\n").length - 1,
+        ch: response.split("\n").slice(-1)[0].length,
+      });
+
+      return { text: response, wasAborted: false };
+    }
+
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let done = false;
