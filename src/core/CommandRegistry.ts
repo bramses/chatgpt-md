@@ -1,6 +1,6 @@
 import { Editor, MarkdownView, Notice, Platform, Plugin } from "obsidian";
 import { ServiceLocator } from "./ServiceLocator";
-import { SettingsManager } from "../managers/SettingsManager";
+import { SettingsService } from "../Services/SettingsService";
 import { IAiApiService } from "src/Services/AiService";
 import { AiModelSuggestModal } from "src/Views/AiModelSuggestModel";
 import { getApiKeyForService, isValidApiKey } from "src/Utilities/SettingsUtils";
@@ -33,14 +33,14 @@ import { getHeadingPrefix, isTitleTimestampFormat } from "src/Utilities/TextHelp
 export class CommandRegistry {
   private plugin: Plugin;
   private serviceLocator: ServiceLocator;
-  private settingsManager: SettingsManager;
+  private settingsService: SettingsService;
   private aiService: IAiApiService | null = null;
   private statusBarItemEl: HTMLElement;
 
-  constructor(plugin: Plugin, serviceLocator: ServiceLocator, settingsManager: SettingsManager) {
+  constructor(plugin: Plugin, serviceLocator: ServiceLocator, settingsService: SettingsService) {
     this.plugin = plugin;
     this.serviceLocator = serviceLocator;
-    this.settingsManager = settingsManager;
+    this.settingsService = settingsService;
     this.statusBarItemEl = plugin.addStatusBarItem();
   }
 
@@ -69,7 +69,7 @@ export class CommandRegistry {
       icon: "message-circle",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = await this.settingsManager.loadSettings();
+        const settings = this.settingsService.getSettings();
         const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
 
         this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
@@ -160,7 +160,7 @@ export class CommandRegistry {
       icon: "list",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = await this.settingsManager.loadSettings();
+        const settings = this.settingsService.getSettings();
 
         const aiModelSuggestModal = new AiModelSuggestModal(this.plugin.app, editor, editorService);
         aiModelSuggestModal.open();
@@ -198,7 +198,7 @@ export class CommandRegistry {
       icon: "minus",
       editorCallback: async (editor: Editor, _view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = await this.settingsManager.loadSettings();
+        const settings = this.settingsService.getSettings();
         editorService.addHorizontalRule(editor, ROLE_USER, settings.headingLevel);
       },
     });
@@ -262,7 +262,7 @@ export class CommandRegistry {
       icon: "subtitles",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = await this.settingsManager.loadSettings();
+        const settings = this.settingsService.getSettings();
 
         // get frontmatter
         const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
@@ -312,7 +312,7 @@ export class CommandRegistry {
       icon: "highlighter",
       editorCallback: async (editor: Editor, _view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = await this.settingsManager.loadSettings();
+        const settings = this.settingsService.getSettings();
 
         try {
           await editorService.createNewChatWithHighlightedText(editor, settings);
@@ -334,7 +334,7 @@ export class CommandRegistry {
       icon: "layout-template",
       callback: async () => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = await this.settingsManager.loadSettings();
+        const settings = this.settingsService.getSettings();
 
         if (settings.dateFormat) {
           await editorService.createNewChatFromTemplate(

@@ -1,4 +1,4 @@
-import { App } from "obsidian";
+import { App, Plugin } from "obsidian";
 import { FileService } from "src/Services/FileService";
 import { EditorContentService } from "src/Services/EditorContentService";
 import { MessageService } from "src/Services/MessageService";
@@ -15,6 +15,7 @@ import { OpenAiService } from "src/Services/OpenAiService";
 import { OllamaService } from "src/Services/OllamaService";
 import { OpenRouterService } from "src/Services/OpenRouterService";
 import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
+import { SettingsService } from "src/Services/SettingsService";
 
 /**
  * ServiceLocator is responsible for creating and providing access to services
@@ -22,6 +23,7 @@ import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src
  */
 export class ServiceLocator {
   private readonly app: App;
+  private readonly plugin: Plugin;
 
   private fileService: FileService;
   private editorContentService: EditorContentService;
@@ -34,9 +36,11 @@ export class ServiceLocator {
   private apiService: ApiService;
   private apiAuthService: ApiAuthService;
   private apiResponseParser: ApiResponseParser;
+  private settingsService: SettingsService;
 
-  constructor(app: App) {
+  constructor(app: App, plugin: Plugin) {
     this.app = app;
+    this.plugin = plugin;
     this.initializeServices();
   }
 
@@ -69,6 +73,9 @@ export class ServiceLocator {
       this.templateService,
       this.frontmatterService
     );
+
+    // Initialize settings service
+    this.settingsService = new SettingsService(this.plugin, this.notificationService, this.errorService);
   }
 
   /**
@@ -148,5 +155,12 @@ export class ServiceLocator {
 
   getApiResponseParser(): ApiResponseParser {
     return this.apiResponseParser;
+  }
+
+  /**
+   * Get the settings service
+   */
+  getSettingsService(): SettingsService {
+    return this.settingsService;
   }
 }

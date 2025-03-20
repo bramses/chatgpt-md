@@ -1,20 +1,21 @@
 import { Plugin } from "obsidian";
 import { ServiceLocator } from "./core/ServiceLocator";
 import { CommandRegistry } from "./core/CommandRegistry";
-import { SettingsManager } from "./managers/SettingsManager";
 
 export default class ChatGPT_MD extends Plugin {
   private serviceLocator: ServiceLocator;
   private commandRegistry: CommandRegistry;
-  private settingsManager: SettingsManager;
 
   async onload() {
-    this.settingsManager = new SettingsManager(this);
-    await this.settingsManager.addSettingTab();
+    // Initialize service locator with plugin instance
+    this.serviceLocator = new ServiceLocator(this.app, this);
 
-    this.serviceLocator = new ServiceLocator(this.app);
+    // Add settings tab using the service from ServiceLocator
+    const settingsService = this.serviceLocator.getSettingsService();
+    await settingsService.addSettingTab();
 
-    this.commandRegistry = new CommandRegistry(this, this.serviceLocator, this.settingsManager);
+    // Initialize command registry with services
+    this.commandRegistry = new CommandRegistry(this, this.serviceLocator, settingsService);
     this.commandRegistry.registerCommands();
   }
 }
