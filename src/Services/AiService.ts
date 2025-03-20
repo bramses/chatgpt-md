@@ -1,16 +1,13 @@
-import { Message } from "src/Models/Message";
 import { Editor, MarkdownView } from "obsidian";
-import { StreamManager } from "src/managers/StreamManager";
-import { StreamService } from "./StreamService";
-import { EditorUpdateService } from "./EditorUpdateService";
-import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
-import { EditorService } from "src/Services/EditorService";
-import { ChatGPT_MDSettings } from "src/Models/Config";
-import { ErrorService } from "./ErrorService";
-import { NotificationService } from "./NotificationService";
+import { Message } from "src/Models/Message";
 import { ApiService } from "./ApiService";
 import { ApiAuthService } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
+import { EditorService } from "./EditorService";
+import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
+import { ChatGPT_MDSettings } from "src/Models/Config";
+import { ErrorService } from "./ErrorService";
+import { NotificationService } from "./NotificationService";
 
 /**
  * Interface defining the contract for AI service implementations
@@ -21,43 +18,55 @@ export interface IAiApiService {
    */
   callAIAPI(
     messages: Message[],
-    options: any,
+    options: Record<string, any>,
     headingPrefix: string,
     editor?: Editor,
     setAtCursor?: boolean,
     apiKey?: string,
     settings?: ChatGPT_MDSettings
-  ): Promise<any>;
+  ): Promise<{
+    fullString: string;
+    mode: string;
+    wasAborted?: boolean;
+  }>;
 
   /**
    * Infer a title from messages
    */
-  inferTitle(view: MarkdownView, settings: any, messages: string[], editorService: EditorService): any;
+  inferTitle(
+    view: MarkdownView,
+    settings: ChatGPT_MDSettings,
+    messages: string[],
+    editorService: EditorService
+  ): Promise<string>;
 }
+
+/**
+ * Type for streaming API response
+ */
+export type StreamingResponse = {
+  fullString: string;
+  mode: "streaming";
+  wasAborted?: boolean;
+};
 
 /**
  * Base class for AI service implementations
  * Contains common functionality and defines abstract methods that must be implemented by subclasses
  */
 export abstract class BaseAiService implements IAiApiService {
-  protected streamService: StreamService;
-  protected editorUpdateService: EditorUpdateService;
   protected apiService: ApiService;
   protected apiAuthService: ApiAuthService;
   protected apiResponseParser: ApiResponseParser;
+  protected readonly errorService: ErrorService;
+  protected readonly notificationService: NotificationService;
 
-  constructor(
-    protected streamManager: StreamManager,
-    protected errorService?: ErrorService,
-    protected notificationService?: NotificationService
-  ) {
-    this.notificationService = notificationService || new NotificationService();
-    this.errorService = errorService || new ErrorService(this.notificationService);
-    this.editorUpdateService = new EditorUpdateService(this.notificationService);
-    this.streamService = new StreamService(this.errorService, this.notificationService, this.editorUpdateService);
+  constructor(errorService?: ErrorService, notificationService?: NotificationService) {
+    this.notificationService = notificationService ?? new NotificationService();
+    this.errorService = errorService ?? new ErrorService(this.notificationService);
     this.apiService = new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = new ApiAuthService(this.notificationService);
-    this.apiResponseParser = new ApiResponseParser(this.editorUpdateService, this.notificationService);
+    this.apiResponseParser = new ApiResponseParser(this.notificationService);
   }
 
   /**
@@ -68,24 +77,24 @@ export abstract class BaseAiService implements IAiApiService {
   /**
    * Get the default configuration for this service
    */
-  abstract getDefaultConfig(): any;
+  abstract getDefaultConfig(): Record<string, any>;
 
   /**
    * Create a payload for the API request
    */
-  abstract createPayload(config: any, messages: Message[]): any;
+  abstract createPayload(config: Record<string, any>, messages: Message[]): Record<string, any>;
 
   /**
    * Handle API errors
    */
-  abstract handleAPIError(err: any, config: any, prefix: string): never;
+  abstract handleAPIError(err: unknown, config: Record<string, any>, prefix: string): never;
 
   /**
    * Call the AI API with the given parameters
    */
   async callAIAPI(
     messages: Message[],
-    options: any = {},
+    options: Record<string, any> = {},
     headingPrefix: string,
     editor?: Editor,
     setAtCursor?: boolean,
@@ -112,7 +121,7 @@ export abstract class BaseAiService implements IAiApiService {
     settings: ChatGPT_MDSettings,
     messages: string[],
     editorService: EditorService
-  ): Promise<any> {
+  ): Promise<string> {
     try {
       if (!view.file) {
         throw new Error("No active file found");
@@ -123,13 +132,6 @@ export abstract class BaseAiService implements IAiApiService {
 
       // Infer the title
       const title = await this.inferTitleFromMessages(apiKey, messages, settings);
-
-      // Check if the result is an error message
-      if (this.isErrorMessage(title)) {
-        console.error("[ChatGPT MD] Error detected in title inference result:", title);
-        this.showNoTitleInferredNotification();
-        return "";
-      }
 
       // Only update the title if we got a valid non-empty title
       if (title && title.trim().length > 0) {
@@ -148,43 +150,10 @@ export abstract class BaseAiService implements IAiApiService {
   }
 
   /**
-   * Check if a string is an error message
-   * @param text The text to check
-   * @returns True if the text appears to be an error message
-   */
-  protected isErrorMessage(text: string): boolean {
-    if (!text || typeof text !== "string") {
-      return false;
-    }
-
-    // Common error message patterns
-    const errorPatterns = [
-      "I am sorry",
-      "I could not answer",
-      "because of an error",
-      "what went wrong",
-      "Error:",
-      "error occurred",
-      "failed",
-      "invalid",
-      "unauthorized",
-      "not found",
-      "API key",
-      "Model-",
-      "URL-",
-    ];
-
-    // Check if the text contains any error patterns
-    return errorPatterns.some((pattern) => text.includes(pattern));
-  }
-
-  /**
    * Show a notification when title inference fails
    */
   protected showNoTitleInferredNotification(): void {
-    if (this.notificationService) {
-      this.notificationService.showWarning("Could not infer title. The file name was not changed.");
-    }
+    this.notificationService?.showWarning("Could not infer title. The file name was not changed.");
   }
 
   /**
@@ -203,29 +172,53 @@ export abstract class BaseAiService implements IAiApiService {
   protected abstract callStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
-    config: any,
+    config: Record<string, any>,
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean
-  ): Promise<{ fullstr: string; mode: "streaming" }>;
+  ): Promise<StreamingResponse>;
 
   /**
    * Call the AI API in non-streaming mode
    */
-  protected abstract callNonStreamingAPI(apiKey: string | undefined, messages: Message[], config: any): Promise<any>;
+  protected abstract callNonStreamingAPI(
+    apiKey: string | undefined,
+    messages: Message[],
+    config: Record<string, any>
+  ): Promise<any>;
 
   /**
    * Infer a title from messages
    */
-  protected abstract inferTitleFromMessages(apiKey: string, messages: string[], settings: any): Promise<string>;
+  protected abstract inferTitleFromMessages(
+    apiKey: string,
+    messages: string[],
+    settings: ChatGPT_MDSettings
+  ): Promise<string>;
 
   /**
    * Stop streaming
    */
   public stopStreaming(): void {
-    if (this.apiService) {
-      this.apiService.stopStreaming();
+    this.apiService?.stopStreaming();
+  }
+
+  /**
+   * Process streaming result and handle aborted case
+   * This centralizes the common logic for all AI services
+   */
+  protected processStreamingResult(result: { text: string; wasAborted: boolean }): StreamingResponse {
+    // If streaming was aborted and text is empty, return empty string with wasAborted flag
+    if (result.wasAborted && result.text === "") {
+      return { fullString: "", mode: "streaming", wasAborted: true };
     }
+
+    // Normal case - return the text with wasAborted flag
+    return {
+      fullString: result.text,
+      mode: "streaming",
+      wasAborted: result.wasAborted,
+    };
   }
 }
 
@@ -239,20 +232,6 @@ export interface OpenAiModel {
 export interface OllamaModel {
   name: string;
 }
-
-/**
- * Factory function to create an AI service instance based on the service type
- * This function is implemented in main.ts to avoid circular dependencies
- */
-export const getAiApiService = (
-  streamManager: StreamManager,
-  serviceType: string,
-  errorService?: ErrorService,
-  notificationService?: NotificationService
-): IAiApiService => {
-  // This is a placeholder that will be replaced by the actual implementation in main.ts
-  throw new Error("getAiApiService should be implemented in main.ts to avoid circular dependencies");
-};
 
 /**
  * Determine the AI provider from a URL or model

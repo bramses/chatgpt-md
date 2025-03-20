@@ -1,11 +1,7 @@
-import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI } from "src/Constants";
+import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
 import { DEFAULT_OLLAMA_CONFIG, OllamaConfig } from "./OllamaService";
 import { DEFAULT_OPENAI_CONFIG, OpenAIConfig } from "./OpenAiService";
-import {
-  AI_SERVICE_OPENROUTER as OPENROUTER_SERVICE_TYPE,
-  DEFAULT_OPENROUTER_CONFIG,
-  OpenRouterConfig,
-} from "./OpenRouterService";
+import { DEFAULT_OPENROUTER_CONFIG, OpenRouterConfig } from "./OpenRouterService";
 
 /**
  * Type representing all possible AI service configurations
@@ -29,7 +25,7 @@ export class AiServiceConfigFactory {
       case AI_SERVICE_OPENAI:
         baseConfig = { ...DEFAULT_OPENAI_CONFIG };
         break;
-      case OPENROUTER_SERVICE_TYPE:
+      case AI_SERVICE_OPENROUTER:
         baseConfig = { ...DEFAULT_OPENROUTER_CONFIG };
         break;
       case AI_SERVICE_OLLAMA:
@@ -52,7 +48,7 @@ export class AiServiceConfigFactory {
     switch (serviceType) {
       case AI_SERVICE_OPENAI:
         return { ...DEFAULT_OPENAI_CONFIG };
-      case OPENROUTER_SERVICE_TYPE:
+      case AI_SERVICE_OPENROUTER:
         return { ...DEFAULT_OPENROUTER_CONFIG };
       case AI_SERVICE_OLLAMA:
         return { ...DEFAULT_OLLAMA_CONFIG };
@@ -66,6 +62,6 @@ export class AiServiceConfigFactory {
    * @returns Array of available service types
    */
   public static getAvailableServiceTypes(): string[] {
-    return [AI_SERVICE_OPENAI, OPENROUTER_SERVICE_TYPE, AI_SERVICE_OLLAMA];
+    return [AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER, AI_SERVICE_OLLAMA];
   }
 }

@@ -1,6 +1,6 @@
 import { Editor, MarkdownView, Notice, Platform, Plugin } from "obsidian";
 import { ServiceLocator } from "./ServiceLocator";
-import { SettingsManager } from "./SettingsManager";
+import { SettingsService } from "../Services/SettingsService";
 import { IAiApiService } from "src/Services/AiService";
 import { AiModelSuggestModal } from "src/Views/AiModelSuggestModel";
 import { getApiKeyForService, isValidApiKey } from "src/Utilities/SettingsUtils";
@@ -25,7 +25,7 @@ import {
   ROLE_USER,
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
-import { isTitleTimestampFormat } from "src/Utilities/TextHelpers";
+import { getHeadingPrefix, isTitleTimestampFormat } from "src/Utilities/TextHelpers";
 
 /**
  * Registers and manages commands for the plugin
@@ -33,20 +33,15 @@ import { isTitleTimestampFormat } from "src/Utilities/TextHelpers";
 export class CommandRegistry {
   private plugin: Plugin;
   private serviceLocator: ServiceLocator;
-  private settingsManager: SettingsManager;
-  private updateStatusBar: (text: string) => void;
+  private settingsService: SettingsService;
   private aiService: IAiApiService | null = null;
+  private statusBarItemEl: HTMLElement;
 
-  constructor(
-    plugin: Plugin,
-    serviceLocator: ServiceLocator,
-    settingsManager: SettingsManager,
-    updateStatusBar: (text: string) => void
-  ) {
+  constructor(plugin: Plugin, serviceLocator: ServiceLocator, settingsService: SettingsService) {
     this.plugin = plugin;
     this.serviceLocator = serviceLocator;
-    this.settingsManager = settingsManager;
-    this.updateStatusBar = updateStatusBar;
+    this.settingsService = settingsService;
+    this.statusBarItemEl = plugin.addStatusBarItem();
   }
 
   /**
@@ -74,7 +69,7 @@ export class CommandRegistry {
       icon: "message-circle",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsManager.getSettings();
+        const settings = this.settingsService.getSettings();
         const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
 
         this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
@@ -103,14 +98,14 @@ export class CommandRegistry {
           const response = await this.aiService.callAIAPI(
             messagesWithRoleAndMessage,
             frontmatter,
-            editorService.getHeadingPrefix(settings.headingLevel),
+            getHeadingPrefix(settings.headingLevel),
             editor,
             settings.generateAtCursor,
             apiKeyToUse,
             settings
           );
 
-          await editorService.processResponse(editor, response, settings);
+          editorService.processResponse(editor, response, settings);
 
           if (
             settings.autoInferTitle &&
@@ -165,7 +160,7 @@ export class CommandRegistry {
       icon: "list",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsManager.getSettings();
+        const settings = this.settingsService.getSettings();
 
         const aiModelSuggestModal = new AiModelSuggestModal(this.plugin.app, editor, editorService);
         aiModelSuggestModal.open();
@@ -201,9 +196,9 @@ export class CommandRegistry {
       id: ADD_HR_COMMAND_ID,
       name: "Add divider",
       icon: "minus",
-      editorCallback: (editor: Editor, _view: MarkdownView) => {
+      editorCallback: async (editor: Editor, _view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsManager.getSettings();
+        const settings = this.settingsService.getSettings();
         editorService.addHorizontalRule(editor, ROLE_USER, settings.headingLevel);
       },
     });
@@ -250,8 +245,8 @@ export class CommandRegistry {
           // @ts-ignore - Call the stopStreaming method
           this.aiService.stopStreaming();
         } else {
-          // Fallback to the old method
-          this.serviceLocator.getStreamService().stopStreaming();
+          // No active AI service to stop streaming
+          this.serviceLocator.getNotificationService().showWarning("No active streaming request to stop");
         }
       },
     });
@@ -267,7 +262,7 @@ export class CommandRegistry {
       icon: "subtitles",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsManager.getSettings();
+        const settings = this.settingsService.getSettings();
 
         // get frontmatter
         const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
@@ -315,9 +310,9 @@ export class CommandRegistry {
       id: MOVE_TO_CHAT_COMMAND_ID,
       name: "Create new chat with highlighted text",
       icon: "highlighter",
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
+      editorCallback: async (editor: Editor, _view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsManager.getSettings();
+        const settings = this.settingsService.getSettings();
 
         try {
           await editorService.createNewChatWithHighlightedText(editor, settings);
@@ -339,7 +334,7 @@ export class CommandRegistry {
       icon: "layout-template",
       callback: async () => {
         const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsManager.getSettings();
+        const settings = this.settingsService.getSettings();
 
         if (settings.dateFormat) {
           await editorService.createNewChatFromTemplate(
@@ -396,5 +391,11 @@ export class CommandRegistry {
       console.error("Error fetching models:", error);
       throw error;
     }
+  }
+  /**
+   * Update the status bar with the given text
+   */
+  private updateStatusBar(text: string) {
+    this.statusBarItemEl.setText(`[ChatGPT MD] ${text}`);
   }
 }

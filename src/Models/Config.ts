@@ -1,20 +1,12 @@
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
-import { DEFAULT_DATE_FORMAT } from "../Constants";
+import {
+  DEFAULT_CHAT_FRONT_MATTER,
+  DEFAULT_DATE_FORMAT,
+  DEFAULT_HEADING_LEVEL,
+  DEFAULT_INFER_TITLE_LANGUAGE,
+} from "../Constants";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
-
-export const DEFAULT_CHAT_FRONT_MATTER = `---
-system_commands: ['I am a helpful assistant.']
-temperature: ${DEFAULT_OPENAI_CONFIG.temperature}
-top_p: ${DEFAULT_OPENAI_CONFIG.top_p}
-max_tokens: ${DEFAULT_OPENAI_CONFIG.max_tokens}
-presence_penalty: ${DEFAULT_OPENAI_CONFIG.presence_penalty}
-frequency_penalty: ${DEFAULT_OPENAI_CONFIG.frequency_penalty}
-stream: ${DEFAULT_OPENAI_CONFIG.stream}
-stop: ${DEFAULT_OPENAI_CONFIG.stop}
-n: ${DEFAULT_OPENAI_CONFIG.n}
-model: ${DEFAULT_OPENAI_CONFIG.model}
----`;
 
 /**
  * API key settings
@@ -98,7 +90,7 @@ export interface ChatGPT_MDSettings
  */
 export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   // API Keys
-  apiKey: "default",
+  apiKey: "",
   openrouterApiKey: "",
 
   // Service URLs
@@ -117,8 +109,8 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 
   // Formatting
   dateFormat: DEFAULT_DATE_FORMAT,
-  headingLevel: 0,
-  inferTitleLanguage: "English",
+  headingLevel: DEFAULT_HEADING_LEVEL,
+  inferTitleLanguage: DEFAULT_INFER_TITLE_LANGUAGE,
 
   // Templates
   defaultChatFrontmatter: DEFAULT_CHAT_FRONT_MATTER,
