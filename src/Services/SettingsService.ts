@@ -1,27 +1,37 @@
 import { Plugin } from "obsidian";
 import { ChatGPT_MDSettings, DEFAULT_SETTINGS } from "src/Models/Config";
 import { ChatGPT_MDSettingsTab } from "../Views/ChatGPT_MDSettingsTab";
+import { NotificationService } from "./NotificationService";
+import { ErrorService } from "./ErrorService";
 
 /**
- * Handles loading and saving of plugin settings
+ * Manages plugin settings with persistence
  */
-export class SettingsManager {
-  private readonly plugin: Plugin;
+export class SettingsService {
   private settings: ChatGPT_MDSettings;
 
-  constructor(plugin: Plugin) {
-    this.plugin = plugin;
+  constructor(
+    private readonly plugin: Plugin,
+    private readonly notificationService: NotificationService = new NotificationService(),
+    private readonly errorService: ErrorService = new ErrorService(new NotificationService())
+  ) {
     this.settings = structuredClone(DEFAULT_SETTINGS);
+    this.loadSettings().catch((error) => this.notificationService.showError("Failed to load settings"));
+  }
+
+  /**
+   * Get current settings
+   */
+  getSettings(): ChatGPT_MDSettings {
+    return this.settings;
   }
 
   /**
    * Load settings from plugin data
-   * @returns Promise resolving to the current settings
    */
   async loadSettings(): Promise<ChatGPT_MDSettings> {
     const loadedData = await this.plugin.loadData();
-    this.settings = { ...DEFAULT_SETTINGS, ...loadedData };
-
+    Object.assign(this.settings, DEFAULT_SETTINGS, loadedData);
     return this.settings;
   }
 
@@ -34,21 +44,19 @@ export class SettingsManager {
 
   /**
    * Update settings with new values
-   * @param newSettings Partial settings to merge with existing settings
    */
   updateSettings(newSettings: Partial<ChatGPT_MDSettings>): void {
-    this.settings = { ...this.settings, ...newSettings };
+    Object.assign(this.settings, newSettings);
   }
 
   /**
    * Add settings tab to the plugin
    */
   async addSettingTab(): Promise<void> {
-    const settings: ChatGPT_MDSettings = await this.loadSettings();
-
+    await this.loadSettings();
     this.plugin.addSettingTab(
       new ChatGPT_MDSettingsTab(this.plugin.app, this.plugin, {
-        settings,
+        settings: this.settings,
         saveSettings: this.saveSettings.bind(this),
       })
     );
