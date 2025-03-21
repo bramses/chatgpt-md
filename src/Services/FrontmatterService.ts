@@ -20,7 +20,7 @@ export class FrontmatterService {
     const frontmatter = parseSettingsFrontmatter(view.editor.getValue());
 
     // Determine the AI service type
-    const aiService =
+    let aiService =
       frontmatter.aiService || aiProviderFromUrl(frontmatter.url, frontmatter.model) || AI_SERVICE_OPENAI;
 
     // Get the default config for the service type
@@ -40,9 +40,10 @@ export class FrontmatterService {
     }
 
     // Parse default frontmatter from settings if it exists
-    let defaultFrontmatterSettings = {};
+    let defaultFrontmatterSettings = null;
     if (settings.defaultChatFrontmatter) {
       defaultFrontmatterSettings = parseSettingsFrontmatter(settings.defaultChatFrontmatter);
+      aiService = aiProviderFromUrl(defaultFrontmatterSettings.url, defaultFrontmatterSettings.model) || aiService;
     }
 
     // Merge the default config with the settings, default frontmatter, and file frontmatter
