@@ -249,5 +249,5 @@ export const aiProviderFromUrl = (url?: string, model?: string): string => {
   if (url?.includes("localhost") || url?.includes("127.0.0.1")) {
     return AI_SERVICE_OLLAMA;
   }
-  return AI_SERVICE_OPENAI;
+  return "";
 };
