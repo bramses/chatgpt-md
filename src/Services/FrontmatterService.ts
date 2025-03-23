@@ -5,7 +5,7 @@ import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { aiProviderFromUrl } from "src/Services/AiService";
-import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
+import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER, YAML_FRONTMATTER_REGEX } from "src/Constants";
 
 /**
  * Service responsible for frontmatter parsing and generation
@@ -17,40 +17,36 @@ export class FrontmatterService {
    * Get frontmatter from a markdown view
    */
   getFrontmatter(view: MarkdownView, settings: ChatGPT_MDSettings): any {
-    const frontmatter = parseSettingsFrontmatter(view.editor.getValue());
+    // Extract frontmatter from the file
+    const fileContent = view.editor.getValue();
+    const frontmatterMatch = fileContent.match(YAML_FRONTMATTER_REGEX);
 
-    // Determine the AI service type
+    // Parse frontmatter configurations
+    const frontmatter = frontmatterMatch ? parseSettingsFrontmatter(frontmatterMatch[0]) : {};
+    const defaultFrontmatter = settings.defaultChatFrontmatter
+      ? parseSettingsFrontmatter(settings.defaultChatFrontmatter)
+      : {};
+
+    // Merge configurations with proper priority order
+    const mergedConfig = { ...settings, ...defaultFrontmatter, ...frontmatter } as Record<string, any>;
+
+    // Determine AI service
     const aiService =
-      frontmatter.aiService || aiProviderFromUrl(frontmatter.url, frontmatter.model) || AI_SERVICE_OPENAI;
+      mergedConfig.aiService || aiProviderFromUrl(mergedConfig.url, mergedConfig.model) || AI_SERVICE_OPENAI;
 
-    // Get the default config for the service type
-    let defaultConfig;
-    switch (aiService) {
-      case AI_SERVICE_OPENAI:
-        defaultConfig = DEFAULT_OPENAI_CONFIG;
-        break;
-      case AI_SERVICE_OLLAMA:
-        defaultConfig = DEFAULT_OLLAMA_CONFIG;
-        break;
-      case AI_SERVICE_OPENROUTER:
-        defaultConfig = DEFAULT_OPENROUTER_CONFIG;
-        break;
-      default:
-        defaultConfig = DEFAULT_OPENAI_CONFIG;
-    }
+    // Get default config for the determined service
+    const serviceDefaults: Record<string, any> = {
+      [AI_SERVICE_OPENAI]: DEFAULT_OPENAI_CONFIG,
+      [AI_SERVICE_OLLAMA]: DEFAULT_OLLAMA_CONFIG,
+      [AI_SERVICE_OPENROUTER]: DEFAULT_OPENROUTER_CONFIG,
+    };
+    const defaultConfig = serviceDefaults[aiService] || DEFAULT_OPENAI_CONFIG;
 
-    // Parse default frontmatter from settings if it exists
-    let defaultFrontmatterSettings = {};
-    if (settings.defaultChatFrontmatter) {
-      defaultFrontmatterSettings = parseSettingsFrontmatter(settings.defaultChatFrontmatter);
-    }
-
-    // Merge the default config with the settings, default frontmatter, and file frontmatter
-    // Order of precedence: defaultConfig < settings < defaultFrontmatterSettings < frontmatter
+    // Return final configuration with everything merged
     return {
       ...defaultConfig,
       ...settings,
-      ...defaultFrontmatterSettings,
+      ...defaultFrontmatter,
       ...frontmatter,
       aiService,
     };
