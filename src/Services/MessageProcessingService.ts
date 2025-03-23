@@ -32,16 +32,22 @@ export class MessageProcessingService {
   findLinksInMessage(message: string): { link: string; title: string }[] {
     const regexes = [
       { regex: WIKI_LINKS_REGEX, fullMatchIndex: 0, titleIndex: 1 },
-      { regex: MARKDOWN_LINKS_REGEX, fullMatchIndex: 0, titleIndex: 2 },
+      { regex: MARKDOWN_LINKS_REGEX, fullMatchIndex: 0, titleIndex: 1, urlIndex: 2 },
     ];
 
     const links: { link: string; title: string }[] = [];
     const seenTitles = new Set<string>();
 
-    for (const { regex, fullMatchIndex, titleIndex } of regexes) {
+    for (const { regex, fullMatchIndex, titleIndex, urlIndex } of regexes) {
       for (const match of message.matchAll(regex)) {
         const fullLink = match[fullMatchIndex];
         const linkTitle = match[titleIndex];
+        const url = urlIndex ? match[urlIndex] : null;
+
+        // Skip external links
+        if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
+          continue;
+        }
 
         if (linkTitle && !seenTitles.has(linkTitle)) {
           links.push({ link: fullLink, title: linkTitle });
