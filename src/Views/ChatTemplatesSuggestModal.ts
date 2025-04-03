@@ -32,12 +32,14 @@ export class ChatTemplatesSuggestModal extends SuggestModal<ChatTemplate> {
     const chatTemplateFiles = this.getFilesInChatFolder();
 
     if (query == "") {
-      return chatTemplateFiles.map((file) => {
-        return {
-          title: file.basename,
-          file: file,
-        };
-      });
+      return chatTemplateFiles
+        .map((file) => {
+          return {
+            title: file.basename,
+            file: file,
+          };
+        })
+        .sort((a, b) => a.title.localeCompare(b.title));
     }
 
     return chatTemplateFiles
@@ -49,7 +51,8 @@ export class ChatTemplatesSuggestModal extends SuggestModal<ChatTemplate> {
           title: file.basename,
           file: file,
         };
-      });
+      })
+      .sort((a, b) => a.title.localeCompare(b.title));
   }
 
   // Renders each suggestion item.
