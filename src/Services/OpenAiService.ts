@@ -12,19 +12,19 @@ import { ApiResponseParser } from "./ApiResponseParser";
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   aiService: AI_SERVICE_OPENAI,
-  frequency_penalty: 0.5,
+  frequency_penalty: 0,
   max_tokens: 300,
   model: "gpt-4",
   n: 1,
-  presence_penalty: 0.5,
+  presence_penalty: 0,
   stop: null,
   stream: true,
   system_commands: null,
   tags: [],
-  temperature: 0.3,
+  temperature: 1,
   title: "Untitled",
   top_p: 1,
-  url: "https://api.openai.com/",
+  url: "https://api.openai.com",
 };
 
 export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) => {
@@ -39,7 +39,11 @@ export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) =>
     const apiAuthService = new ApiAuthService();
     const headers = apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENAI);
 
-    const models = await apiService.makeGetRequest(`${DEFAULT_OPENAI_CONFIG.url}v1/models`, headers, AI_SERVICE_OPENAI);
+    const models = await apiService.makeGetRequest(
+      `${DEFAULT_OPENAI_CONFIG.url}/v1/models`,
+      headers,
+      AI_SERVICE_OPENAI
+    );
 
     return models.data
       .filter((model: OpenAiModel) => model.id.includes("gpt"))
@@ -153,7 +157,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
 
       // Make streaming request using ApiService
       const response = await this.apiService.makeStreamingRequest(
-        `${config.url}v1/chat/completions`,
+        `${config.url}/v1/chat/completions`,
         payload,
         headers,
         this.getServiceType()
@@ -198,7 +202,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
 
       // Make non-streaming request using ApiService
       return await this.apiService.makeNonStreamingRequest(
-        `${config.url}v1/chat/completions`,
+        `${config.url}/v1/chat/completions`,
         payload,
         headers,
         this.getServiceType()
