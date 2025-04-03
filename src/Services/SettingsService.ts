@@ -4,6 +4,15 @@ import { ChatGPT_MDSettingsTab } from "../Views/ChatGPT_MDSettingsTab";
 import { NotificationService } from "./NotificationService";
 import { ErrorService } from "./ErrorService";
 
+// Define interface for migration data
+interface SettingsMigration {
+  setting: string;
+  pattern: RegExp;
+  replacement: string;
+  description: string;
+  introducedIn: string; // For documentation purposes only
+}
+
 /**
  * Manages plugin settings with persistence
  */
@@ -24,6 +33,60 @@ export class SettingsService {
    */
   getSettings(): ChatGPT_MDSettings {
     return this.settings;
+  }
+
+  /**
+   * Migrate settings from older versions
+   */
+  async migrateSettings(): Promise<void> {
+    // Define migrations as an array of objects with version information
+    const settingsMigrations: SettingsMigration[] = [
+      {
+        setting: "ollamaUrl",
+        pattern: /\/api\/$/,
+        replacement: "",
+        description: "Removing trailing /api/ from Ollama URL",
+        introducedIn: "2.1.3",
+      },
+      {
+        setting: "openrouterUrl",
+        pattern: /\/api\/$/,
+        replacement: "",
+        description: "Removing trailing /api/ from OpenRouter URL",
+        introducedIn: "2.1.3",
+      },
+      {
+        setting: "openaiUrl",
+        pattern: /\/$/,
+        replacement: "",
+        description: "Removing trailing slash from OpenAI URL",
+        introducedIn: "2.1.3",
+      },
+    ];
+
+    let needsUpdate = false;
+
+    // Execute each migration
+    for (const migration of settingsMigrations) {
+      const settingKey = migration.setting as keyof ChatGPT_MDSettings;
+      const currentValue = this.settings[settingKey] as string | undefined;
+
+      if (currentValue && migration.pattern.test(currentValue)) {
+        // Use updateSettings for type safety
+        this.updateSettings({
+          [settingKey]: currentValue.replace(migration.pattern, migration.replacement),
+        } as Partial<ChatGPT_MDSettings>);
+
+        console.log(`[ChatGPT MD] Migration (${migration.introducedIn}): ${migration.description}`);
+        needsUpdate = true;
+      }
+    }
+
+    // Save settings if any changes were made
+    if (needsUpdate) {
+      await this.saveSettings();
+      console.log("[ChatGPT MD] Migrated settings");
+    }
   }
 
   /**
@@ -53,7 +116,10 @@ export class SettingsService {
    * Add settings tab to the plugin
    */
   async addSettingTab(): Promise<void> {
+    // Load settings and run migrations if needed
     await this.loadSettings();
+
+    // Create the settings tab with the current settings
     this.plugin.addSettingTab(
       new ChatGPT_MDSettingsTab(this.plugin.app, this.plugin, {
         settings: this.settings,

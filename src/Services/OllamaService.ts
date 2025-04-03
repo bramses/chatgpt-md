@@ -27,7 +27,7 @@ export interface OllamaConfig {
 export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
   aiService: AI_SERVICE_OLLAMA,
   model: "llama2",
-  url: "http://localhost:11434/api/",
+  url: "http://localhost:11434",
   stream: true,
   title: "Untitled",
   system_commands: null,
@@ -39,7 +39,7 @@ export const fetchAvailableOllamaModels = async () => {
     const apiService = new ApiService();
     const headers = { "Content-Type": "application/json" };
 
-    const json = await apiService.makeGetRequest(`${DEFAULT_OLLAMA_CONFIG.url}tags`, headers, AI_SERVICE_OLLAMA);
+    const json = await apiService.makeGetRequest(`${DEFAULT_OLLAMA_CONFIG.url}/api/tags`, headers, AI_SERVICE_OLLAMA);
     const models = json.models;
 
     return models
@@ -143,7 +143,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
 
       // Make streaming request using ApiService
       const response = await this.apiService.makeStreamingRequest(
-        `${config.url}chat`,
+        `${config.url}/api/chat`,
         payload,
         headers,
         this.getServiceType()
@@ -186,7 +186,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
 
       // Make non-streaming request using ApiService
       return await this.apiService.makeNonStreamingRequest(
-        `${config.url}chat`,
+        `${config.url}/api/chat`,
         payload,
         headers,
         this.getServiceType()
