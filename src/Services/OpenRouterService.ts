@@ -64,7 +64,7 @@ export const DEFAULT_OPENROUTER_CONFIG: OpenRouterConfig = {
   temperature: 0.3,
   title: "Untitled",
   top_p: 1,
-  url: "https://openrouter.ai/api/",
+  url: "https://openrouter.ai",
 };
 
 export const fetchAvailableOpenRouterModels = async (apiKey: string) => {
@@ -81,7 +81,7 @@ export const fetchAvailableOpenRouterModels = async (apiKey: string) => {
     const headers = apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENROUTER);
 
     const models = await apiService.makeGetRequest(
-      `${DEFAULT_OPENROUTER_CONFIG.url}v1/models`,
+      `${DEFAULT_OPENROUTER_CONFIG.url}/api/v1/models`,
       headers,
       AI_SERVICE_OPENROUTER
     );
@@ -200,7 +200,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
 
       // Make streaming request using ApiService
       const response = await this.apiService.makeStreamingRequest(
-        `${config.url}v1/chat/completions`,
+        `${config.url}/api/v1/chat/completions`,
         payload,
         headers,
         this.getServiceType()
@@ -245,7 +245,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
 
       // Make non-streaming request using ApiService
       return await this.apiService.makeNonStreamingRequest(
-        `${config.url}v1/chat/completions`,
+        `${config.url}/api/v1/chat/completions`,
         payload,
         headers,
         this.getServiceType()

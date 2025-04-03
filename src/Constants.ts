@@ -50,13 +50,12 @@ export const ROLE_USER = "user";
 
 export const DEFAULT_CHAT_FRONT_MATTER = `---
 system_commands: ['I am a helpful assistant.']
-temperature: 0.3
-top_p: 1
+frequency_penalty: 0
 max_tokens: 300
-presence_penalty: 0.5
-frequency_penalty: 0.5
-stream: true
-stop: null
-n: 1
 model: gpt-4o-mini
+n: 1
+presence_penalty: 0
+stop: null
+stream: true
+temperature: 1
 ---`;

@@ -10,8 +10,12 @@ export default class ChatGPT_MD extends Plugin {
     // Initialize service locator with plugin instance
     this.serviceLocator = new ServiceLocator(this.app, this);
 
-    // Add settings tab using the service from ServiceLocator
+    // Get settings service and ensure migrations run first
     const settingsService = this.serviceLocator.getSettingsService();
+    await settingsService.loadSettings();
+    await settingsService.migrateSettings();
+
+    // Add settings tab after migrations have completed
     await settingsService.addSettingTab();
 
     // Initialize command registry with services
