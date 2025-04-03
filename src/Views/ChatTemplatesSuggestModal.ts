@@ -1,6 +1,7 @@
 import { App, normalizePath, Notice, SuggestModal, TFile, TFolder } from "obsidian";
 
 import { ChatGPT_MDSettings } from "src/Models/Config";
+import { FileService } from "src/Services/FileService";
 
 interface ChatTemplate {
   title: string;
@@ -10,11 +11,13 @@ interface ChatTemplate {
 export class ChatTemplatesSuggestModal extends SuggestModal<ChatTemplate> {
   settings: ChatGPT_MDSettings;
   titleDate: string;
+  fileService: FileService;
 
-  constructor(app: App, settings: ChatGPT_MDSettings, titleDate: string) {
+  constructor(app: App, settings: ChatGPT_MDSettings, titleDate: string, fileService: FileService) {
     super(app);
     this.settings = settings;
     this.titleDate = titleDate;
+    this.fileService = fileService;
   }
 
   getFilesInChatFolder(): TFile[] {
@@ -74,7 +77,9 @@ export class ChatTemplatesSuggestModal extends SuggestModal<ChatTemplate> {
       finalContent = this.settings.defaultChatFrontmatter + "\n\n" + templateText;
     }
 
-    const newFileName = `${this.titleDate} ${template.title}`;
+    // Sanitize the template title before creating the file
+    const sanitizedTemplateTitle = this.fileService.sanitizeFileName(template.title);
+    const newFileName = `${this.titleDate} ${sanitizedTemplateTitle}`;
     let newFilePath = normalizePath(`${this.settings.chatFolder}/${newFileName}.md`);
 
     let i = 1;
@@ -84,7 +89,7 @@ export class ChatTemplatesSuggestModal extends SuggestModal<ChatTemplate> {
     }
 
     try {
-      const file = await this.app.vault.create(newFilePath, finalContent);
+      const file = await this.fileService.createNewFile(newFilePath, finalContent);
       // open new file
       await this.app.workspace.openLinkText(file.basename, "", true);
     } catch (error) {

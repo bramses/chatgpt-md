@@ -1,5 +1,6 @@
 import { App, MarkdownView, Notice, TFile } from "obsidian";
 import { createFolderModal } from "src/Utilities/ModalHelpers";
+import { DEFAULT_DATE_FORMAT } from "src/Constants";
 
 /**
  * Service responsible for file and folder operations
@@ -41,9 +42,9 @@ export class FileService {
    * @returns The sanitized file name
    */
   sanitizeFileName(fileName: string): string {
-    // Replace characters that are invalid in file names
-    // These include: \ / : * ? " < > |
-    return fileName.replace(/[\\/:*?"<>|]/g, "-");
+    // Replace characters that are invalid in file names while preserving spaces and dashes
+    // Allow alphanumeric characters, spaces, and dashes
+    return fileName.replace(/[^\w\s-]/g, "-");
   }
 
   /**
@@ -69,6 +70,18 @@ export class FileService {
    * Create a new file with the given content
    */
   async createNewFile(filePath: string, content: string): Promise<TFile> {
+    // Sanitize the file path before creating the file
+    const lastSlashIndex = filePath.lastIndexOf("/");
+    if (lastSlashIndex !== -1) {
+      const directory = filePath.substring(0, lastSlashIndex + 1);
+      const filename = filePath.substring(lastSlashIndex + 1);
+      const sanitizedFilename = this.sanitizeFileName(filename);
+      filePath = directory + sanitizedFilename;
+    } else {
+      // No directory part, just a filename
+      filePath = this.sanitizeFileName(filePath);
+    }
+
     return this.app.vault.create(filePath, content);
   }
 
@@ -96,7 +109,31 @@ export class FileService {
    * Format a date according to the given format
    */
   formatDate(date: Date, format: string): string {
-    // Simple implementation - in a real app, you'd want a more robust date formatter
-    return date.toISOString().replace(/[-:]/g, "").replace(/\..+/, "");
+    if (!format) {
+      // If no format is provided, use the default from Constants
+      format = DEFAULT_DATE_FORMAT;
+    }
+
+    // Extract date/time components with padding to ensure consistent length
+    const year = date.getFullYear().toString();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const seconds = date.getSeconds().toString().padStart(2, "0");
+
+    // Simple replacement of format tokens with actual values
+    let formattedDate = format;
+    formattedDate = formattedDate.replace(/YYYY/g, year);
+    formattedDate = formattedDate.replace(/MM/g, month);
+    formattedDate = formattedDate.replace(/DD/g, day);
+    formattedDate = formattedDate.replace(/hh/g, hours);
+    formattedDate = formattedDate.replace(/mm/g, minutes);
+    formattedDate = formattedDate.replace(/ss/g, seconds);
+
+    // Replace any non-letter/non-digit characters except spaces and dashes with dashes for file safety
+    formattedDate = formattedDate.replace(/[^\w\s-]/g, "-");
+
+    return formattedDate;
   }
 }

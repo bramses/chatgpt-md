@@ -43,7 +43,7 @@ export class TemplateService {
         return;
       }
 
-      new ChatTemplatesSuggestModal(this.app, settings, fileName).open();
+      new ChatTemplatesSuggestModal(this.app, settings, fileName, this.fileService).open();
     } catch (err) {
       console.error(`[ChatGPT MD] Error in Create new chat from template`, err);
       new Notice(`[ChatGPT MD] Error in Create new chat from template, check console`);
@@ -67,7 +67,9 @@ export class TemplateService {
         return;
       }
 
-      const fileName = `${this.fileService.formatDate(new Date(), settings.dateFormat)}.md`;
+      // Format date and ensure it's sanitized
+      const formattedDate = this.fileService.formatDate(new Date(), settings.dateFormat);
+      const fileName = `${formattedDate}.md`;
       const filePath = `${settings.chatFolder}/${fileName}`;
 
       // Apply default frontmatter from settings
