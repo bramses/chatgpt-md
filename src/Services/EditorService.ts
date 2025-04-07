@@ -102,28 +102,6 @@ export class EditorService {
    * Set the model in the front matter of the active file
    */
   setModel(editor: Editor, modelName: string): void {
-    const content = editor.getValue();
-
-    const frontmatterMatches = content.match(YAML_FRONTMATTER_REGEX);
-
-    let newContent;
-
-    if (frontmatterMatches) {
-      const frontmatter = frontmatterMatches[0];
-      let extractedFrontmatter = frontmatter.replace(/---/g, "");
-
-      const modelRegex = /^model:\s*(.*)$/m;
-      if (modelRegex.test(extractedFrontmatter)) {
-        extractedFrontmatter = extractedFrontmatter.replace(modelRegex, `model: ${modelName}`);
-      } else {
-        extractedFrontmatter += `\nmodel: ${modelName}`;
-      }
-
-      newContent = content.replace(YAML_FRONTMATTER_REGEX, `---${extractedFrontmatter}---`);
-    } else {
-      newContent = `---\nmodel: ${modelName}\n---\n${content}`;
-    }
-
-    editor.setValue(newContent);
+    this.frontmatterService.updateFrontmatterField(editor, "model", modelName);
   }
 }
