@@ -1,6 +1,5 @@
 import { App, Editor, MarkdownView } from "obsidian";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { YAML_FRONTMATTER_REGEX } from "src/Constants";
 import { FileService } from "./FileService";
 import { EditorContentService } from "./EditorContentService";
 import { MessageService } from "./MessageService";
