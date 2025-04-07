@@ -102,43 +102,94 @@ export const parseSettingsFrontmatter = (yamlString: string): Record<string, any
   const lines = content.split("\n");
   const result: Record<string, any> = {};
 
-  for (const line of lines) {
-    // Skip empty lines
-    if (!line.trim()) continue;
+  // Track multi-line array state
+  let currentArrayKey: string | null = null;
+  let currentArray: string[] = [];
 
-    // Split on first colon
-    const [key, ...valueParts] = line.split(":");
-    const value = valueParts.join(":").trim();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    // Skip empty lines
+    if (!line) continue;
+
+    // Check if we're inside a multi-line array
+    if (currentArrayKey !== null) {
+      // Check if this line is an array item (starts with a dash)
+      if (line.startsWith("-")) {
+        // Extract the value after the dash
+        let itemValue = line.substring(1).trim();
+
+        // Remove quotes if they exist
+        if (
+          (itemValue.startsWith("'") && itemValue.endsWith("'")) ||
+          (itemValue.startsWith('"') && itemValue.endsWith('"'))
+        ) {
+          itemValue = itemValue.substring(1, itemValue.length - 1);
+        }
+
+        currentArray.push(itemValue);
+        continue;
+      } else {
+        // End of array - store it in the result
+        result[currentArrayKey] = currentArray;
+        currentArrayKey = null;
+        currentArray = [];
+        // Don't continue - process this line normally
+      }
+    }
+
+    // Split on first colon (but not if it's in quotes)
+    const colonIndex = line.indexOf(":");
+    if (colonIndex === -1) continue; // Skip invalid lines
+
+    const key = line.substring(0, colonIndex).trim();
+    const value = line.substring(colonIndex + 1).trim();
+
+    // Check for multi-line array start
+    if (value === "" && i + 1 < lines.length && lines[i + 1].trim().startsWith("-")) {
+      currentArrayKey = key;
+      currentArray = [];
+      continue;
+    }
 
     // Parse the value
     if (value.startsWith("[") && value.endsWith("]")) {
-      // Handle arrays
-      result[key.trim()] = value
+      // Handle inline arrays
+      result[key] = value
         .slice(1, -1)
         .split(",")
         .map((item) => {
           const trimmed = item.trim();
           // Handle quoted strings in arrays
-          if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
+          if (
+            (trimmed.startsWith("'") && trimmed.endsWith("'")) ||
+            (trimmed.startsWith('"') && trimmed.endsWith('"'))
+          ) {
             return trimmed.slice(1, -1);
           }
           return trimmed;
         });
     } else if (value === "true") {
-      result[key.trim()] = true;
+      result[key] = true;
     } else if (value === "false") {
-      result[key.trim()] = false;
+      result[key] = false;
     } else if (value === "null") {
-      result[key.trim()] = null;
+      result[key] = null;
     } else if (!isNaN(Number(value))) {
-      result[key.trim()] = Number(value);
+      result[key] = Number(value);
     } else {
-      result[key.trim()] = value;
+      result[key] = value;
     }
+  }
+
+  // Handle case where file ends with an array
+  if (currentArrayKey !== null) {
+    result[currentArrayKey] = currentArray;
   }
 
   return result;
 };
+
 export const escapeRegExp = (string: string): string => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };

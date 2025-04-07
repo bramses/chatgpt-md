@@ -1,4 +1,4 @@
-import { App, MarkdownView } from "obsidian";
+import { App, Editor, MarkdownView } from "obsidian";
 import { parseSettingsFrontmatter } from "src/Utilities/TextHelpers";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
@@ -53,6 +53,63 @@ export class FrontmatterService {
   }
 
   /**
+   * Update a field in the frontmatter of a file
+   * @param editor The editor instance
+   * @param key The key to update
+   * @param value The new value
+   * @returns The updated content
+   */
+  updateFrontmatterField(editor: Editor, key: string, value: any): void {
+    const content = editor.getValue();
+    const frontmatterMatches = content.match(YAML_FRONTMATTER_REGEX);
+    let newContent;
+
+    if (frontmatterMatches) {
+      // Extract existing frontmatter
+      const frontmatter = frontmatterMatches[0];
+      let extractedFrontmatter = frontmatter.replace(/---/g, "");
+
+      // Check if the key already exists in frontmatter
+      const keyRegex = new RegExp(`^${key}:\\s*(.*)$`, "m");
+      if (keyRegex.test(extractedFrontmatter)) {
+        // Key exists, update it
+        extractedFrontmatter = extractedFrontmatter.replace(keyRegex, `${key}: ${value}`);
+      } else {
+        // Key doesn't exist, add it
+        extractedFrontmatter += `\n${key}: ${value}`;
+      }
+
+      // Replace the old frontmatter with the new one
+      newContent = content.replace(YAML_FRONTMATTER_REGEX, `---${extractedFrontmatter}---`);
+    } else {
+      // No frontmatter exists, create new one
+      newContent = `---\n${key}: ${value}\n---\n${content}`;
+    }
+
+    editor.setValue(newContent);
+  }
+
+  /**
+   * Convert a JavaScript object to YAML frontmatter string
+   * @param obj Object to convert to YAML
+   * @returns YAML frontmatter string including delimiter markers
+   */
+  private objectToYamlFrontmatter(obj: Record<string, any>): string {
+    // Convert to YAML
+    const frontmatterLines = Object.entries(obj).map(([key, value]) => {
+      if (value === null || value === undefined) {
+        return `${key}:`;
+      }
+      if (typeof value === "string") {
+        return `${key}: "${value}"`;
+      }
+      return `${key}: ${value}`;
+    });
+
+    return `---\n${frontmatterLines.join("\n")}\n---\n\n`;
+  }
+
+  /**
    * Generate frontmatter for a new chat
    */
   generateFrontmatter(settings: ChatGPT_MDSettings, additionalSettings: Record<string, any> = {}): string {
@@ -63,18 +120,7 @@ export class FrontmatterService {
         const defaultFrontmatter = parseSettingsFrontmatter(settings.defaultChatFrontmatter);
         const mergedFrontmatter = { ...defaultFrontmatter, ...additionalSettings };
 
-        // Convert to YAML
-        const frontmatterLines = Object.entries(mergedFrontmatter).map(([key, value]) => {
-          if (value === null || value === undefined) {
-            return `${key}:`;
-          }
-          if (typeof value === "string") {
-            return `${key}: "${value}"`;
-          }
-          return `${key}: ${value}`;
-        });
-
-        return `---\n${frontmatterLines.join("\n")}\n---\n\n`;
+        return this.objectToYamlFrontmatter(mergedFrontmatter);
       }
 
       // If no additional settings, return the default frontmatter as is
@@ -124,17 +170,6 @@ export class FrontmatterService {
         break;
     }
 
-    // Convert to YAML
-    const frontmatterLines = Object.entries(frontmatterObj).map(([key, value]) => {
-      if (value === null || value === undefined) {
-        return `${key}:`;
-      }
-      if (typeof value === "string") {
-        return `${key}: "${value}"`;
-      }
-      return `${key}: ${value}`;
-    });
-
-    return `---\n${frontmatterLines.join("\n")}\n---\n\n`;
+    return this.objectToYamlFrontmatter(frontmatterObj);
   }
 }
