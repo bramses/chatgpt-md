@@ -96,9 +96,22 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     // Remove the provider prefix if it exists in the model name
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
+    // Process system commands if they exist
+    let processedMessages = messages;
+    if (config.system_commands && config.system_commands.length > 0) {
+      // Add system commands to the beginning of the messages
+      const systemMessages = config.system_commands.map((command) => ({
+        role: "system",
+        content: command,
+      }));
+
+      processedMessages = [...systemMessages, ...messages];
+      console.log(`[ChatGPT MD] Added ${systemMessages.length} system commands to messages`);
+    }
+
     return {
       model: modelName,
-      messages,
+      messages: processedMessages,
       stream: config.stream,
     };
   }
