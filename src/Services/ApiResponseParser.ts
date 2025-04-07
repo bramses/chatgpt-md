@@ -122,6 +122,7 @@ export class ApiResponseParser {
       if (json.choices && json.choices[0]) {
         const { delta } = json.choices[0];
 
+        // Handle content in delta if it exists
         if (delta && delta.content) {
           // Only update the editor with the new delta content, not the full text
           if (setAtCursor) {
@@ -139,6 +140,32 @@ export class ApiResponseParser {
 
           // Return the accumulated text for tracking
           return currentText + delta.content;
+        }
+
+        // Handle citations when finish_reason is "stop"
+        if (json.choices[0].finish_reason === "stop" && json.citations?.length > 0) {
+          const annotations = json.choices[0].delta?.annotations || [];
+
+          const citationsText =
+            "\n\n**Sources:**\n" +
+            json.citations
+              .map((citation: string, index: number) => {
+                const annotation = annotations.find(
+                  (a: any) => a.type === "url_citation" && a.url_citation?.url === citation
+                );
+                const title = annotation?.url_citation.title || citation;
+
+                return `${index + 1}. [${title}](${citation})`;
+              })
+              .join("\n");
+
+          // Add citations at the current cursor position
+          const cursor = editor.getCursor();
+          editor.replaceRange(citationsText, cursor);
+          editor.setCursor({ line: cursor.line, ch: cursor.ch + citationsText.length });
+
+          // Return the accumulated text with citations
+          return currentText + citationsText;
         }
       }
 
