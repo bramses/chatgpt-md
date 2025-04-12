@@ -269,13 +269,21 @@ export class MessageService {
   /**
    * Process a standard (non-streaming) response
    */
-  private processStandardResponse(editor: Editor, response: string, settings: ChatGPT_MDSettings): void {
-    let responseStr = response;
-    if (this.unfinishedCodeBlock(responseStr)) {
-      responseStr = responseStr + "\n```";
-    }
+  private processStandardResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings): void {
+    // Extract response text and model name
+    const responseStr = typeof response === "object" ? response.fullString || response : response;
+    const model = typeof response === "object" ? response.model : undefined;
 
-    this.appendMessage(editor, responseStr, settings.headingLevel);
+    // Format response text (add closing code block if needed)
+    const formattedResponse = this.unfinishedCodeBlock(responseStr) ? responseStr + "\n```" : responseStr;
+
+    // Create headers with model name if available
+    const headingPrefix = getHeadingPrefix(settings.headingLevel);
+    const assistantHeader = this.getHeaderRole(headingPrefix, ROLE_ASSISTANT, model);
+    const userHeader = this.getHeaderRole(headingPrefix, ROLE_USER);
+
+    // Insert the response
+    editor.replaceRange(`${assistantHeader}${formattedResponse}${userHeader}`, editor.getCursor());
   }
 
   /**
