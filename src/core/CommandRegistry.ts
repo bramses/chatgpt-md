@@ -3,9 +3,9 @@ import { ServiceLocator } from "./ServiceLocator";
 import { SettingsService } from "../Services/SettingsService";
 import { IAiApiService } from "src/Services/AiService";
 import { AiModelSuggestModal } from "src/Views/AiModelSuggestModel";
-import { fetchAvailableOpenAiModels } from "src/Services/OpenAiService";
-import { fetchAvailableOllamaModels } from "src/Services/OllamaService";
-import { fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
+import { DEFAULT_OPENAI_CONFIG, fetchAvailableOpenAiModels } from "src/Services/OpenAiService";
+import { DEFAULT_OLLAMA_CONFIG, fetchAvailableOllamaModels } from "src/Services/OllamaService";
+import { DEFAULT_OPENROUTER_CONFIG, fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
@@ -168,15 +168,13 @@ export class CommandRegistry {
         aiModelSuggestModal.open();
 
         const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
-
-        // Step 1: Fetch available models from API
         this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
+
         try {
-          // Use the utility function to get the API keys
           const openAiKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
           const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
 
-          const models = await this.fetchAvailableModels(frontmatter.url, openAiKey, openRouterKey);
+          const models = await this.fetchAvailableModels(this.getAiApiUrls(frontmatter), openAiKey, openRouterKey);
 
           aiModelSuggestModal.close();
           new AiModelSuggestModal(this.plugin.app, editor, editorService, models).open();
@@ -367,26 +365,38 @@ export class CommandRegistry {
     });
   }
 
+  private getAiApiUrls(frontmatter: any) {
+    return {
+      openaiUrl: frontmatter.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
+      openrouterUrl: frontmatter.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
+      ollamaUrl: frontmatter.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
+    };
+  }
+
   /**
    * Fetch available models from all services
    */
-  private async fetchAvailableModels(url: string, apiKey: string, openrouterApiKey: string): Promise<string[]> {
+  private async fetchAvailableModels(
+    urls: { [key: string]: string },
+    apiKey: string,
+    openrouterApiKey: string
+  ): Promise<string[]> {
     try {
       const apiAuthService = new ApiAuthService();
 
       // Always fetch Ollama models as they don't require an API key
-      const ollamaModels = await fetchAvailableOllamaModels();
+      const ollamaModels = await fetchAvailableOllamaModels(urls.ollamaUrl);
 
       // Only fetch OpenAI models if a valid API key exists
       let openAiModels: string[] = [];
       if (apiAuthService.isValidApiKey(apiKey)) {
-        openAiModels = await fetchAvailableOpenAiModels(url, apiKey);
+        openAiModels = await fetchAvailableOpenAiModels(urls.openaiUrl, apiKey);
       }
 
       // Only fetch OpenRouter models if a valid API key exists
       let openRouterModels: string[] = [];
       if (apiAuthService.isValidApiKey(openrouterApiKey)) {
-        openRouterModels = await fetchAvailableOpenRouterModels(openrouterApiKey);
+        openRouterModels = await fetchAvailableOpenRouterModels(urls.openrouterUrl, openrouterApiKey);
       }
 
       return [...ollamaModels, ...openAiModels, ...openRouterModels];

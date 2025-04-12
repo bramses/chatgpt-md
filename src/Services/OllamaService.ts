@@ -33,13 +33,13 @@ export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
   system_commands: null,
 };
 
-export const fetchAvailableOllamaModels = async () => {
+export const fetchAvailableOllamaModels = async (url: string) => {
   try {
     // Use ApiService for the API request
     const apiService = new ApiService();
     const headers = { "Content-Type": "application/json" };
 
-    const json = await apiService.makeGetRequest(`${DEFAULT_OLLAMA_CONFIG.url}/api/tags`, headers, AI_SERVICE_OLLAMA);
+    const json = await apiService.makeGetRequest(`${url}/api/tags`, headers, AI_SERVICE_OLLAMA);
     const models = json.models;
 
     return models
