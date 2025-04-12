@@ -3,7 +3,6 @@ import { ServiceLocator } from "./ServiceLocator";
 import { SettingsService } from "../Services/SettingsService";
 import { IAiApiService } from "src/Services/AiService";
 import { AiModelSuggestModal } from "src/Views/AiModelSuggestModel";
-import { getApiKeyForService, isValidApiKey } from "src/Utilities/SettingsUtils";
 import { fetchAvailableOpenAiModels } from "src/Services/OpenAiService";
 import { fetchAvailableOllamaModels } from "src/Services/OllamaService";
 import { fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
@@ -26,6 +25,7 @@ import {
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
 import { getHeadingPrefix, isTitleTimestampFormat } from "src/Utilities/TextHelpers";
+import { ApiAuthService } from "src/Services/ApiAuthService";
 
 /**
  * Registers and manages commands for the plugin
@@ -36,12 +36,14 @@ export class CommandRegistry {
   private settingsService: SettingsService;
   private aiService: IAiApiService | null = null;
   private statusBarItemEl: HTMLElement;
+  private apiAuthService: ApiAuthService;
 
   constructor(plugin: Plugin, serviceLocator: ServiceLocator, settingsService: SettingsService) {
     this.plugin = plugin;
     this.serviceLocator = serviceLocator;
     this.settingsService = settingsService;
     this.statusBarItemEl = plugin.addStatusBarItem();
+    this.apiAuthService = new ApiAuthService();
   }
 
   /**
@@ -93,7 +95,7 @@ export class CommandRegistry {
           }
 
           // Get the appropriate API key for the service
-          const apiKeyToUse = getApiKeyForService(settings, frontmatter.aiService);
+          const apiKeyToUse = this.apiAuthService.getApiKey(settings, frontmatter.aiService);
 
           const response = await this.aiService.callAIAPI(
             messagesWithRoleAndMessage,
@@ -116,7 +118,7 @@ export class CommandRegistry {
             const settingsWithApiKey = {
               ...frontmatter,
               // Use the utility function to get the correct API key
-              openrouterApiKey: getApiKeyForService(settings, AI_SERVICE_OPENROUTER),
+              openrouterApiKey: this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER),
             };
 
             // Ensure model is set for title inference
@@ -171,8 +173,8 @@ export class CommandRegistry {
         this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
         try {
           // Use the utility function to get the API keys
-          const openAiKey = getApiKeyForService(settings, "openai");
-          const openRouterKey = getApiKeyForService(settings, AI_SERVICE_OPENROUTER);
+          const openAiKey = this.apiAuthService.getApiKey(settings, "openai");
+          const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
 
           const models = await this.fetchAvailableModels(frontmatter.url, openAiKey, openRouterKey);
 
@@ -287,7 +289,7 @@ export class CommandRegistry {
         const settingsWithApiKey = {
           ...settings,
           ...frontmatter,
-          openrouterApiKey: getApiKeyForService(settings, AI_SERVICE_OPENROUTER),
+          openrouterApiKey: this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER),
         };
 
         console.log("[ChatGPT MD] Inferring title with settings:", {
@@ -370,18 +372,20 @@ export class CommandRegistry {
    */
   private async fetchAvailableModels(url: string, apiKey: string, openrouterApiKey: string): Promise<string[]> {
     try {
+      const apiAuthService = new ApiAuthService();
+
       // Always fetch Ollama models as they don't require an API key
       const ollamaModels = await fetchAvailableOllamaModels();
 
       // Only fetch OpenAI models if a valid API key exists
       let openAiModels: string[] = [];
-      if (isValidApiKey(apiKey)) {
+      if (apiAuthService.isValidApiKey(apiKey)) {
         openAiModels = await fetchAvailableOpenAiModels(url, apiKey);
       }
 
       // Only fetch OpenRouter models if a valid API key exists
       let openRouterModels: string[] = [];
-      if (isValidApiKey(openrouterApiKey)) {
+      if (apiAuthService.isValidApiKey(openrouterApiKey)) {
         openRouterModels = await fetchAvailableOpenRouterModels(openrouterApiKey);
       }
 

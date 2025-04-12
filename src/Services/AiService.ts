@@ -70,11 +70,6 @@ export abstract class BaseAiService implements IAiApiService {
   }
 
   /**
-   * Get the service type identifier
-   */
-  abstract getServiceType(): string;
-
-  /**
    * Get the default configuration for this service
    */
   abstract getDefaultConfig(): Record<string, any>;

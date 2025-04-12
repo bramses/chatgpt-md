@@ -3,7 +3,6 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENAI, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { BaseAiService, IAiApiService, OpenAiModel } from "src/Services/AiService";
-import { isValidApiKey } from "src/Utilities/SettingsUtils";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
 import { ApiService } from "./ApiService";
@@ -29,14 +28,15 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
 
 export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) => {
   try {
-    if (!isValidApiKey(apiKey)) {
+    const apiAuthService = new ApiAuthService();
+
+    if (!apiAuthService.isValidApiKey(apiKey)) {
       console.error("OpenAI API key is missing. Please add your OpenAI API key in the settings.");
       return [];
     }
 
     // Use ApiService for the API request
     const apiService = new ApiService();
-    const apiAuthService = new ApiAuthService();
     const headers = apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENAI);
 
     const models = await apiService.makeGetRequest(
@@ -80,16 +80,12 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
   }
 
-  getServiceType(): string {
-    return AI_SERVICE_OPENAI;
-  }
-
   getDefaultConfig(): OpenAIConfig {
     return DEFAULT_OPENAI_CONFIG;
   }
 
   getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
-    return settings.apiKey;
+    return this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
   }
 
   getUrlFromSettings(settings: ChatGPT_MDSettings): string {
@@ -133,16 +129,16 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
       model: config.model,
       url: config.url,
       defaultUrl: DEFAULT_OPENAI_CONFIG.url,
-      aiService: this.getServiceType(),
+      aiService: AI_SERVICE_OPENAI,
     };
 
     // Special handling for custom URL errors
     if (err instanceof Object && config.url !== DEFAULT_OPENAI_CONFIG.url) {
-      return this.errorService.handleUrlError(config.url, DEFAULT_OPENAI_CONFIG.url, this.getServiceType()) as never;
+      return this.errorService.handleUrlError(config.url, DEFAULT_OPENAI_CONFIG.url, AI_SERVICE_OPENAI) as never;
     }
 
     // Use the centralized error handling
-    return this.errorService.handleApiError(err, this.getServiceType(), {
+    return this.errorService.handleApiError(err, AI_SERVICE_OPENAI, {
       context,
       showNotification: true,
       logToConsole: true,
@@ -163,7 +159,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
 
       // Create payload and headers
       const payload = this.createPayload(config, messages);
-      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
+      const headers = this.apiAuthService.createAuthHeaders(apiKey!, AI_SERVICE_OPENAI);
 
       // Insert assistant header
       const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
@@ -173,13 +169,13 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
         `${config.url}/v1/chat/completions`,
         payload,
         headers,
-        this.getServiceType()
+        AI_SERVICE_OPENAI
       );
 
       // Process the streaming response using ApiResponseParser
       const result = await this.apiResponseParser.processStreamResponse(
         response,
-        this.getServiceType(),
+        AI_SERVICE_OPENAI,
         editor,
         cursorPositions,
         setAtCursor,
@@ -211,14 +207,14 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
 
       // Create payload and headers
       const payload = this.createPayload(config, messages);
-      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
+      const headers = this.apiAuthService.createAuthHeaders(apiKey!, AI_SERVICE_OPENAI);
 
       // Make non-streaming request using ApiService
       return await this.apiService.makeNonStreamingRequest(
         `${config.url}/v1/chat/completions`,
         payload,
         headers,
-        this.getServiceType()
+        AI_SERVICE_OPENAI
       );
     } catch (err) {
       // Use the error service to handle the error consistently
@@ -237,7 +233,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
       }
 
       // For regular chat, return the error message
-      return this.errorService.handleApiError(err, this.getServiceType(), {
+      return this.errorService.handleApiError(err, AI_SERVICE_OPENAI, {
         returnForChat: true,
         showNotification: true,
         context: { model: config.model, url: config.url },

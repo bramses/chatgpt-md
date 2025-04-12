@@ -76,16 +76,12 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
   }
 
-  getServiceType(): string {
-    return AI_SERVICE_OLLAMA;
-  }
-
   getDefaultConfig(): OllamaConfig {
     return DEFAULT_OLLAMA_CONFIG;
   }
 
-  getApiKeyFromSettings(_settings: ChatGPT_MDSettings): string {
-    return ""; // Ollama doesn't use an API key
+  getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
+    return this.apiAuthService.getApiKey(settings, AI_SERVICE_OLLAMA);
   }
 
   getUrlFromSettings(settings: ChatGPT_MDSettings): string {
@@ -122,16 +118,16 @@ export class OllamaService extends BaseAiService implements IAiApiService {
       model: config.model,
       url: config.url,
       defaultUrl: DEFAULT_OLLAMA_CONFIG.url,
-      aiService: this.getServiceType(),
+      aiService: AI_SERVICE_OLLAMA,
     };
 
     // Special handling for custom URL errors
     if (err instanceof Object && config.url !== DEFAULT_OLLAMA_CONFIG.url) {
-      return this.errorService.handleUrlError(config.url, DEFAULT_OLLAMA_CONFIG.url, this.getServiceType()) as never;
+      return this.errorService.handleUrlError(config.url, DEFAULT_OLLAMA_CONFIG.url, AI_SERVICE_OLLAMA) as never;
     }
 
     // Use the centralized error handling
-    return this.errorService.handleApiError(err, this.getServiceType(), {
+    return this.errorService.handleApiError(err, AI_SERVICE_OLLAMA, {
       context,
       showNotification: true,
       logToConsole: true,
@@ -149,7 +145,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     try {
       // Create payload and headers
       const payload = this.createPayload(config, messages);
-      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
+      const headers = this.apiAuthService.createAuthHeaders(apiKey!, AI_SERVICE_OLLAMA);
 
       // Insert assistant header
       const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
@@ -159,13 +155,13 @@ export class OllamaService extends BaseAiService implements IAiApiService {
         `${config.url}/api/chat`,
         payload,
         headers,
-        this.getServiceType()
+        AI_SERVICE_OLLAMA
       );
 
       // Process the streaming response using ApiResponseParser
       const result = await this.apiResponseParser.processStreamResponse(
         response,
-        this.getServiceType(),
+        AI_SERVICE_OLLAMA,
         editor,
         cursorPositions,
         setAtCursor,
@@ -202,7 +198,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
         `${config.url}/api/chat`,
         payload,
         headers,
-        this.getServiceType()
+        AI_SERVICE_OLLAMA
       );
     } catch (err) {
       // Use the error service to handle the error consistently
@@ -218,7 +214,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
       }
 
       // For regular chat, return the error message
-      return this.errorService.handleApiError(err, this.getServiceType(), {
+      return this.errorService.handleApiError(err, AI_SERVICE_OLLAMA, {
         returnForChat: true,
         showNotification: true,
         context: { model: config.model, url: config.url },
