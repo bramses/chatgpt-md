@@ -4,7 +4,14 @@ import { ApiService } from "./ApiService";
 import { ApiAuthService } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { EditorService } from "./EditorService";
-import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
+import {
+  AI_SERVICE_OLLAMA,
+  AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENROUTER,
+  API_ENDPOINTS,
+  NEWLINE,
+  ROLE_USER,
+} from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
@@ -20,6 +27,7 @@ export interface IAiApiService {
     messages: Message[],
     options: Record<string, any>,
     headingPrefix: string,
+    url: string,
     editor?: Editor,
     setAtCursor?: boolean,
     apiKey?: string,
@@ -61,6 +69,9 @@ export abstract class BaseAiService implements IAiApiService {
   protected readonly errorService: ErrorService;
   protected readonly notificationService: NotificationService;
 
+  // Abstract property that subclasses must implement to specify their service type
+  protected abstract serviceType: string;
+
   constructor(errorService?: ErrorService, notificationService?: NotificationService) {
     this.notificationService = notificationService ?? new NotificationService();
     this.errorService = errorService ?? new ErrorService(this.notificationService);
@@ -68,11 +79,6 @@ export abstract class BaseAiService implements IAiApiService {
     this.apiAuthService = new ApiAuthService(this.notificationService);
     this.apiResponseParser = new ApiResponseParser(this.notificationService);
   }
-
-  /**
-   * Get the service type identifier
-   */
-  abstract getServiceType(): string;
 
   /**
    * Get the default configuration for this service
@@ -96,6 +102,7 @@ export abstract class BaseAiService implements IAiApiService {
     messages: Message[],
     options: Record<string, any> = {},
     headingPrefix: string,
+    url: string,
     editor?: Editor,
     setAtCursor?: boolean,
     apiKey?: string,
@@ -105,7 +112,7 @@ export abstract class BaseAiService implements IAiApiService {
 
     // Use URL from settings if available
     if (settings) {
-      config.url = this.getUrlFromSettings(settings);
+      config.url = url;
     }
 
     return options.stream && editor
@@ -131,13 +138,24 @@ export abstract class BaseAiService implements IAiApiService {
       const apiKey = this.getApiKeyFromSettings(settings);
 
       // Infer the title
-      const title = await this.inferTitleFromMessages(apiKey, messages, settings);
+      const titleResponse = await this.inferTitleFromMessages(apiKey, messages, settings);
+
+      // Extract the title string - handle both string and object responses
+      let titleStr = "";
+
+      if (typeof titleResponse === "string") {
+        titleStr = titleResponse;
+      } else if (titleResponse && typeof titleResponse === "object") {
+        // Type assertion for the response object
+        const responseObj = titleResponse as { fullString?: string };
+        titleStr = responseObj.fullString || "";
+      }
 
       // Only update the title if we got a valid non-empty title
-      if (title && title.trim().length > 0) {
+      if (titleStr && titleStr.trim().length > 0) {
         // Update the title in the editor
-        await editorService.writeInferredTitle(view, title);
-        return title;
+        await editorService.writeInferredTitle(view, titleStr.trim());
+        return titleStr.trim();
       } else {
         this.showNoTitleInferredNotification();
         return "";
@@ -162,11 +180,6 @@ export abstract class BaseAiService implements IAiApiService {
   abstract getApiKeyFromSettings(settings: ChatGPT_MDSettings): string;
 
   /**
-   * Get the service URL from settings
-   */
-  abstract getUrlFromSettings(settings: ChatGPT_MDSettings): string;
-
-  /**
    * Call the AI API in streaming mode
    */
   protected abstract callStreamingAPI(
@@ -188,13 +201,56 @@ export abstract class BaseAiService implements IAiApiService {
   ): Promise<any>;
 
   /**
-   * Infer a title from messages
+   * Infer a title from messages - each service can override this if needed,
+   * but this provides a standard implementation
    */
-  protected abstract inferTitleFromMessages(
-    apiKey: string,
-    messages: string[],
-    settings: ChatGPT_MDSettings
-  ): Promise<string>;
+  protected inferTitleFromMessages = async (apiKey: string, messages: string[], settings: any): Promise<string> => {
+    try {
+      if (messages.length < 2) {
+        this.notificationService.showWarning("Not enough messages to infer title. Minimum 2 messages.");
+        return "";
+      }
+      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon (:), back slash (\\), forward slash (/), asterisk (*), question mark (?), double quote ("), less than (<), greater than (>), or pipe (|) as these are invalid in file names. Just return the title. Write the title in ${settings.inferTitleLanguage}. \nMessages:${NEWLINE}${JSON.stringify(
+        messages
+      )}`;
+
+      // Get the default config for this service
+      const defaultConfig = this.getDefaultConfig();
+
+      // Ensure all settings are applied
+      const config = {
+        ...defaultConfig,
+        ...settings,
+      };
+
+      // If model is not set in settings, use the default model
+      if (!config.model) {
+        console.log("[ChatGPT MD] Model not set for title inference, using default model");
+        config.model = defaultConfig.model;
+      }
+
+      // Ensure we have a URL
+      if (!config.url) {
+        console.log("[ChatGPT MD] URL not set for title inference, using default URL");
+        config.url = defaultConfig.url;
+      }
+
+      console.log("[ChatGPT MD] Inferring title with model:", config.model);
+
+      try {
+        // Use a separate try/catch block for the API call to handle errors without returning them to the chat
+        return await this.callNonStreamingAPI(apiKey, [{ role: ROLE_USER, content: prompt }], config);
+      } catch (apiError) {
+        // Log the error but don't return it to the chat
+        console.error(`[ChatGPT MD] Error calling API for title inference:`, apiError);
+        return "";
+      }
+    } catch (err) {
+      console.error(`[ChatGPT MD] Error inferring title:`, err);
+      this.showNoTitleInferredNotification();
+      return "";
+    }
+  };
 
   /**
    * Stop streaming
@@ -220,6 +276,53 @@ export abstract class BaseAiService implements IAiApiService {
       wasAborted: result.wasAborted,
     };
   }
+
+  /**
+   * Get the full API endpoint URL
+   */
+  protected getApiEndpoint(config: Record<string, any>): string {
+    return `${config.url}${API_ENDPOINTS[this.serviceType as keyof typeof API_ENDPOINTS]}`;
+  }
+
+  /**
+   * Prepare API call with common setup
+   */
+  protected prepareApiCall(apiKey: string | undefined, messages: Message[], config: Record<string, any>) {
+    // Validate API key
+    this.apiAuthService.validateApiKey(apiKey, this.serviceType);
+
+    // Create payload and headers
+    const payload = this.createPayload(config, messages);
+    const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.serviceType);
+
+    return { payload, headers };
+  }
+
+  /**
+   * Handle API errors for both streaming and non-streaming calls
+   */
+  protected handleApiCallError(
+    err: any,
+    config: Record<string, any>,
+    isTitleInference: boolean | string | undefined = false
+  ): any {
+    console.error(`[ChatGPT MD] ${this.serviceType} API error:`, err);
+
+    // Convert string or any other truthy value to boolean
+    const shouldThrow = Boolean(isTitleInference);
+
+    if (shouldThrow) {
+      // For title inference, just throw the error to be caught by the caller
+      throw err;
+    }
+
+    // For regular chat, return the error message
+    return this.errorService.handleApiError(err, this.serviceType, {
+      returnForChat: true,
+      showNotification: true,
+      context: { model: config.model, url: config.url },
+    });
+  }
 }
 
 export interface OpenAiModel {
@@ -237,17 +340,26 @@ export interface OllamaModel {
  * Determine the AI provider from a URL or model
  */
 export const aiProviderFromUrl = (url?: string, model?: string): string => {
+  // Check model first
   if (model?.includes(AI_SERVICE_OPENROUTER)) {
     return AI_SERVICE_OPENROUTER;
   }
   if (model?.includes("local")) {
     return AI_SERVICE_OLLAMA;
   }
-  if (url?.includes("openrouter")) {
+
+  // Then check URL patterns
+  // Define URL patterns
+  const OPENROUTER_URL_PATTERN = "openrouter";
+  const LOCAL_URL_PATTERNS = ["localhost", "127.0.0.1"];
+
+  if (url?.includes(OPENROUTER_URL_PATTERN)) {
     return AI_SERVICE_OPENROUTER;
   }
-  if (url?.includes("localhost") || url?.includes("127.0.0.1")) {
+  if (LOCAL_URL_PATTERNS.some((pattern) => url?.includes(pattern))) {
     return AI_SERVICE_OLLAMA;
   }
+
+  // Default to OpenAI
   return AI_SERVICE_OPENAI;
 };
