@@ -48,6 +48,11 @@ export class ApiAuthService {
    * @throws Error if the API key is invalid
    */
   validateApiKey(apiKey: string | undefined, serviceName: string): void {
+    // Skip validation for Ollama as it doesn't require an API key
+    if (serviceName === AI_SERVICE_OLLAMA) {
+      return;
+    }
+
     if (!this.isValidApiKey(apiKey)) {
       const errorMessage = `${serviceName} API key is missing or invalid. Please add your ${serviceName} API key in the settings.`;
       this.notificationService.showError(errorMessage);
