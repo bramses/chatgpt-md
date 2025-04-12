@@ -173,7 +173,7 @@ export class CommandRegistry {
         this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
         try {
           // Use the utility function to get the API keys
-          const openAiKey = this.apiAuthService.getApiKey(settings, "openai");
+          const openAiKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
           const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
 
           const models = await this.fetchAvailableModels(frontmatter.url, openAiKey, openRouterKey);

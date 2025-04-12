@@ -1,5 +1,6 @@
 import { NotificationService } from "./NotificationService";
 import {
+  AI_SERVICE_OLLAMA,
   CHAT_ERROR_MESSAGE_401,
   CHAT_ERROR_MESSAGE_404,
   CHAT_ERROR_MESSAGE_NO_CONNECTION,
@@ -145,7 +146,7 @@ Model- ${model}, URL- ${url}`;
 
 Error connecting to the custom URL.
 
-Model- ${serviceName === "ollama" ? "llama2" : "unknown"}, URL- ${url}`;
+Model- ${serviceName === AI_SERVICE_OLLAMA ? "llama2" : "unknown"}, URL- ${url}`;
   }
 
   /**

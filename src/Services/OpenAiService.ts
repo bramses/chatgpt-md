@@ -155,7 +155,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
     try {
       // Validate API key using ApiAuthService
-      this.apiAuthService.validateApiKey(apiKey, "OpenAI");
+      this.apiAuthService.validateApiKey(apiKey, AI_SERVICE_OPENAI);
 
       // Create payload and headers
       const payload = this.createPayload(config, messages);
@@ -201,7 +201,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
       console.log(`[ChatGPT MD] "no stream"`, config);
 
       // Validate API key using ApiAuthService
-      this.apiAuthService.validateApiKey(apiKey, "OpenAI");
+      this.apiAuthService.validateApiKey(apiKey, AI_SERVICE_OPENAI);
 
       config.stream = false;
 
