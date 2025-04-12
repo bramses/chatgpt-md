@@ -33,13 +33,13 @@ export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
   system_commands: null,
 };
 
-export const fetchAvailableOllamaModels = async () => {
+export const fetchAvailableOllamaModels = async (url: string) => {
   try {
     // Use ApiService for the API request
     const apiService = new ApiService();
     const headers = { "Content-Type": "application/json" };
 
-    const json = await apiService.makeGetRequest(`${DEFAULT_OLLAMA_CONFIG.url}/api/tags`, headers, AI_SERVICE_OLLAMA);
+    const json = await apiService.makeGetRequest(`${url}/api/tags`, headers, AI_SERVICE_OLLAMA);
     const models = json.models;
 
     return models
@@ -61,6 +61,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
   protected apiService: ApiService;
   protected apiAuthService: ApiAuthService;
   protected apiResponseParser: ApiResponseParser;
+  protected serviceType = AI_SERVICE_OLLAMA;
 
   constructor(
     errorService?: ErrorService,
@@ -76,20 +77,12 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
   }
 
-  getServiceType(): string {
-    return AI_SERVICE_OLLAMA;
-  }
-
   getDefaultConfig(): OllamaConfig {
     return DEFAULT_OLLAMA_CONFIG;
   }
 
-  getApiKeyFromSettings(_settings: ChatGPT_MDSettings): string {
-    return ""; // Ollama doesn't use an API key
-  }
-
-  getUrlFromSettings(settings: ChatGPT_MDSettings): string {
-    return settings.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url;
+  getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
+    return this.apiAuthService.getApiKey(settings, AI_SERVICE_OLLAMA);
   }
 
   createPayload(config: OllamaConfig, messages: Message[]): OllamaStreamPayload {
@@ -122,16 +115,16 @@ export class OllamaService extends BaseAiService implements IAiApiService {
       model: config.model,
       url: config.url,
       defaultUrl: DEFAULT_OLLAMA_CONFIG.url,
-      aiService: this.getServiceType(),
+      aiService: AI_SERVICE_OLLAMA,
     };
 
     // Special handling for custom URL errors
     if (err instanceof Object && config.url !== DEFAULT_OLLAMA_CONFIG.url) {
-      return this.errorService.handleUrlError(config.url, DEFAULT_OLLAMA_CONFIG.url, this.getServiceType()) as never;
+      return this.errorService.handleUrlError(config.url, DEFAULT_OLLAMA_CONFIG.url, AI_SERVICE_OLLAMA) as never;
     }
 
     // Use the centralized error handling
-    return this.errorService.handleApiError(err, this.getServiceType(), {
+    return this.errorService.handleApiError(err, AI_SERVICE_OLLAMA, {
       context,
       showNotification: true,
       logToConsole: true,
@@ -147,25 +140,24 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     setAtCursor?: boolean | undefined
   ): Promise<StreamingResponse> {
     try {
-      // Create payload and headers
-      const payload = this.createPayload(config, messages);
-      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
+      // Use the common preparation method
+      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
 
       // Insert assistant header
       const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
 
-      // Make streaming request using ApiService
+      // Make streaming request using ApiService with the centralized endpoint
       const response = await this.apiService.makeStreamingRequest(
-        `${config.url}/api/chat`,
+        this.getApiEndpoint(config),
         payload,
         headers,
-        this.getServiceType()
+        this.serviceType
       );
 
       // Process the streaming response using ApiResponseParser
       const result = await this.apiResponseParser.processStreamResponse(
         response,
-        this.getServiceType(),
+        this.serviceType,
         editor,
         cursorPositions,
         setAtCursor,
@@ -192,78 +184,24 @@ export class OllamaService extends BaseAiService implements IAiApiService {
       console.log(`[ChatGPT MD] "no stream"`, config);
 
       config.stream = false;
+      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
 
-      // Create payload and headers
-      const payload = this.createPayload(config, messages);
-      const headers = { "Content-Type": "application/json" };
-
-      // Make non-streaming request using ApiService
-      return await this.apiService.makeNonStreamingRequest(
-        `${config.url}/api/chat`,
+      const response = await this.apiService.makeNonStreamingRequest(
+        this.getApiEndpoint(config),
         payload,
         headers,
-        this.getServiceType()
+        this.serviceType
       );
+
+      // Return simple object with response and model
+      return { fullString: response, model: payload.model };
     } catch (err) {
-      // Use the error service to handle the error consistently
-      console.error(`[ChatGPT MD] Ollama API error:`, err);
-
-      // Check if this is a title inference call (based on message content)
       const isTitleInference =
-        messages.length === 1 && messages[0].content && messages[0].content.includes("Infer title from the summary");
+        messages.length === 1 && messages[0].content?.toString().includes("Infer title from the summary");
 
-      if (isTitleInference) {
-        // For title inference, just throw the error to be caught by the caller
-        throw err;
-      }
-
-      // For regular chat, return the error message
-      return this.errorService.handleApiError(err, this.getServiceType(), {
-        returnForChat: true,
-        showNotification: true,
-        context: { model: config.model, url: config.url },
-      });
+      return this.handleApiCallError(err, config, isTitleInference);
     }
   }
-
-  protected inferTitleFromMessages = async (apiKey: string, messages: string[], settings: any): Promise<string> => {
-    try {
-      if (messages.length < 2) {
-        this.notificationService.showWarning("Not enough messages to infer title. Minimum 2 messages.");
-        return "";
-      }
-      const prompt = `Infer title from the summary of the content of these messages. The title **cannot** contain any of the following characters: colon (:), back slash (\\), forward slash (/), asterisk (*), question mark (?), double quote ("), less than (<), greater than (>), or pipe (|) as these are invalid in file names. Just return the title. Write the title in ${settings.inferTitleLanguage}. \nMessages:${NEWLINE}${JSON.stringify(
-        messages
-      )}`;
-
-      // Ensure model is set
-      const config = {
-        ...DEFAULT_OLLAMA_CONFIG,
-        ...settings,
-      };
-
-      // If model is not set in settings, use the default model
-      if (!config.model) {
-        console.log("[ChatGPT MD] Model not set for title inference, using default model");
-        config.model = DEFAULT_OLLAMA_CONFIG.model;
-      }
-
-      console.log("[ChatGPT MD] Inferring title with model:", config.model);
-
-      try {
-        // Use a separate try/catch block for the API call to handle errors without returning them to the chat
-        return await this.callNonStreamingAPI("", [{ role: ROLE_USER, content: prompt }], config);
-      } catch (apiError) {
-        // Log the error but don't return it to the chat
-        console.error("[ChatGPT MD] Error calling API for title inference:", apiError);
-        return "";
-      }
-    } catch (err) {
-      console.error("[ChatGPT MD] Error inferring title:", err);
-      this.showNoTitleInferredNotification();
-      return "";
-    }
-  };
 
   protected showNoTitleInferredNotification(): void {
     this.notificationService.showWarning("Could not infer title. The file name was not changed.");

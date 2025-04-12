@@ -3,10 +3,9 @@ import { ServiceLocator } from "./ServiceLocator";
 import { SettingsService } from "../Services/SettingsService";
 import { IAiApiService } from "src/Services/AiService";
 import { AiModelSuggestModal } from "src/Views/AiModelSuggestModel";
-import { getApiKeyForService, isValidApiKey } from "src/Utilities/SettingsUtils";
-import { fetchAvailableOpenAiModels } from "src/Services/OpenAiService";
-import { fetchAvailableOllamaModels } from "src/Services/OllamaService";
-import { fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
+import { DEFAULT_OPENAI_CONFIG, fetchAvailableOpenAiModels } from "src/Services/OpenAiService";
+import { DEFAULT_OLLAMA_CONFIG, fetchAvailableOllamaModels } from "src/Services/OllamaService";
+import { DEFAULT_OPENROUTER_CONFIG, fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
@@ -26,6 +25,7 @@ import {
   STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
 import { getHeadingPrefix, isTitleTimestampFormat } from "src/Utilities/TextHelpers";
+import { ApiAuthService } from "src/Services/ApiAuthService";
 
 /**
  * Registers and manages commands for the plugin
@@ -36,12 +36,14 @@ export class CommandRegistry {
   private settingsService: SettingsService;
   private aiService: IAiApiService | null = null;
   private statusBarItemEl: HTMLElement;
+  private apiAuthService: ApiAuthService;
 
   constructor(plugin: Plugin, serviceLocator: ServiceLocator, settingsService: SettingsService) {
     this.plugin = plugin;
     this.serviceLocator = serviceLocator;
     this.settingsService = settingsService;
     this.statusBarItemEl = plugin.addStatusBarItem();
+    this.apiAuthService = new ApiAuthService();
   }
 
   /**
@@ -93,12 +95,13 @@ export class CommandRegistry {
           }
 
           // Get the appropriate API key for the service
-          const apiKeyToUse = getApiKeyForService(settings, frontmatter.aiService);
+          const apiKeyToUse = this.apiAuthService.getApiKey(settings, frontmatter.aiService);
 
           const response = await this.aiService.callAIAPI(
             messagesWithRoleAndMessage,
             frontmatter,
             getHeadingPrefix(settings.headingLevel),
+            this.getAiApiUrls(frontmatter)[frontmatter.aiService],
             editor,
             settings.generateAtCursor,
             apiKeyToUse,
@@ -116,7 +119,9 @@ export class CommandRegistry {
             const settingsWithApiKey = {
               ...frontmatter,
               // Use the utility function to get the correct API key
-              openrouterApiKey: getApiKeyForService(settings, AI_SERVICE_OPENROUTER),
+              openrouterApiKey: this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER),
+              // Use the centralized method for URL
+              url: this.getAiApiUrls(frontmatter)[frontmatter.aiService],
             };
 
             // Ensure model is set for title inference
@@ -166,15 +171,13 @@ export class CommandRegistry {
         aiModelSuggestModal.open();
 
         const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
-
-        // Step 1: Fetch available models from API
         this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
-        try {
-          // Use the utility function to get the API keys
-          const openAiKey = getApiKeyForService(settings, "openai");
-          const openRouterKey = getApiKeyForService(settings, AI_SERVICE_OPENROUTER);
 
-          const models = await this.fetchAvailableModels(frontmatter.url, openAiKey, openRouterKey);
+        try {
+          const openAiKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
+          const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
+
+          const models = await this.fetchAvailableModels(this.getAiApiUrls(frontmatter), openAiKey, openRouterKey);
 
           aiModelSuggestModal.close();
           new AiModelSuggestModal(this.plugin.app, editor, editorService, models).open();
@@ -271,13 +274,7 @@ export class CommandRegistry {
         // Ensure model is set
         if (!frontmatter.model) {
           console.log("[ChatGPT MD] Model not set in frontmatter, using default model");
-          if (frontmatter.aiService === AI_SERVICE_OPENAI) {
-            frontmatter.model = "gpt-4";
-          } else if (frontmatter.aiService === AI_SERVICE_OLLAMA) {
-            frontmatter.model = "llama2";
-          } else if (frontmatter.aiService === AI_SERVICE_OPENROUTER) {
-            frontmatter.model = "anthropic/claude-3-opus:beta";
-          }
+          return;
         }
 
         this.updateStatusBar(`Calling ${frontmatter.model}`);
@@ -287,13 +284,9 @@ export class CommandRegistry {
         const settingsWithApiKey = {
           ...settings,
           ...frontmatter,
-          openrouterApiKey: getApiKeyForService(settings, AI_SERVICE_OPENROUTER),
+          openrouterApiKey: this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER),
+          url: this.getAiApiUrls(frontmatter)[frontmatter.aiService],
         };
-
-        console.log("[ChatGPT MD] Inferring title with settings:", {
-          aiService: frontmatter.aiService,
-          model: settingsWithApiKey.model,
-        });
 
         await this.aiService.inferTitle(view, settingsWithApiKey, messages, editorService);
 
@@ -365,24 +358,38 @@ export class CommandRegistry {
     });
   }
 
+  private getAiApiUrls(frontmatter: any): { [key: string]: string } {
+    return {
+      openai: frontmatter.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
+      openrouter: frontmatter.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
+      ollama: frontmatter.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
+    };
+  }
+
   /**
    * Fetch available models from all services
    */
-  private async fetchAvailableModels(url: string, apiKey: string, openrouterApiKey: string): Promise<string[]> {
+  private async fetchAvailableModels(
+    urls: { [key: string]: string },
+    apiKey: string,
+    openrouterApiKey: string
+  ): Promise<string[]> {
     try {
+      const apiAuthService = new ApiAuthService();
+
       // Always fetch Ollama models as they don't require an API key
-      const ollamaModels = await fetchAvailableOllamaModels();
+      const ollamaModels = await fetchAvailableOllamaModels(urls[AI_SERVICE_OLLAMA]);
 
       // Only fetch OpenAI models if a valid API key exists
       let openAiModels: string[] = [];
-      if (isValidApiKey(apiKey)) {
-        openAiModels = await fetchAvailableOpenAiModels(url, apiKey);
+      if (apiAuthService.isValidApiKey(apiKey)) {
+        openAiModels = await fetchAvailableOpenAiModels(urls[AI_SERVICE_OPENAI], apiKey);
       }
 
       // Only fetch OpenRouter models if a valid API key exists
       let openRouterModels: string[] = [];
-      if (isValidApiKey(openrouterApiKey)) {
-        openRouterModels = await fetchAvailableOpenRouterModels(openrouterApiKey);
+      if (apiAuthService.isValidApiKey(openrouterApiKey)) {
+        openRouterModels = await fetchAvailableOpenRouterModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey);
       }
 
       return [...ollamaModels, ...openAiModels, ...openRouterModels];
