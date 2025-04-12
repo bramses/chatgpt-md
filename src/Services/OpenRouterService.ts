@@ -3,12 +3,11 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENROUTER, NEWLINE, ROLE_USER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { BaseAiService, IAiApiService, StreamingResponse } from "src/Services/AiService";
-import { isValidApiKey } from "src/Utilities/SettingsUtils";
-import { ErrorService } from "./ErrorService";
-import { NotificationService } from "./NotificationService";
-import { ApiService } from "./ApiService";
 import { ApiAuthService } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
+import { ApiService } from "./ApiService";
+import { ErrorService } from "./ErrorService";
+import { NotificationService } from "./NotificationService";
 
 // Define a constant for OpenRouter service
 export interface OpenRouterModel {
@@ -69,15 +68,16 @@ export const DEFAULT_OPENROUTER_CONFIG: OpenRouterConfig = {
 
 export const fetchAvailableOpenRouterModels = async (apiKey: string) => {
   try {
+    const apiAuthService = new ApiAuthService();
+
     // Check if API key is empty or undefined
-    if (!isValidApiKey(apiKey)) {
+    if (!apiAuthService.isValidApiKey(apiKey)) {
       console.error("OpenRouter API key is missing. Please add your OpenRouter API key in the settings.");
       return [];
     }
 
     // Use ApiService for the API request
     const apiService = new ApiService();
-    const apiAuthService = new ApiAuthService();
     const headers = apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENROUTER);
 
     const models = await apiService.makeGetRequest(
@@ -120,16 +120,12 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
   }
 
-  getServiceType(): string {
-    return AI_SERVICE_OPENROUTER;
-  }
-
   getDefaultConfig(): OpenRouterConfig {
     return DEFAULT_OPENROUTER_CONFIG;
   }
 
   getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
-    return settings.openrouterApiKey;
+    return this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
   }
 
   getUrlFromSettings(settings: ChatGPT_MDSettings): string {
@@ -172,7 +168,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       model: config.model,
       url: config.url,
       defaultUrl: DEFAULT_OPENROUTER_CONFIG.url,
-      aiService: this.getServiceType(),
+      aiService: AI_SERVICE_OPENROUTER,
     };
 
     // Special handling for custom URL errors
@@ -180,12 +176,12 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       return this.errorService.handleUrlError(
         config.url,
         DEFAULT_OPENROUTER_CONFIG.url,
-        this.getServiceType()
+        AI_SERVICE_OPENROUTER
       ) as never;
     }
 
     // Use the centralized error handling
-    return this.errorService.handleApiError(err, this.getServiceType(), {
+    return this.errorService.handleApiError(err, AI_SERVICE_OPENROUTER, {
       context,
       showNotification: true,
       logToConsole: true,
@@ -206,7 +202,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
 
       // Create payload and headers
       const payload = this.createPayload(config, messages);
-      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
+      const headers = this.apiAuthService.createAuthHeaders(apiKey!, AI_SERVICE_OPENROUTER);
 
       // Insert assistant header
       const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
@@ -216,13 +212,13 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
         `${config.url}/api/v1/chat/completions`,
         payload,
         headers,
-        this.getServiceType()
+        AI_SERVICE_OPENROUTER
       );
 
       // Process the streaming response using ApiResponseParser
       const result = await this.apiResponseParser.processStreamResponse(
         response,
-        this.getServiceType(),
+        AI_SERVICE_OPENROUTER,
         editor,
         cursorPositions,
         setAtCursor,
@@ -254,14 +250,14 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
 
       // Create payload and headers
       const payload = this.createPayload(config, messages);
-      const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.getServiceType());
+      const headers = this.apiAuthService.createAuthHeaders(apiKey!, AI_SERVICE_OPENROUTER);
 
       // Make non-streaming request using ApiService
       return await this.apiService.makeNonStreamingRequest(
         `${config.url}/api/v1/chat/completions`,
         payload,
         headers,
-        this.getServiceType()
+        AI_SERVICE_OPENROUTER
       );
     } catch (err) {
       // Use the error service to handle the error consistently
@@ -277,7 +273,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       }
 
       // For regular chat, return the error message
-      return this.errorService.handleApiError(err, this.getServiceType(), {
+      return this.errorService.handleApiError(err, AI_SERVICE_OPENROUTER, {
         returnForChat: true,
         showNotification: true,
         context: { model: config.model, url: config.url },

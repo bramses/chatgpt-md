@@ -1,6 +1,5 @@
 import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { isValidApiKey } from "src/Utilities/SettingsUtils";
 import { NotificationService } from "./NotificationService";
 
 /**
@@ -12,6 +11,15 @@ export class ApiAuthService {
 
   constructor(notificationService?: NotificationService) {
     this.notificationService = notificationService || new NotificationService();
+  }
+
+  /**
+   * Checks if an API key is valid (not empty or undefined)
+   * @param apiKey The API key to check
+   * @returns True if the API key is valid, false otherwise
+   */
+  isValidApiKey(apiKey?: string): boolean {
+    return !!apiKey && apiKey.trim() !== "";
   }
 
   /**
@@ -40,7 +48,7 @@ export class ApiAuthService {
    * @throws Error if the API key is invalid
    */
   validateApiKey(apiKey: string | undefined, serviceName: string): void {
-    if (!isValidApiKey(apiKey)) {
+    if (!this.isValidApiKey(apiKey)) {
       const errorMessage = `${serviceName} API key is missing or invalid. Please add your ${serviceName} API key in the settings.`;
       this.notificationService.showError(errorMessage);
       throw new Error(errorMessage);
