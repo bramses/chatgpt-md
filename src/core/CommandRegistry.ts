@@ -101,6 +101,7 @@ export class CommandRegistry {
             messagesWithRoleAndMessage,
             frontmatter,
             getHeadingPrefix(settings.headingLevel),
+            this.getAiApiUrls(frontmatter)[frontmatter.aiService],
             editor,
             settings.generateAtCursor,
             apiKeyToUse,
@@ -119,6 +120,8 @@ export class CommandRegistry {
               ...frontmatter,
               // Use the utility function to get the correct API key
               openrouterApiKey: this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER),
+              // Use the centralized method for URL
+              url: this.getAiApiUrls(frontmatter)[frontmatter.aiService],
             };
 
             // Ensure model is set for title inference
@@ -271,13 +274,7 @@ export class CommandRegistry {
         // Ensure model is set
         if (!frontmatter.model) {
           console.log("[ChatGPT MD] Model not set in frontmatter, using default model");
-          if (frontmatter.aiService === AI_SERVICE_OPENAI) {
-            frontmatter.model = "gpt-4";
-          } else if (frontmatter.aiService === AI_SERVICE_OLLAMA) {
-            frontmatter.model = "llama2";
-          } else if (frontmatter.aiService === AI_SERVICE_OPENROUTER) {
-            frontmatter.model = "anthropic/claude-3-opus:beta";
-          }
+          return;
         }
 
         this.updateStatusBar(`Calling ${frontmatter.model}`);
@@ -288,12 +285,8 @@ export class CommandRegistry {
           ...settings,
           ...frontmatter,
           openrouterApiKey: this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER),
+          url: this.getAiApiUrls(frontmatter)[frontmatter.aiService],
         };
-
-        console.log("[ChatGPT MD] Inferring title with settings:", {
-          aiService: frontmatter.aiService,
-          model: settingsWithApiKey.model,
-        });
 
         await this.aiService.inferTitle(view, settingsWithApiKey, messages, editorService);
 
@@ -365,11 +358,11 @@ export class CommandRegistry {
     });
   }
 
-  private getAiApiUrls(frontmatter: any) {
+  private getAiApiUrls(frontmatter: any): { [key: string]: string } {
     return {
-      openaiUrl: frontmatter.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
-      openrouterUrl: frontmatter.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
-      ollamaUrl: frontmatter.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
+      openai: frontmatter.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
+      openrouter: frontmatter.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
+      ollama: frontmatter.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
     };
   }
 
@@ -385,18 +378,18 @@ export class CommandRegistry {
       const apiAuthService = new ApiAuthService();
 
       // Always fetch Ollama models as they don't require an API key
-      const ollamaModels = await fetchAvailableOllamaModels(urls.ollamaUrl);
+      const ollamaModels = await fetchAvailableOllamaModels(urls[AI_SERVICE_OLLAMA]);
 
       // Only fetch OpenAI models if a valid API key exists
       let openAiModels: string[] = [];
       if (apiAuthService.isValidApiKey(apiKey)) {
-        openAiModels = await fetchAvailableOpenAiModels(urls.openaiUrl, apiKey);
+        openAiModels = await fetchAvailableOpenAiModels(urls[AI_SERVICE_OPENAI], apiKey);
       }
 
       // Only fetch OpenRouter models if a valid API key exists
       let openRouterModels: string[] = [];
       if (apiAuthService.isValidApiKey(openrouterApiKey)) {
-        openRouterModels = await fetchAvailableOpenRouterModels(urls.openrouterUrl, openrouterApiKey);
+        openRouterModels = await fetchAvailableOpenRouterModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey);
       }
 
       return [...ollamaModels, ...openAiModels, ...openRouterModels];
