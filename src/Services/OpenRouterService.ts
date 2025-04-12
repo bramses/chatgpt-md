@@ -66,7 +66,7 @@ export const DEFAULT_OPENROUTER_CONFIG: OpenRouterConfig = {
   url: "https://openrouter.ai",
 };
 
-export const fetchAvailableOpenRouterModels = async (apiKey: string) => {
+export const fetchAvailableOpenRouterModels = async (url: string, apiKey: string) => {
   try {
     const apiAuthService = new ApiAuthService();
 
@@ -80,11 +80,7 @@ export const fetchAvailableOpenRouterModels = async (apiKey: string) => {
     const apiService = new ApiService();
     const headers = apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENROUTER);
 
-    const models = await apiService.makeGetRequest(
-      `${DEFAULT_OPENROUTER_CONFIG.url}/api/v1/models`,
-      headers,
-      AI_SERVICE_OPENROUTER
-    );
+    const models = await apiService.makeGetRequest(`${url}/api/v1/models`, headers, AI_SERVICE_OPENROUTER);
 
     return models.data
       .sort((a: OpenRouterModel, b: OpenRouterModel) => {

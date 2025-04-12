@@ -39,11 +39,7 @@ export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) =>
     const apiService = new ApiService();
     const headers = apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENAI);
 
-    const models = await apiService.makeGetRequest(
-      `${DEFAULT_OPENAI_CONFIG.url}/v1/models`,
-      headers,
-      AI_SERVICE_OPENAI
-    );
+    const models = await apiService.makeGetRequest(`${url}/v1/models`, headers, AI_SERVICE_OPENAI);
 
     return models.data
       .filter((model: OpenAiModel) => model.id.includes("gpt"))
