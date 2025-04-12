@@ -138,13 +138,24 @@ export abstract class BaseAiService implements IAiApiService {
       const apiKey = this.getApiKeyFromSettings(settings);
 
       // Infer the title
-      const title = await this.inferTitleFromMessages(apiKey, messages, settings);
+      const titleResponse = await this.inferTitleFromMessages(apiKey, messages, settings);
+
+      // Extract the title string - handle both string and object responses
+      let titleStr = "";
+
+      if (typeof titleResponse === "string") {
+        titleStr = titleResponse;
+      } else if (titleResponse && typeof titleResponse === "object") {
+        // Type assertion for the response object
+        const responseObj = titleResponse as { fullString?: string };
+        titleStr = responseObj.fullString || "";
+      }
 
       // Only update the title if we got a valid non-empty title
-      if (title && title.trim().length > 0) {
+      if (titleStr && titleStr.trim().length > 0) {
         // Update the title in the editor
-        await editorService.writeInferredTitle(view, title);
-        return title;
+        await editorService.writeInferredTitle(view, titleStr.trim());
+        return titleStr.trim();
       } else {
         this.showNoTitleInferredNotification();
         return "";

@@ -233,23 +233,21 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       console.log(`[ChatGPT MD] "no stream"`, config);
 
       config.stream = false;
-
-      // Use the common preparation method
       const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
 
-      // Make non-streaming request using ApiService with the centralized endpoint
-      return await this.apiService.makeNonStreamingRequest(
+      const response = await this.apiService.makeNonStreamingRequest(
         this.getApiEndpoint(config),
         payload,
         headers,
         this.serviceType
       );
-    } catch (err) {
-      // Check if this is a title inference call (based on message content)
-      const isTitleInference =
-        messages.length === 1 && messages[0].content && messages[0].content.includes("Infer title from the summary");
 
-      // Use the common error handling method
+      // Return simple object with response and model
+      return { fullString: response, model: payload.model };
+    } catch (err) {
+      const isTitleInference =
+        messages.length === 1 && messages[0].content?.toString().includes("Infer title from the summary");
+
       return this.handleApiCallError(err, config, isTitleInference);
     }
   }
