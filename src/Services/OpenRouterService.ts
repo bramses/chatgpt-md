@@ -198,7 +198,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
   ): Promise<StreamingResponse> {
     try {
       // Validate API key using ApiAuthService
-      this.apiAuthService.validateApiKey(apiKey, "OpenRouter");
+      this.apiAuthService.validateApiKey(apiKey, AI_SERVICE_OPENROUTER);
 
       // Create payload and headers
       const payload = this.createPayload(config, messages);
@@ -244,7 +244,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       console.log(`[ChatGPT MD] "no stream"`, config);
 
       // Validate API key using ApiAuthService
-      this.apiAuthService.validateApiKey(apiKey, "OpenRouter");
+      this.apiAuthService.validateApiKey(apiKey, AI_SERVICE_OPENROUTER);
 
       config.stream = false;
 

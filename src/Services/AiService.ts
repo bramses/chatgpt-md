@@ -232,17 +232,26 @@ export interface OllamaModel {
  * Determine the AI provider from a URL or model
  */
 export const aiProviderFromUrl = (url?: string, model?: string): string => {
+  // Check model first
   if (model?.includes(AI_SERVICE_OPENROUTER)) {
     return AI_SERVICE_OPENROUTER;
   }
   if (model?.includes("local")) {
     return AI_SERVICE_OLLAMA;
   }
-  if (url?.includes("openrouter")) {
+
+  // Then check URL patterns
+  // Define URL patterns
+  const OPENROUTER_URL_PATTERN = "openrouter";
+  const LOCAL_URL_PATTERNS = ["localhost", "127.0.0.1"];
+
+  if (url?.includes(OPENROUTER_URL_PATTERN)) {
     return AI_SERVICE_OPENROUTER;
   }
-  if (url?.includes("localhost") || url?.includes("127.0.0.1")) {
+  if (LOCAL_URL_PATTERNS.some((pattern) => url?.includes(pattern))) {
     return AI_SERVICE_OLLAMA;
   }
+
+  // Default to OpenAI
   return AI_SERVICE_OPENAI;
 };
