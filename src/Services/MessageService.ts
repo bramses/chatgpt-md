@@ -42,7 +42,13 @@ export class MessageService {
         const fullLink = match[fullMatchIndex];
         const linkTitle = match[titleIndex];
 
-        if (linkTitle && !seenTitles.has(linkTitle)) {
+        // Skip URLs that start with http:// or https://
+        if (
+          linkTitle &&
+          !seenTitles.has(linkTitle) &&
+          !linkTitle.startsWith("http://") &&
+          !linkTitle.startsWith("https://")
+        ) {
           links.push({ link: fullLink, title: linkTitle });
           seenTitles.add(linkTitle);
         }

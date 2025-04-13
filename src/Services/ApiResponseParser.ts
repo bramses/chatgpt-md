@@ -10,6 +10,7 @@ import { ApiService } from "./ApiService";
  */
 export class ApiResponseParser {
   private notificationService: NotificationService;
+  private collectedCitations: Set<string> = new Set(); // Store citations as they come in
 
   constructor(notificationService?: NotificationService) {
     this.notificationService = notificationService || new NotificationService();
@@ -119,6 +120,16 @@ export class ApiResponseParser {
     try {
       const json = JSON.parse(line.replace("data: ", ""));
 
+      // Collect citations if they exist in this chunk
+      if (json.citations && json.citations.length > 0) {
+        console.log("Found citations in chunk:", json.citations);
+        for (const citation of json.citations) {
+          this.collectedCitations.add(citation);
+          console.log("Added citation to set:", citation);
+        }
+        console.log("Current citations set size:", this.collectedCitations.size);
+      }
+
       if (json.choices && json.choices[0]) {
         const { delta } = json.choices[0];
 
@@ -140,32 +151,6 @@ export class ApiResponseParser {
 
           // Return the accumulated text for tracking
           return currentText + delta.content;
-        }
-
-        // Handle citations when finish_reason is "stop"
-        if (json.choices[0].finish_reason === "stop" && json.citations?.length > 0) {
-          const annotations = json.choices[0].delta?.annotations || [];
-
-          const citationsText =
-            "\n\n**Sources:**\n" +
-            json.citations
-              .map((citation: string, index: number) => {
-                const annotation = annotations.find(
-                  (a: any) => a.type === "url_citation" && a.url_citation?.url === citation
-                );
-                const title = annotation?.url_citation.title || citation;
-
-                return `${index + 1}. [${title}](${citation})`;
-              })
-              .join("\n");
-
-          // Add citations at the current cursor position
-          const cursor = editor.getCursor();
-          editor.replaceRange(citationsText, cursor);
-          editor.setCursor({ line: cursor.line, ch: cursor.ch + citationsText.length });
-
-          // Return the accumulated text with citations
-          return currentText + citationsText;
         }
       }
 
@@ -312,6 +297,34 @@ export class ApiResponseParser {
       const cursor = editor.getCursor();
       editor.replaceRange("\n```", cursor);
       text += "\n```";
+    }
+
+    // Now append any collected citations after the entire response is complete
+    if (this.collectedCitations.size > 0) {
+      console.log("Completed streaming response, appending citations");
+      console.log("Citations to append:", Array.from(this.collectedCitations));
+
+      const citations = Array.from(this.collectedCitations);
+
+      const citationsText =
+        "\n\n**Sources:**\n" +
+        citations
+          .map((citation: string, index: number) => {
+            return `${index + 1}. [${citation}](${citation})`;
+          })
+          .join("\n");
+
+      // Add citations at the current cursor position
+      const cursor = editor.getCursor();
+      editor.replaceRange(citationsText, cursor);
+      editor.setCursor({ line: cursor.line, ch: cursor.ch + citationsText.length });
+
+      // Append to text variable to include citations in returned text
+      text += citationsText;
+
+      // Clear the collected citations after they've been appended
+      this.collectedCitations.clear();
+      console.log("Citations set cleared after appending to response");
     }
 
     // Clean up any trailing content if not setting at cursor
