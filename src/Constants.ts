@@ -2,10 +2,6 @@ export const AI_SERVICE_OLLAMA = "ollama";
 export const AI_SERVICE_OPENAI = "openai";
 export const AI_SERVICE_OPENROUTER = "openrouter";
 
-// URL Constants
-export const LOCALHOST = "localhost";
-export const LOCALHOST_IP = "127.0.0.1";
-
 // API endpoints for each service
 export const API_ENDPOINTS = {
   [AI_SERVICE_OPENAI]: "/v1/chat/completions",

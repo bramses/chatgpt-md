@@ -3,7 +3,6 @@ import { ApiAuthService } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
-import { AI_SERVICE_OLLAMA, LOCALHOST, LOCALHOST_IP } from "src/Constants";
 
 /**
  * ApiService handles all API communication for the application
@@ -48,12 +47,6 @@ export class ApiService {
 
       this.abortController = new AbortController();
 
-      // Special handling for Ollama requests - detect if running on mobile by checking the URL
-      // This addresses CORS issues when accessing from a non-localhost URL
-      if (serviceType === AI_SERVICE_OLLAMA && !url.includes(LOCALHOST) && !url.includes(LOCALHOST_IP)) {
-        return await this.makeOllamaRequestWithFallback(url, payload, headers);
-      }
-
       const response = await fetch(url, {
         method: "POST",
         headers,
@@ -72,90 +65,6 @@ export class ApiService {
       return response;
     } catch (error) {
       return this.handleRequestError(error, serviceType, payload, url);
-    }
-  }
-
-  /**
-   * Makes an Ollama request using Obsidian's requestUrl to bypass CORS issues
-   * This method uses a non-streaming request but simulates a streaming response
-   * for compatibility with the streaming handler
-   */
-  private async makeOllamaRequestWithFallback(
-    url: string,
-    payload: any,
-    headers: Record<string, string>
-  ): Promise<Response> {
-    try {
-      console.log(`[ChatGPT MD] Using CORS-friendly Ollama request method`);
-
-      // Make a regular non-streaming request
-      const nonStreamingPayload = {
-        ...payload,
-        stream: false, // Force non-streaming for this request
-      };
-
-      const responseObj = await requestUrl({
-        url,
-        method: "POST",
-        headers,
-        contentType: "application/json",
-        body: JSON.stringify(nonStreamingPayload),
-        throw: false,
-      });
-
-      if (responseObj.status !== 200) {
-        const error = new Error(`Ollama request failed with status ${responseObj.status}`);
-        throw error;
-      }
-
-      // Create a ReadableStream that will output the response data
-      const responseData = responseObj.json;
-      const { readable, writable } = new TransformStream();
-      const writer = writable.getWriter();
-
-      // Simulate streaming by writing the response in chunks
-      // This is done asynchronously so we can return the response immediately
-      (async () => {
-        if (responseData.message && responseData.message.content) {
-          // Handle chat completion format
-          const content = responseData.message.content;
-          const chunkSize = 10; // Characters per chunk
-
-          for (let i = 0; i < content.length; i += chunkSize) {
-            const chunk = content.substring(i, i + chunkSize);
-            const chunkObj = { message: { content: chunk } };
-            await writer.write(new TextEncoder().encode(JSON.stringify(chunkObj) + "\n"));
-            // Small delay to simulate streaming
-            await new Promise((resolve) => setTimeout(resolve, 10));
-          }
-        } else if (responseData.response) {
-          // Handle generate API format
-          const content = responseData.response;
-          const chunkSize = 10; // Characters per chunk
-
-          for (let i = 0; i < content.length; i += chunkSize) {
-            const chunk = content.substring(i, i + chunkSize);
-            const chunkObj = { response: chunk };
-            await writer.write(new TextEncoder().encode(JSON.stringify(chunkObj) + "\n"));
-            // Small delay to simulate streaming
-            await new Promise((resolve) => setTimeout(resolve, 10));
-          }
-        }
-
-        await writer.close();
-      })();
-
-      // Create a mock Response with the ReadableStream
-      return new Response(readable, {
-        status: 200,
-        statusText: "OK",
-        headers: new Headers({
-          "Content-Type": "application/json",
-        }),
-      });
-    } catch (error) {
-      console.error("[ChatGPT MD] Error using fallback Ollama request method:", error);
-      throw error;
     }
   }
 
@@ -252,7 +161,7 @@ export class ApiService {
       context: { model: payload.model, url, status: response.status },
     });
 
-    return new Error(typeof error === "string" ? error : JSON.stringify(error));
+    return new Error(error);
   }
 
   /**
