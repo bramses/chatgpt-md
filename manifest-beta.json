@@ -1,7 +1,7 @@
 {
   "id": "chatgpt-md",
   "name": "ChatGPT MD",
-  "version": "2.1.5",
+  "version": "2.2.0",
   "minAppVersion": "0.15.0",
   "description": "A seamless integration of chatGPT, OpenRouter.ai and local LLMs via Ollama into Obsidian.",
   "author": "Deniz Okcu (created by Bram Adams)",
