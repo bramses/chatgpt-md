@@ -42,23 +42,49 @@ try {
   process.exit(1);
 }
 
-// Update manifest.json or manifest-beta.json
-try {
-  const manifestFile = isBeta ? "manifest-beta.json" : "manifest.json";
-  const manifest = JSON.parse(readFileSync(manifestFile, "utf8"));
-  manifest.version = newVersion;
-  writeFileSync(manifestFile, JSON.stringify(manifest, null, "\t") + "\n");
-  console.log(`✅ Updated ${manifestFile}`);
-} catch (error) {
-  console.error(`❌ Failed to update ${isBeta ? "manifest-beta.json" : "manifest.json"}:`, error.message);
-  process.exit(1);
+// Update manifest files based on version type
+if (isBeta) {
+  // For beta versions, only update manifest-beta.json
+  try {
+    const manifestFile = "manifest-beta.json";
+    const manifest = JSON.parse(readFileSync(manifestFile, "utf8"));
+    manifest.version = newVersion;
+    writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + "\n");
+    console.log(`✅ Updated ${manifestFile}`);
+  } catch (error) {
+    console.error(`❌ Failed to update manifest-beta.json:`, error.message);
+    process.exit(1);
+  }
+} else {
+  // For non-beta versions, update both manifest.json and manifest-beta.json
+  try {
+    // Update manifest.json
+    const manifest = JSON.parse(readFileSync("manifest.json", "utf8"));
+    manifest.version = newVersion;
+    writeFileSync("manifest.json", JSON.stringify(manifest, null, 2) + "\n");
+    console.log(`✅ Updated manifest.json`);
+
+    // Also update manifest-beta.json
+    try {
+      const betaManifest = JSON.parse(readFileSync("manifest-beta.json", "utf8"));
+      betaManifest.version = newVersion;
+      writeFileSync("manifest-beta.json", JSON.stringify(betaManifest, null, 2) + "\n");
+      console.log(`✅ Updated manifest-beta.json`);
+    } catch (error) {
+      console.error(`❌ Failed to update manifest-beta.json:`, error.message);
+      // Don't exit since the main manifest was updated successfully
+    }
+  } catch (error) {
+    console.error(`❌ Failed to update manifest.json:`, error.message);
+    process.exit(1);
+  }
 }
 
 // Update versions.json
 try {
   const versions = JSON.parse(readFileSync("versions.json", "utf8"));
   versions[newVersion] = minAppVersion;
-  writeFileSync("versions.json", JSON.stringify(versions, null, "\t") + "\n");
+  writeFileSync("versions.json", JSON.stringify(versions, null, 2) + "\n");
   console.log("✅ Updated versions.json");
 } catch (error) {
   console.error("❌ Failed to update versions.json:", error.message);
@@ -71,7 +97,7 @@ try {
   if (isBeta) {
     filesToCommit.push("manifest-beta.json");
   } else {
-    filesToCommit.push("manifest.json");
+    filesToCommit.push("manifest.json", "manifest-beta.json");
   }
 
   execSync(`git add ${filesToCommit.join(" ")}`);

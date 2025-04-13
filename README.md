@@ -1,15 +1,19 @@
 # ChatGPT MD
 
-🚀 A seamless integration of chatGPT, OpenRouter.ai and local LLMs via Ollama into Obsidian.
+🚀 A seamless integration of ChatGPT, OpenRouter.ai and local LLMs via Ollama into Obsidian.
 
 ![Chatting with links about vacation plans](images/chat-with-link.gif)
 
-## What's New in v2.1.0 🚀
-- We've added support for **OpenRouter.ai** as an LLM provider in our Obsidian plugin.
-Set an OpenRouter.ai API key in the settings, and you can access a wide range of models like 
-**Gemini, DeepSeek, Llama, Perplexity** and many more (full list: https://openrouter.ai/models).
-- The new command `ChatGPT MD: Select Model` allows you to select from all available LLMs (openAI, Ollama, OpenRouter.ai) 
-and set the current model for your note.
+## What's New in v2.2.0 🚀
+- **Perplexity Source Citations**: Added support for source citations when using Perplexity models via OpenRouter.ai (openrouter@perplexity/llama-3.1-sonar-small-128k-online, openrouter@perplexity/llama-3.1-sonar-large-128k-online). Get web sources for your queries without needing a Perplexity Pro subscription - pay only for the tokens you use via OpenRouter.ai.
+- **Improved URL Configuration**: Each AI service now has its own dedicated URL parameter in settings and frontmatter:
+  - `openaiUrl` for OpenAI API
+  - `openrouterUrl` for OpenRouter.ai
+  - `ollamaUrl` for Ollama
+- **Enhanced Mobile Support**: Fixed Ollama streaming without CORS issues on mobile devices
+- **Improved System Commands**: Fixed missing system commands from notes' frontmatter
+- **Template Organization**: Templates are now ordered alphabetically in the template suggest modal
+- **Settings Migration**: Added automatic migration of service URLs for better consistency
 
 ## A simple and quick Start 🏁
 Get started in just a few simple steps:
@@ -24,19 +28,21 @@ Start chatting, don't worry too much about the more advanced features. They will
 
 ## Features
 * **Interactive conversations**: 
-  * Engage directly with ChatGPT and Ollama from any Markdown note, edit questions or responses on-the-fly, and continue the chat seamlessly.
+  * Engage directly with ChatGPT, OpenRouter.ai models, and Ollama from any Markdown note, edit questions or responses on-the-fly, and continue the chat seamlessly.
 * **Privacy & Zero API Costs:** 
   * Use local LLMs via Ollama, keeping your chats on your computer and avoiding API costs.
+* **Multiple AI Providers:**
+  * Choose from OpenAI, OpenRouter.ai (with access to models like Gemini, Claude, DeepSeek, Llama, Perplexity), or local models via Ollama.
 * **System Commands:** 
   * Instruct the LLM via system commands to get the best possible answers.
 * **Link context**: 
   * Provide links to any other note in your vault for added context during conversations with Markdown or Wiki links.
 * **Per-note Configuration:** 
-  * Overwrite default settings via frontmatter for individual notes using params from [OpenAI API](https://platform.openai.com/docs/api-reference/chat) or [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-chat-completion).
+  * Overwrite default settings via frontmatter for individual notes using params from [OpenAI API](https://platform.openai.com/docs/api-reference/chat), [OpenRouter.ai](https://openrouter.ai/docs), or [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-chat-completion).
 * **Markdown Support:** 
   * Enjoy full rendering of lists, code blocks, and more from all responses.
 * **Minimal Setup:** 
-  * Utilize your OpenAI API key or install any LLM locally via Ollama.
+  * Utilize your OpenAI API key, OpenRouter.ai API key, or install any LLM locally via Ollama.
 * **Comment Blocks:** 
   * Ignore parts of your notes using comment blocks.
 * **Chat Templates**: 
@@ -45,7 +51,7 @@ Start chatting, don't worry too much about the more advanced features. They will
 ## Privacy and Security
 
 ChatGPT MD is 
-- only storing data locally in your vault, with zero tracking and no 3rd party integrations except direct calls to the openAI API. 
+- only storing data locally in your vault, with zero tracking and no 3rd party integrations except direct calls to the AI APIs (OpenAI, OpenRouter.ai).
 - allowing you to use Ollama, a local LLM installation for offline conversation-based knowledge exploration.
 
 ### Default Configuration
@@ -64,6 +70,11 @@ stream: true
 stop: null
 n: 1
 model: gpt-4o-mini
+
+# Service-specific URLs (optional, will use global settings if not specified)
+openaiUrl: https://api.openai.com
+# openrouterUrl: https://openrouter.ai
+# ollamaUrl: http://localhost:11434
 ---
 ```
 💡 Pro tip: Increasing `max_tokens` to a higher value e.g. `4096` for more complex tasks like reasoning, coding or text creation.
@@ -92,11 +103,28 @@ temperature: 1
 The AI responses will keep the used model name in the response title for future reference.
 You can find the list of your installed Ollama model names from your terminal via `ollama list` or the available openAI model names online on this [openAI models](https://platform.openai.com/docs/models) page.
 
-The default url for Ollama is
+### Service URLs
+Each AI service has its own dedicated URL parameter that can be configured globally in settings or per-note via frontmatter:
+
 ```
-url: http://localhost:11434
+---
+# For OpenAI
+openaiUrl: https://api.openai.com
+
+# For OpenRouter
+openrouterUrl: https://openrouter.ai
+
+# For Ollama
+ollamaUrl: http://localhost:11434
+---
 ```
-This can be changed via local frontmatter properties.
+
+The default URLs are:
+- OpenAI: `https://api.openai.com`
+- OpenRouter: `https://openrouter.ai`
+- Ollama: `http://localhost:11434`
+
+Note: Previous versions used a single `url` parameter which is now deprecated. Please update your templates and notes to use the service-specific URL parameters.
 
 ### Commands 👨‍💻
 Run commands from Obsidian's command pallet via `cmd + p` or `ctrl + p` and start typing `chatgpt` or set hotkeys
@@ -111,7 +139,8 @@ Run commands from Obsidian's command pallet via `cmd + p` or `ctrl + p` and star
 
 #### Utility Commands
 - **Infer Title**: Automatically generate a note title based on the notes content. Configurable to auto-run after 4+ messages.
-- **Add Comment Block**: Insert comment blocks for parts of yor note that should be ignored.
+- **Add Comment Block**: Insert comment blocks for parts of your note that should be ignored.
+- **Select Model**: Choose from all available LLMs (OpenAI, OpenRouter.ai, Ollama) and set the current model for your note.
 
 #### Maintenance Commands
 - **Clear Chat**: Remove all messages while retaining frontmatter.
@@ -128,8 +157,7 @@ Use the `ChatGPT MD: Chat` command from the Obsidian command Palette (`cmd + p` 
 Yes, you should! Go to `Settings > Hotkeys`, search for `ChatGPT MD: Chat` and add your preferred keybinding (e.g., `cmd + j`).
 
 #### How do I use chat and reasoning models?
-You can use openAI's GPT 3 and 4 models and any model you have installed via Ollama.
-Compatibility with openAI's o1 and o3 models is on the roadmap.
+You can use OpenAI's GPT 3 and 4 models, various models through OpenRouter.ai (like Claude, Gemini, DeepSeek, Llama, Perplexity), or any model you have installed via Ollama.
 DeepSeek-r1:7b works great for reasoning locally via Ollama.
 
 #### How do I use a custom endpoint?
@@ -137,6 +165,9 @@ Ensure your custom API adheres to OpenAI's specifications, such as Azure's hoste
 
 #### Where should I add my OpenAI API key?
 In the plugin settings, add your OpenAI API key and/or install Ollama and local LLMs of your choice.
+
+#### What happened to the 'url' parameter in the frontmatter?
+The single 'url' parameter is now deprecated. In v2.2.0 and higher, we've introduced service-specific URL parameters: `openaiUrl`, `openrouterUrl`, and `ollamaUrl`. This allows for more flexibility and clarity when configuring different services. Please update your templates and notes accordingly.
 
 🤖 Enjoy exploring the power of ChatGPT MD in your Obsidian vault!🚀
 

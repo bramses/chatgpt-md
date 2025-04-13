@@ -1,6 +1,6 @@
 import { Editor } from "obsidian";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_OPENAI, NEWLINE, ROLE_USER } from "src/Constants";
+import { AI_SERVICE_OPENAI } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { BaseAiService, IAiApiService, OpenAiModel } from "src/Services/AiService";
 import { ErrorService } from "./ErrorService";
