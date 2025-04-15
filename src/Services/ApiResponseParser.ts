@@ -52,7 +52,13 @@ export class ApiResponseParser {
    * @param serviceType The AI service type
    * @returns The parsed content
    */
-  parseNonStreamingResponse(data: any, serviceType: string): string {
+  parseNonStreamingResponse(data: any, serviceType: string): string | any {
+    // Check if this is an embeddings response (has an embedding array)
+    if (data?.embedding && (Array.isArray(data.embedding) || typeof data.embedding === "object")) {
+      // Return the whole response object for embeddings
+      return data;
+    }
+
     switch (serviceType) {
       case AI_SERVICE_OPENAI:
         return data.choices[0].message.content;

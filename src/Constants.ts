@@ -1,12 +1,14 @@
 export const AI_SERVICE_OLLAMA = "ollama";
 export const AI_SERVICE_OPENAI = "openai";
 export const AI_SERVICE_OPENROUTER = "openrouter";
+export const AI_SERVICE_ANTHROPIC = "anthropic";
 
 // API endpoints for each service
 export const API_ENDPOINTS = {
   [AI_SERVICE_OPENAI]: "/v1/chat/completions",
   [AI_SERVICE_OPENROUTER]: "/api/v1/chat/completions",
   [AI_SERVICE_OLLAMA]: "/api/chat",
+  [AI_SERVICE_ANTHROPIC]: "/v1/messages",
 };
 
 export const ADD_COMMENT_BLOCK_COMMAND_ID = "add-comment-block";
@@ -17,6 +19,8 @@ export const MOVE_TO_CHAT_COMMAND_ID = "move-to-chat";
 export const INFER_TITLE_COMMAND_ID = "infer-title";
 export const CHOOSE_CHAT_TEMPLATE_COMMAND_ID = "choose-chat-template";
 export const CLEAR_CHAT_COMMAND_ID = "clear-chat";
+export const INDEX_VAULT_COMMAND_ID = "index-vault";
+export const SEARCH_VAULT_COMMAND_ID = "search-vault";
 
 export const CHAT_ERROR_MESSAGE_401 =
   "I am sorry. There was an authorization issue with the external API (Status 401).\nPlease check your API key in the settings";

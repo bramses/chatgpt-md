@@ -94,7 +94,44 @@ export class ApiService {
         throw: false,
       });
 
-      const data = responseUrl.json;
+      // If the request failed, handle the error
+      if (responseUrl.status !== 200) {
+        console.error(`[ChatGPT MD] API request failed with status ${responseUrl.status}:`, responseUrl.text);
+        throw new Error(`API request failed with status ${responseUrl.status}: ${responseUrl.text}`);
+      }
+
+      let data;
+      try {
+        data = responseUrl.json;
+      } catch (error) {
+        console.error(`[ChatGPT MD] Failed to parse JSON response:`, responseUrl.text);
+        throw new Error(`Failed to parse JSON response: ${responseUrl.text}`);
+      }
+
+      // Add detailed logging for the API response
+      if (url.includes("/api/embeddings")) {
+        console.log(`[ChatGPT MD] Received embedding response from ${serviceType}:`, {
+          status: responseUrl.status,
+          hasEmbedding: !!data?.embedding,
+          embeddingLength: data?.embedding?.length || 0,
+          embeddingType: data?.embedding ? typeof data.embedding : "undefined",
+          isArray: Array.isArray(data?.embedding),
+          responseSize: JSON.stringify(data).length,
+          responseTime: responseUrl.headers?.["x-response-time"] || "unknown",
+        });
+
+        // Log warning for potentially problematic responses
+        if (!data?.embedding) {
+          console.warn(`[ChatGPT MD] Missing embedding in response from ${serviceType}:`, data);
+        } else if (!Array.isArray(data.embedding)) {
+          console.warn(
+            `[ChatGPT MD] Invalid embedding format from ${serviceType} (not an array):`,
+            typeof data.embedding
+          );
+        } else if (data.embedding.length === 0) {
+          console.warn(`[ChatGPT MD] Empty embedding array from ${serviceType}`);
+        }
+      }
 
       if (data?.error) {
         return this.errorService.handleApiError({ error: data.error }, serviceType, {

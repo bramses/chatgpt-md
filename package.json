@@ -9,13 +9,23 @@
     "version": "node version-bump.mjs && git add manifest.json versions.json",
     "update-version": "node update-version.mjs"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "obsidian-plugin",
+    "chatgpt",
+    "openai",
+    "ollama",
+    "openrouter",
+    "ai",
+    "llm"
+  ],
+  "author": "Deniz Okcu (created by Bram Adams)",
   "license": "MIT",
   "devDependencies": {
+    "@codemirror/state": "^6.0.0",
+    "@codemirror/view": "^6.0.0",
     "@types/node": "^22.14.1",
-    "@typescript-eslint/eslint-plugin": "8.29.1",
-    "@typescript-eslint/parser": "8.29.1",
+    "@typescript-eslint/eslint-plugin": "8.30.1",
+    "@typescript-eslint/parser": "8.30.1",
     "builtin-modules": "5.0.0",
     "esbuild": "0.25.2",
     "eslint": "^9.24.0",
