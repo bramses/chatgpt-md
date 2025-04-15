@@ -34,6 +34,14 @@ export class NotificationService {
   }
 
   /**
+   * Show an information notification
+   * @param message The information message
+   */
+  showInfo(message: string): void {
+    this.showNotification(`ℹ️ ${message}`, 4000);
+  }
+
+  /**
    * Show a warning notification
    * @param message The warning message
    */
