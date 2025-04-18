@@ -48,580 +48,450 @@ export class CommandRegistry {
    * Register all commands
    */
   registerCommands(): void {
-    this.registerChatCommand();
-    this.registerSelectModelCommand();
-    this.registerAddDividerCommand();
-    this.registerAddCommentBlockCommand();
-    this.registerStopStreamingCommand();
-    this.registerInferTitleCommand();
-    this.registerMoveToNewChatCommand();
-    this.registerChooseChatTemplateCommand();
-    this.registerClearChatCommand();
-    this.registerIndexVaultCommand();
-    this.registerSearchVaultCommand();
-    this.registerRepairVectorDatabaseCommand();
+    // Chat commands
+    this.registerCommand("call-chatgpt-api", "Chat", "message-circle", this.handleChatCommand.bind(this));
+    this.registerCommand("stop-streaming", "Stop streaming", "octagon", this.handleStopStreaming.bind(this));
+    this.registerCommand("select-model-command", "Select Model", "list", this.handleSelectModel.bind(this));
+    this.registerCommand("infer-title", "Infer title", "subtitles", this.handleInferTitle.bind(this));
+
+    // Editor formatting commands
+    this.registerCommand("add-hr", "Add divider", "minus", this.handleAddDivider.bind(this));
+    this.registerCommand("add-comment-block", "Add comment block", "comment", this.handleAddCommentBlock.bind(this));
+    this.registerCommand("clear-chat", "Clear chat (except frontmatter)", "trash", this.handleClearChat.bind(this));
+
+    // Chat management commands
+    this.registerCommand(
+      "move-to-chat",
+      "Create new chat with highlighted text",
+      "highlighter",
+      this.handleMoveToNewChat.bind(this)
+    );
+    this.registerCommand(
+      "choose-chat-template",
+      "Create new chat from template",
+      "layout-template",
+      this.handleChatTemplate.bind(this)
+    );
+
+    // Indexing and search commands
+    this.registerCommand(
+      "index-vault",
+      "Index vault with Ollama embeddings",
+      "search",
+      this.handleIndexVault.bind(this)
+    );
+    this.registerCommand(
+      "search-vault",
+      "Search vault with Ollama embeddings",
+      "search",
+      this.handleSearchVault.bind(this)
+    );
+    this.registerCommand(
+      "repair-vector-database",
+      "Repair vector database (remove invalid vectors)",
+      "tool",
+      this.handleRepairVectorDatabase.bind(this)
+    );
   }
 
   /**
-   * Register the main chat command
+   * Helper to register a command
    */
-  private registerChatCommand(): void {
+  private registerCommand(
+    id: string,
+    name: string,
+    icon: string,
+    callback: (editor?: Editor, view?: MarkdownView) => void
+  ): void {
     this.plugin.addCommand({
-      id: "call-chatgpt-api",
-      name: "Chat",
-      icon: "message-circle",
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
-        const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsService.getSettings();
-        const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
-
-        this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
-
-        try {
-          // get messages from editor
-          const { messagesWithRole: messagesWithRoleAndMessage, messages } = await editorService.getMessagesFromEditor(
-            editor,
-            settings
-          );
-
-          // move cursor to end of file if generateAtCursor is false
-          if (!settings.generateAtCursor) {
-            editorService.moveCursorToEnd(editor);
-          }
-
-          if (Platform.isMobile) {
-            new Notice(`[ChatGPT MD] Calling ${frontmatter.model}`);
-          } else {
-            this.updateStatusBar(`Calling ${frontmatter.model}`);
-          }
-
-          // Get the appropriate API key for the service
-          const apiKeyToUse = this.apiAuthService.getApiKey(settings, frontmatter.aiService);
-
-          const response = await this.aiService.callAIAPI(
-            messagesWithRoleAndMessage,
-            frontmatter,
-            getHeadingPrefix(settings.headingLevel),
-            this.getAiApiUrls(frontmatter)[frontmatter.aiService],
-            editor,
-            settings.generateAtCursor,
-            apiKeyToUse,
-            settings
-          );
-
-          editorService.processResponse(editor, response, settings);
-
-          if (
-            settings.autoInferTitle &&
-            isTitleTimestampFormat(view?.file?.basename, settings.dateFormat) &&
-            messagesWithRoleAndMessage.length > MIN_AUTO_INFER_MESSAGES
-          ) {
-            // Create a settings object with the correct API key and model
-            const settingsWithApiKey = {
-              ...frontmatter,
-              // Use the utility function to get the correct API key
-              openrouterApiKey: this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER),
-              // Use the centralized method for URL
-              url: this.getAiApiUrls(frontmatter)[frontmatter.aiService],
-            };
-
-            // Ensure model is set for title inference
-            if (!settingsWithApiKey.model) {
-              console.log("[ChatGPT MD] Model not set for auto title inference, using default model");
-              if (frontmatter.aiService === AI_SERVICE_OPENAI) {
-                settingsWithApiKey.model = "gpt-4";
-              } else if (frontmatter.aiService === AI_SERVICE_OLLAMA) {
-                settingsWithApiKey.model = "llama2";
-              } else if (frontmatter.aiService === AI_SERVICE_OPENROUTER) {
-                settingsWithApiKey.model = "anthropic/claude-3-opus:beta";
-              }
-            }
-
-            console.log("[ChatGPT MD] Auto-inferring title with settings:", {
-              aiService: frontmatter.aiService,
-              model: settingsWithApiKey.model,
-            });
-
-            await this.aiService.inferTitle(view, settingsWithApiKey, messages, editorService);
-          }
-        } catch (err) {
-          if (Platform.isMobile) {
-            new Notice(`[ChatGPT MD] Calling ${frontmatter.model}. ` + err, 9000);
-          }
-          console.log(err);
-        }
-
-        this.updateStatusBar("");
-      },
+      id,
+      name,
+      icon,
+      editorCallback: (editor: Editor, view: MarkdownView) => callback(editor, view),
+      callback: () => callback(),
     });
   }
 
   /**
-   * Register the select model command
+   * Handle the main chat command
    */
-  private registerSelectModelCommand(): void {
-    this.plugin.addCommand({
-      id: "select-model-command",
-      name: "Select Model",
-      icon: "list",
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
-        const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsService.getSettings();
+  private async handleChatCommand(editor: Editor, view: MarkdownView): Promise<void> {
+    const editorService = this.serviceLocator.getEditorService();
+    const settings = this.settingsService.getSettings();
+    const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
+    this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
 
-        const aiModelSuggestModal = new AiModelSuggestModal(this.plugin.app, editor, editorService);
-        aiModelSuggestModal.open();
-
-        const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
-        this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
-
-        try {
-          const openAiKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
-          const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
-
-          const models = await this.fetchAvailableModels(this.getAiApiUrls(frontmatter), openAiKey, openRouterKey);
-
-          aiModelSuggestModal.close();
-          new AiModelSuggestModal(this.plugin.app, editor, editorService, models).open();
-        } catch (e) {
-          aiModelSuggestModal.close();
-
-          new Notice("Could not find any models");
-          console.error(e);
-        }
-      },
-    });
-  }
-
-  /**
-   * Register the add divider command
-   */
-  private registerAddDividerCommand(): void {
-    this.plugin.addCommand({
-      id: "add-hr",
-      name: "Add divider",
-      icon: "minus",
-      editorCallback: async (editor: Editor, _view: MarkdownView) => {
-        const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsService.getSettings();
-        editorService.addHorizontalRule(editor, ROLE_USER, settings.headingLevel);
-      },
-    });
-  }
-
-  /**
-   * Register the add comment block command
-   */
-  private registerAddCommentBlockCommand(): void {
-    this.plugin.addCommand({
-      id: "add-comment-block",
-      name: "Add comment block",
-      icon: "comment",
-      editorCallback: (editor: Editor, _view: MarkdownView) => {
-        // add a comment block at cursor
-        const cursor = editor.getCursor();
-        const line = cursor.line;
-        const ch = cursor.ch;
-
-        const commentBlock = `${COMMENT_BLOCK_START}${NEWLINE}${COMMENT_BLOCK_END}`;
-        editor.replaceRange(commentBlock, cursor);
-
-        // move cursor to middle of comment block
-        const newCursor = {
-          line: line + 1,
-          ch: ch,
-        };
-        editor.setCursor(newCursor);
-      },
-    });
-  }
-
-  /**
-   * Register the stop streaming command
-   */
-  private registerStopStreamingCommand(): void {
-    this.plugin.addCommand({
-      id: "stop-streaming",
-      name: "Stop streaming",
-      icon: "octagon",
-      callback: () => {
-        // Use the aiService's stopStreaming method if available
-        if (this.aiService && "stopStreaming" in this.aiService) {
-          // @ts-ignore - Call the stopStreaming method
-          this.aiService.stopStreaming();
-        } else {
-          // No active AI service to stop streaming
-          this.serviceLocator.getNotificationService().showWarning("No active streaming request to stop");
-        }
-      },
-    });
-  }
-
-  /**
-   * Register the infer title command
-   */
-  private registerInferTitleCommand(): void {
-    this.plugin.addCommand({
-      id: "infer-title",
-      name: "Infer title",
-      icon: "subtitles",
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
-        const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsService.getSettings();
-
-        // get frontmatter
-        const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
-        this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
-
-        // Ensure model is set
-        if (!frontmatter.model) {
-          console.log("[ChatGPT MD] Model not set in frontmatter, using default model");
-          return;
-        }
-
-        this.updateStatusBar(`Calling ${frontmatter.model}`);
-        const { messages } = await editorService.getMessagesFromEditor(editor, settings);
-
-        // Use the utility function to get the correct API key
-        const settingsWithApiKey = {
-          ...settings,
-          ...frontmatter,
-          openrouterApiKey: this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER),
-          url: this.getAiApiUrls(frontmatter)[frontmatter.aiService],
-        };
-
-        await this.aiService.inferTitle(view, settingsWithApiKey, messages, editorService);
-
-        this.updateStatusBar("");
-      },
-    });
-  }
-
-  /**
-   * Register the move to new chat command
-   */
-  private registerMoveToNewChatCommand(): void {
-    this.plugin.addCommand({
-      id: "move-to-chat",
-      name: "Create new chat with highlighted text",
-      icon: "highlighter",
-      editorCallback: async (editor: Editor, _view: MarkdownView) => {
-        const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsService.getSettings();
-
-        try {
-          await editorService.createNewChatWithHighlightedText(editor, settings);
-        } catch (err) {
-          console.error(`[ChatGPT MD] Error in Create new chat with highlighted text`, err);
-          new Notice(`[ChatGPT MD] Error in Create new chat with highlighted text, check console`);
-        }
-      },
-    });
-  }
-
-  /**
-   * Register the choose chat template command
-   */
-  private registerChooseChatTemplateCommand(): void {
-    this.plugin.addCommand({
-      id: "choose-chat-template",
-      name: "Create new chat from template",
-      icon: "layout-template",
-      callback: async () => {
-        const editorService = this.serviceLocator.getEditorService();
-        const settings = this.settingsService.getSettings();
-
-        if (settings.dateFormat) {
-          await editorService.createNewChatFromTemplate(
-            settings,
-            editorService.getDate(new Date(), settings.dateFormat)
-          );
-          return;
-        }
-        new Notice(
-          "date format cannot be empty in your ChatGPT MD settings. You can choose something like YYYYMMDDhhmmss"
-        );
-      },
-    });
-  }
-
-  /**
-   * Register the clear chat command
-   */
-  private registerClearChatCommand(): void {
-    this.plugin.addCommand({
-      id: "clear-chat",
-      name: "Clear chat (except frontmatter)",
-      icon: "trash",
-      editorCallback: async (editor: Editor, _view: MarkdownView) => {
-        const editorService = this.serviceLocator.getEditorService();
-        editorService.clearChat(editor);
-      },
-    });
-  }
-
-  /**
-   * Register the index vault command
-   */
-  private registerIndexVaultCommand(): void {
-    this.plugin.addCommand({
-      id: "index-vault",
-      name: "Index vault with Ollama embeddings",
-      icon: "search",
-      callback: async () => {
-        try {
-          // Initialize the services if they don't exist
-          if (!this.vaultIndexingService) {
-            const embeddingsService = new OllamaEmbeddingsService();
-            const vectorDatabase = new VectorDatabaseService(this.plugin.app);
-            this.vaultIndexingService = new VaultIndexingService(this.plugin.app, vectorDatabase, embeddingsService);
-          }
-
-          // Check if indexing is already in progress
-          if (this.vaultIndexingService.isIndexingInProgress()) {
-            this.serviceLocator.getNotificationService().showWarning("Indexing is already in progress");
-            return;
-          }
-
-          // Check if Ollama is available
-          const isOllamaAvailable = await this.vaultIndexingService.isOllamaAvailable(DEFAULT_OLLAMA_EMBEDDINGS_CONFIG);
-
-          if (!isOllamaAvailable) {
-            this.serviceLocator
-              .getNotificationService()
-              .showError(
-                "Ollama is not available. Please make sure Ollama is running and the mxbai-embed-large model is installed."
-              );
-            return;
-          }
-
-          // Start indexing
-          this.serviceLocator.getNotificationService().showInfo("Starting to index vault with Ollama embeddings...");
-
-          if (Platform.isMobile) {
-            new Notice("Starting to index vault with Ollama embeddings...");
-          } else {
-            this.updateStatusBar("Indexing vault with Ollama embeddings...");
-          }
-
-          await this.vaultIndexingService.startIndexing(DEFAULT_OLLAMA_EMBEDDINGS_CONFIG, DEFAULT_INDEXING_OPTIONS);
-
-          if (!Platform.isMobile) {
-            this.updateStatusBar("");
-          }
-        } catch (err) {
-          console.error("[ChatGPT MD] Error indexing vault:", err);
-          this.serviceLocator.getNotificationService().showError(`Error indexing vault: ${err}`);
-
-          if (!Platform.isMobile) {
-            this.updateStatusBar("");
-          }
-        }
-      },
-    });
-  }
-
-  /**
-   * Register a command to repair the vector database
-   */
-  private registerRepairVectorDatabaseCommand(): void {
-    this.plugin.addCommand({
-      id: "repair-vector-database",
-      name: "Repair vector database (remove invalid vectors)",
-      icon: "tool",
-      callback: async () => {
-        try {
-          // Initialize the services if they don't exist
-          if (!this.vaultIndexingService) {
-            const embeddingsService = new OllamaEmbeddingsService();
-            const vectorDatabase = new VectorDatabaseService(this.plugin.app);
-            this.vaultIndexingService = new VaultIndexingService(this.plugin.app, vectorDatabase, embeddingsService);
-          }
-
-          const vectorDatabase = (this.vaultIndexingService as any).vectorDatabase;
-
-          if (!vectorDatabase) {
-            this.serviceLocator.getNotificationService().showError("Vector database service not available");
-            return;
-          }
-
-          // Initialize the database if needed
-          if (!vectorDatabase.isInitialized()) {
-            const initialized = await vectorDatabase.initialize();
-            if (!initialized) {
-              this.serviceLocator.getNotificationService().showError("Failed to initialize vector database");
-              return;
-            }
-          }
-
-          this.serviceLocator.getNotificationService().showInfo("Starting to repair vector database...");
-
-          if (Platform.isMobile) {
-            new Notice("Starting to repair vector database...");
-          } else {
-            this.updateStatusBar("Repairing vector database...");
-          }
-
-          const removedCount = await vectorDatabase.cleanupInvalidVectors();
-
-          if (Platform.isMobile) {
-            new Notice(`Vector database repair complete. Removed ${removedCount} invalid vectors.`);
-          } else {
-            this.updateStatusBar("");
-          }
-
-          this.serviceLocator
-            .getNotificationService()
-            .showInfo(`Vector database repair complete. Removed ${removedCount} invalid vectors.`);
-        } catch (err) {
-          console.error("[ChatGPT MD] Error repairing vector database:", err);
-          this.serviceLocator.getNotificationService().showError(`Error repairing vector database: ${err}`);
-
-          if (!Platform.isMobile) {
-            this.updateStatusBar("");
-          }
-        }
-      },
-    });
-  }
-
-  /**
-   * Register the search vault command
-   */
-  private registerSearchVaultCommand(): void {
-    this.plugin.addCommand({
-      id: "search-vault",
-      name: "Search vault with Ollama embeddings",
-      icon: "search",
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
-        try {
-          // Get the selected text or prompt the user for a query
-          const selection = editor.getSelection();
-          let query = selection;
-
-          if (!query || query.trim() === "") {
-            // If no selection, show the search prompt modal
-            const searchPromptModal = new SearchPromptModal(this.plugin.app, async (userQuery) => {
-              if (userQuery && userQuery.trim() !== "") {
-                await this.performVaultSearch(userQuery, editor);
-              }
-            });
-            searchPromptModal.open();
-            return;
-          }
-
-          // If we have a selection, perform the search directly
-          await this.performVaultSearch(query, editor);
-        } catch (err) {
-          console.error("[ChatGPT MD] Error searching vault:", err);
-          this.serviceLocator.getNotificationService().showError(`Error searching vault: ${err}`);
-
-          if (!Platform.isMobile) {
-            this.updateStatusBar("");
-          }
-        }
-      },
-    });
-  }
-
-  /**
-   * Perform the vault search with the given query
-   * @param query - The search query
-   * @param editor - The editor instance
-   */
-  private async performVaultSearch(query: string, editor: Editor): Promise<void> {
     try {
-      // Initialize the services if they don't exist
-      if (!this.vaultIndexingService) {
-        const embeddingsService = new OllamaEmbeddingsService();
-        const vectorDatabase = new VectorDatabaseService(this.plugin.app);
-        this.vaultIndexingService = new VaultIndexingService(this.plugin.app, vectorDatabase, embeddingsService);
-      }
-
-      // Show status
-      if (Platform.isMobile) {
-        new Notice(`Searching vault for: ${query.substring(0, 30)}${query.length > 30 ? "..." : ""}`);
-      } else {
-        this.updateStatusBar(`Searching vault for: ${query.substring(0, 30)}${query.length > 30 ? "..." : ""}`);
-      }
-
-      // Get the current file path to exclude from results
-      const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-      const currentFilePath = activeView?.file?.path || "";
-
-      // Search the vault
-      const results = await this.vaultIndexingService.searchVault(
-        query,
-        DEFAULT_OLLAMA_EMBEDDINGS_CONFIG,
-        5 // Limit to 5 results
+      const { messagesWithRole: messagesWithRoleAndMessage, messages } = await editorService.getMessagesFromEditor(
+        editor,
+        settings
       );
+
+      if (!settings.generateAtCursor) {
+        editorService.moveCursorToEnd(editor);
+      }
+
+      this.updateStatusOrNotice(`Calling ${frontmatter.model}`);
+
+      const apiKeyToUse = this.apiAuthService.getApiKey(settings, frontmatter.aiService);
+      const response = await this.aiService.callAIAPI(
+        messagesWithRoleAndMessage,
+        frontmatter,
+        getHeadingPrefix(settings.headingLevel),
+        this.getAiApiUrls(frontmatter)[frontmatter.aiService],
+        editor,
+        settings.generateAtCursor,
+        apiKeyToUse,
+        settings
+      );
+
+      editorService.processResponse(editor, response, settings);
+
+      if (
+        settings.autoInferTitle &&
+        isTitleTimestampFormat(view?.file?.basename, settings.dateFormat) &&
+        messagesWithRoleAndMessage.length > MIN_AUTO_INFER_MESSAGES
+      ) {
+        const settingsWithApiKey = this.prepareSettingsWithApiKey(frontmatter, settings);
+        await this.aiService.inferTitle(view, settingsWithApiKey, messages, editorService);
+      }
+    } catch (err) {
+      this.handleError(`Calling ${frontmatter.model}`, err);
+    }
+
+    this.updateStatusBar("");
+  }
+
+  /**
+   * Handle stop streaming command
+   */
+  private handleStopStreaming(): void {
+    if (this.aiService && "stopStreaming" in this.aiService) {
+      // @ts-ignore - Call the stopStreaming method
+      this.aiService.stopStreaming();
+    } else {
+      this.serviceLocator.getNotificationService().showWarning("No active streaming request to stop");
+    }
+  }
+
+  /**
+   * Handle select model command
+   */
+  private async handleSelectModel(editor: Editor, view: MarkdownView): Promise<void> {
+    const editorService = this.serviceLocator.getEditorService();
+    const settings = this.settingsService.getSettings();
+
+    const aiModelSuggestModal = new AiModelSuggestModal(this.plugin.app, editor, editorService);
+    aiModelSuggestModal.open();
+
+    const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
+    this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
+
+    try {
+      const openAiKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
+      const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
+      const models = await this.fetchAvailableModels(this.getAiApiUrls(frontmatter), openAiKey, openRouterKey);
+
+      aiModelSuggestModal.close();
+      new AiModelSuggestModal(this.plugin.app, editor, editorService, models).open();
+    } catch (e) {
+      aiModelSuggestModal.close();
+      new Notice("Could not find any models");
+      console.error(e);
+    }
+  }
+
+  /**
+   * Handle the infer title command
+   */
+  private async handleInferTitle(editor: Editor, view: MarkdownView): Promise<void> {
+    const editorService = this.serviceLocator.getEditorService();
+    const settings = this.settingsService.getSettings();
+    const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
+    this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
+
+    if (!frontmatter.model) {
+      console.log("[ChatGPT MD] Model not set in frontmatter, using default model");
+      return;
+    }
+
+    this.updateStatusBar(`Calling ${frontmatter.model}`);
+    const { messages } = await editorService.getMessagesFromEditor(editor, settings);
+    const settingsWithApiKey = this.prepareSettingsWithApiKey(frontmatter, settings);
+
+    await this.aiService.inferTitle(view, settingsWithApiKey, messages, editorService);
+    this.updateStatusBar("");
+  }
+
+  /**
+   * Handle add divider command
+   */
+  private handleAddDivider(editor: Editor): void {
+    const editorService = this.serviceLocator.getEditorService();
+    const settings = this.settingsService.getSettings();
+    editorService.addHorizontalRule(editor, ROLE_USER, settings.headingLevel);
+  }
+
+  /**
+   * Handle add comment block command
+   */
+  private handleAddCommentBlock(editor: Editor): void {
+    const cursor = editor.getCursor();
+    const commentBlock = `${COMMENT_BLOCK_START}${NEWLINE}${COMMENT_BLOCK_END}`;
+
+    editor.replaceRange(commentBlock, cursor);
+    editor.setCursor({ line: cursor.line + 1, ch: cursor.ch });
+  }
+
+  /**
+   * Handle clear chat command
+   */
+  private handleClearChat(editor: Editor): void {
+    const editorService = this.serviceLocator.getEditorService();
+    editorService.clearChat(editor);
+  }
+
+  /**
+   * Handle move to new chat command
+   */
+  private async handleMoveToNewChat(editor: Editor): Promise<void> {
+    const editorService = this.serviceLocator.getEditorService();
+    const settings = this.settingsService.getSettings();
+
+    try {
+      await editorService.createNewChatWithHighlightedText(editor, settings);
+    } catch (err) {
+      console.error(`[ChatGPT MD] Error in Create new chat with highlighted text`, err);
+      new Notice(`[ChatGPT MD] Error in Create new chat with highlighted text, check console`);
+    }
+  }
+
+  /**
+   * Handle choose chat template command
+   */
+  private async handleChatTemplate(): Promise<void> {
+    const editorService = this.serviceLocator.getEditorService();
+    const settings = this.settingsService.getSettings();
+
+    if (settings.dateFormat) {
+      await editorService.createNewChatFromTemplate(settings, editorService.getDate(new Date(), settings.dateFormat));
+      return;
+    }
+    new Notice("date format cannot be empty in your ChatGPT MD settings. You can choose something like YYYYMMDDhhmmss");
+  }
+
+  /**
+   * Handle index vault command
+   */
+  private async handleIndexVault(): Promise<void> {
+    try {
+      this.initializeVaultServices();
+
+      if (this.vaultIndexingService && this.vaultIndexingService.isIndexingInProgress()) {
+        this.serviceLocator.getNotificationService().showWarning("Indexing is already in progress");
+        return;
+      }
+
+      if (!this.vaultIndexingService) {
+        this.serviceLocator.getNotificationService().showError("Failed to initialize vault indexing service");
+        return;
+      }
+
+      const isOllamaAvailable = await this.vaultIndexingService.isOllamaAvailable(DEFAULT_OLLAMA_EMBEDDINGS_CONFIG);
+      if (!isOllamaAvailable) {
+        this.serviceLocator
+          .getNotificationService()
+          .showError(
+            "Ollama is not available. Please make sure Ollama is running and the mxbai-embed-large model is installed."
+          );
+        return;
+      }
+
+      this.updateStatusOrNotice("Indexing vault with Ollama embeddings...");
+      await this.vaultIndexingService.startIndexing(DEFAULT_OLLAMA_EMBEDDINGS_CONFIG, DEFAULT_INDEXING_OPTIONS);
+
+      if (!Platform.isMobile) {
+        this.updateStatusBar("");
+      }
+    } catch (err) {
+      this.handleError("Error indexing vault", err);
+    }
+  }
+
+  /**
+   * Handle repair vector database command
+   */
+  private async handleRepairVectorDatabase(): Promise<void> {
+    try {
+      this.initializeVaultServices();
+      const vectorDatabase = (this.vaultIndexingService as any).vectorDatabase;
+
+      if (!vectorDatabase) {
+        this.serviceLocator.getNotificationService().showError("Vector database service not available");
+        return;
+      }
+
+      if (!vectorDatabase.isInitialized()) {
+        const initialized = await vectorDatabase.initialize();
+        if (!initialized) {
+          this.serviceLocator.getNotificationService().showError("Failed to initialize vector database");
+          return;
+        }
+      }
+
+      this.updateStatusOrNotice("Repairing vector database...");
+      const removedCount = await vectorDatabase.cleanupInvalidVectors();
 
       if (!Platform.isMobile) {
         this.updateStatusBar("");
       }
 
-      // Filter out the current file from results
-      const filteredResults = results.filter((result) => result.path !== currentFilePath);
+      this.serviceLocator
+        .getNotificationService()
+        .showInfo(`Vector database repair complete. Removed ${removedCount} invalid vectors.`);
+    } catch (err) {
+      this.handleError("Error repairing vector database", err);
+    }
+  }
 
+  /**
+   * Handle search vault command
+   */
+  private async handleSearchVault(editor: Editor, view: MarkdownView): Promise<void> {
+    try {
+      const selection = editor.getSelection();
+      let query = selection;
+
+      if (!query || query.trim() === "") {
+        const searchPromptModal = new SearchPromptModal(this.plugin.app, async (userQuery) => {
+          if (userQuery && userQuery.trim() !== "") {
+            await this.performVaultSearch(userQuery, editor);
+          }
+        });
+        searchPromptModal.open();
+        return;
+      }
+
+      await this.performVaultSearch(query, editor);
+    } catch (err) {
+      this.handleError("Error searching vault", err);
+    }
+  }
+
+  /**
+   * Perform the vault search with the given query
+   */
+  private async performVaultSearch(query: string, editor: Editor): Promise<void> {
+    try {
+      this.initializeVaultServices();
+
+      if (!this.vaultIndexingService) {
+        this.serviceLocator.getNotificationService().showError("Failed to initialize vault indexing service");
+        return;
+      }
+
+      this.updateStatusOrNotice(`Searching vault for: ${query.substring(0, 30)}${query.length > 30 ? "..." : ""}`);
+
+      const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+      const currentFilePath = activeView?.file?.path || "";
+
+      const results = await this.vaultIndexingService.searchVault(query, DEFAULT_OLLAMA_EMBEDDINGS_CONFIG, 10);
+
+      if (!Platform.isMobile) {
+        this.updateStatusBar("");
+      }
+
+      const filteredResults = results.filter((result) => result.path !== currentFilePath);
       if (filteredResults.length === 0) {
         this.serviceLocator.getNotificationService().showInfo("No results found in the indexed vault.");
         return;
       }
 
-      // Format the results
-      let formattedResults = `## Search Results for: "${query}"\n\n`;
-
-      filteredResults.forEach((result, index) => {
-        const similarityPercent = Math.round(result.similarity * 100);
-        // Use wiki links (double brackets) instead of markdown links
-        formattedResults += `${index + 1}. [[${result.path}|${result.name}]] - ${similarityPercent}% similarity\n`;
-      });
-
-      const editorService = this.serviceLocator.getEditorService();
-      const settings = this.settingsService.getSettings();
-
-      // Move cursor to end of file if not generating at cursor
-      if (!settings.generateAtCursor) {
-        editorService.moveCursorToEnd(editor);
-      }
-
-      // Get cursor position for insertion
-      const cursor = editor.getCursor();
-
-      // Add an assistant header with the model name
-      const headingPrefix = getHeadingPrefix(settings.headingLevel);
-      const assistantHeader = getHeaderRole(headingPrefix, ROLE_ASSISTANT, "mxbai-embed-large");
-
-      // Insert both the assistant header and the search results
-      editor.replaceRange(assistantHeader + formattedResults, cursor);
-
-      // Add a user divider after the search results
-      const userHeader = getHeaderRole(headingPrefix, ROLE_USER);
-
-      // Get cursor position after adding the assistant response
-      const newCursor = {
-        line: cursor.line + (assistantHeader + formattedResults).split("\n").length - 1,
-        ch: 0,
-      };
-
-      // Insert the user divider
-      editor.replaceRange(userHeader, newCursor);
-
-      // Move cursor to after the user divider (for the user to start typing their response)
-      const finalCursorPos = {
-        line: newCursor.line + userHeader.split("\n").length - 1,
-        ch: 0,
-      };
-      editor.setCursor(finalCursorPos);
+      this.insertSearchResults(query, filteredResults, editor);
     } catch (err) {
-      console.error("[ChatGPT MD] Error performing vault search:", err);
-      this.serviceLocator.getNotificationService().showError(`Error performing vault search: ${err}`);
-
-      if (!Platform.isMobile) {
-        this.updateStatusBar("");
-      }
+      this.handleError("Error performing vault search", err);
     }
   }
 
+  /**
+   * Insert search results into the editor
+   */
+  private insertSearchResults(query: string, results: any[], editor: Editor): void {
+    let formattedResults = `## Search Results for: "${query}"\n\n`;
+
+    results.forEach((result, index) => {
+      const similarityPercent = Math.round(result.similarity * 100);
+      formattedResults += `${index + 1}. [[${result.path}|${result.name}]] - ${similarityPercent}% similarity\n`;
+    });
+
+    const editorService = this.serviceLocator.getEditorService();
+    const settings = this.settingsService.getSettings();
+
+    if (!settings.generateAtCursor) {
+      editorService.moveCursorToEnd(editor);
+    }
+
+    const cursor = editor.getCursor();
+    const headingPrefix = getHeadingPrefix(settings.headingLevel);
+    const assistantHeader = getHeaderRole(headingPrefix, ROLE_ASSISTANT, "mxbai-embed-large");
+
+    editor.replaceRange(assistantHeader + formattedResults, cursor);
+
+    const userHeader = getHeaderRole(headingPrefix, ROLE_USER);
+    const newCursor = {
+      line: cursor.line + (assistantHeader + formattedResults).split("\n").length - 1,
+      ch: 0,
+    };
+
+    editor.replaceRange(userHeader, newCursor);
+
+    const finalCursorPos = {
+      line: newCursor.line + userHeader.split("\n").length - 1,
+      ch: 0,
+    };
+    editor.setCursor(finalCursorPos);
+  }
+
+  // ======= Helper Methods =======
+
+  /**
+   * Initialize vault services if needed
+   */
+  private initializeVaultServices(): void {
+    if (!this.vaultIndexingService) {
+      const embeddingsService = new OllamaEmbeddingsService();
+      const vectorDatabase = new VectorDatabaseService(this.plugin.app);
+      this.vaultIndexingService = new VaultIndexingService(this.plugin.app, vectorDatabase, embeddingsService);
+    }
+  }
+
+  /**
+   * Prepare settings with API key for inference
+   */
+  private prepareSettingsWithApiKey(frontmatter: any, settings: any): any {
+    const settingsWithApiKey = {
+      ...settings,
+      ...frontmatter,
+      openrouterApiKey: this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER),
+      url: this.getAiApiUrls(frontmatter)[frontmatter.aiService],
+    };
+
+    if (!settingsWithApiKey.model) {
+      if (frontmatter.aiService === AI_SERVICE_OPENAI) {
+        settingsWithApiKey.model = "gpt-4";
+      } else if (frontmatter.aiService === AI_SERVICE_OLLAMA) {
+        settingsWithApiKey.model = "llama2";
+      } else if (frontmatter.aiService === AI_SERVICE_OPENROUTER) {
+        settingsWithApiKey.model = "anthropic/claude-3-opus:beta";
+      }
+    }
+
+    return settingsWithApiKey;
+  }
+
+  /**
+   * Get API URLs for different services
+   */
   private getAiApiUrls(frontmatter: any): { [key: string]: string } {
     return {
       openai: frontmatter.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
@@ -639,54 +509,48 @@ export class CommandRegistry {
     openrouterApiKey: string
   ): Promise<string[]> {
     try {
-      const apiAuthService = new ApiAuthService();
-      const timeout = 5000; // 5 seconds timeout
-
-      // Create a timeout promise
+      const timeout = 5000;
       const createTimeoutPromise = () => {
         return new Promise<string[]>((_, reject) => {
           setTimeout(() => reject(new Error("Request timed out after 5 seconds")), timeout);
         });
       };
 
-      // Prepare fetch promises
       const fetchPromises: Promise<string[]>[] = [];
 
-      // Always fetch Ollama models as they don't require an API key
-      const ollamaPromise = Promise.race([
-        fetchAvailableOllamaModels(urls[AI_SERVICE_OLLAMA]),
-        createTimeoutPromise(),
-      ]).catch((err) => {
-        console.warn(`Error fetching Ollama models: ${err.message}`);
-        return [] as string[];
-      });
-      fetchPromises.push(ollamaPromise);
-
-      // Only fetch OpenAI models if a valid API key exists
-      if (apiAuthService.isValidApiKey(apiKey)) {
-        const openAiPromise = Promise.race([
-          fetchAvailableOpenAiModels(urls[AI_SERVICE_OPENAI], apiKey),
-          createTimeoutPromise(),
-        ]).catch((err) => {
-          console.warn(`Error fetching OpenAI models: ${err.message}`);
+      // Ollama models (no API key required)
+      fetchPromises.push(
+        Promise.race([fetchAvailableOllamaModels(urls[AI_SERVICE_OLLAMA]), createTimeoutPromise()]).catch((err) => {
+          console.warn(`Error fetching Ollama models: ${err.message}`);
           return [] as string[];
-        });
-        fetchPromises.push(openAiPromise);
+        })
+      );
+
+      // OpenAI models (if API key exists)
+      if (this.apiAuthService.isValidApiKey(apiKey)) {
+        fetchPromises.push(
+          Promise.race([fetchAvailableOpenAiModels(urls[AI_SERVICE_OPENAI], apiKey), createTimeoutPromise()]).catch(
+            (err) => {
+              console.warn(`Error fetching OpenAI models: ${err.message}`);
+              return [] as string[];
+            }
+          )
+        );
       }
 
-      // Only fetch OpenRouter models if a valid API key exists
-      if (apiAuthService.isValidApiKey(openrouterApiKey)) {
-        const openRouterPromise = Promise.race([
-          fetchAvailableOpenRouterModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey),
-          createTimeoutPromise(),
-        ]).catch((err) => {
-          console.warn(`Error fetching OpenRouter models: ${err.message}`);
-          return [] as string[];
-        });
-        fetchPromises.push(openRouterPromise);
+      // OpenRouter models (if API key exists)
+      if (this.apiAuthService.isValidApiKey(openrouterApiKey)) {
+        fetchPromises.push(
+          Promise.race([
+            fetchAvailableOpenRouterModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey),
+            createTimeoutPromise(),
+          ]).catch((err) => {
+            console.warn(`Error fetching OpenRouter models: ${err.message}`);
+            return [] as string[];
+          })
+        );
       }
 
-      // Execute all promises in parallel and combine results
       const results = await Promise.all(fetchPromises);
       return results.flat();
     } catch (error) {
@@ -695,6 +559,30 @@ export class CommandRegistry {
       throw error;
     }
   }
+
+  /**
+   * Update status bar or show notice based on platform
+   */
+  private updateStatusOrNotice(text: string): void {
+    if (Platform.isMobile) {
+      new Notice(`[ChatGPT MD] ${text}`);
+    } else {
+      this.updateStatusBar(text);
+    }
+  }
+
+  /**
+   * Handle error with appropriate notification
+   */
+  private handleError(context: string, err: any): void {
+    console.error(`[ChatGPT MD] ${context}:`, err);
+    this.serviceLocator.getNotificationService().showError(`${context}: ${err}`);
+
+    if (!Platform.isMobile) {
+      this.updateStatusBar("");
+    }
+  }
+
   /**
    * Update the status bar with the given text
    */
