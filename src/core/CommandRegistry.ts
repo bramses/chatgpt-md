@@ -7,25 +7,15 @@ import { DEFAULT_OPENAI_CONFIG, fetchAvailableOpenAiModels } from "src/Services/
 import { DEFAULT_OLLAMA_CONFIG, fetchAvailableOllamaModels } from "src/Services/OllamaService";
 import { DEFAULT_OPENROUTER_CONFIG, fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
 import {
-  ADD_COMMENT_BLOCK_COMMAND_ID,
-  ADD_HR_COMMAND_ID,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
-  CALL_CHATGPT_API_COMMAND_ID,
-  CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
-  CLEAR_CHAT_COMMAND_ID,
   COMMENT_BLOCK_END,
   COMMENT_BLOCK_START,
-  INDEX_VAULT_COMMAND_ID,
-  INFER_TITLE_COMMAND_ID,
   MIN_AUTO_INFER_MESSAGES,
-  MOVE_TO_CHAT_COMMAND_ID,
   NEWLINE,
   ROLE_ASSISTANT,
   ROLE_USER,
-  SEARCH_VAULT_COMMAND_ID,
-  STOP_STREAMING_COMMAND_ID,
 } from "src/Constants";
 import { getHeaderRole, getHeadingPrefix, isTitleTimestampFormat } from "src/Utilities/TextHelpers";
 import { ApiAuthService } from "src/Services/ApiAuthService";
@@ -77,7 +67,7 @@ export class CommandRegistry {
    */
   private registerChatCommand(): void {
     this.plugin.addCommand({
-      id: CALL_CHATGPT_API_COMMAND_ID,
+      id: "call-chatgpt-api",
       name: "Chat",
       icon: "message-circle",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
@@ -207,7 +197,7 @@ export class CommandRegistry {
    */
   private registerAddDividerCommand(): void {
     this.plugin.addCommand({
-      id: ADD_HR_COMMAND_ID,
+      id: "add-hr",
       name: "Add divider",
       icon: "minus",
       editorCallback: async (editor: Editor, _view: MarkdownView) => {
@@ -223,7 +213,7 @@ export class CommandRegistry {
    */
   private registerAddCommentBlockCommand(): void {
     this.plugin.addCommand({
-      id: ADD_COMMENT_BLOCK_COMMAND_ID,
+      id: "add-comment-block",
       name: "Add comment block",
       icon: "comment",
       editorCallback: (editor: Editor, _view: MarkdownView) => {
@@ -250,7 +240,7 @@ export class CommandRegistry {
    */
   private registerStopStreamingCommand(): void {
     this.plugin.addCommand({
-      id: STOP_STREAMING_COMMAND_ID,
+      id: "stop-streaming",
       name: "Stop streaming",
       icon: "octagon",
       callback: () => {
@@ -271,7 +261,7 @@ export class CommandRegistry {
    */
   private registerInferTitleCommand(): void {
     this.plugin.addCommand({
-      id: INFER_TITLE_COMMAND_ID,
+      id: "infer-title",
       name: "Infer title",
       icon: "subtitles",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
@@ -311,7 +301,7 @@ export class CommandRegistry {
    */
   private registerMoveToNewChatCommand(): void {
     this.plugin.addCommand({
-      id: MOVE_TO_CHAT_COMMAND_ID,
+      id: "move-to-chat",
       name: "Create new chat with highlighted text",
       icon: "highlighter",
       editorCallback: async (editor: Editor, _view: MarkdownView) => {
@@ -333,7 +323,7 @@ export class CommandRegistry {
    */
   private registerChooseChatTemplateCommand(): void {
     this.plugin.addCommand({
-      id: CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
+      id: "choose-chat-template",
       name: "Create new chat from template",
       icon: "layout-template",
       callback: async () => {
@@ -359,7 +349,7 @@ export class CommandRegistry {
    */
   private registerClearChatCommand(): void {
     this.plugin.addCommand({
-      id: CLEAR_CHAT_COMMAND_ID,
+      id: "clear-chat",
       name: "Clear chat (except frontmatter)",
       icon: "trash",
       editorCallback: async (editor: Editor, _view: MarkdownView) => {
@@ -374,7 +364,7 @@ export class CommandRegistry {
    */
   private registerIndexVaultCommand(): void {
     this.plugin.addCommand({
-      id: INDEX_VAULT_COMMAND_ID,
+      id: "index-vault",
       name: "Index vault with Ollama embeddings",
       icon: "search",
       callback: async () => {
@@ -499,7 +489,7 @@ export class CommandRegistry {
    */
   private registerSearchVaultCommand(): void {
     this.plugin.addCommand({
-      id: SEARCH_VAULT_COMMAND_ID,
+      id: "search-vault",
       name: "Search vault with Ollama embeddings",
       icon: "search",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
