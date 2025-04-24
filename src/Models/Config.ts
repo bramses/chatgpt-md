@@ -14,6 +14,8 @@ import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 export interface ApiKeySettings {
   /** API Key for OpenAI */
   apiKey: string;
+  /** (Optional) ID of an OpenAI Assistant you’ve built */
+  assistantId: string;
   /** API Key for OpenRouter */
   openrouterApiKey: string;
 }
@@ -91,6 +93,7 @@ export interface ChatGPT_MDSettings
 export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   // API Keys
   apiKey: "",
+  assistantId: "",
   openrouterApiKey: "",
 
   // Service URLs
