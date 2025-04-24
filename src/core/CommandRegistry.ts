@@ -38,6 +38,7 @@ export class CommandRegistry {
   private aiService: IAiApiService | null = null;
   private statusBarItemEl: HTMLElement;
   private apiAuthService: ApiAuthService;
+  public availableModels: string[] = [];
 
   constructor(plugin: Plugin, serviceLocator: ServiceLocator, settingsService: SettingsService) {
     this.plugin = plugin;
@@ -168,26 +169,50 @@ export class CommandRegistry {
         const editorService = this.serviceLocator.getEditorService();
         const settings = this.settingsService.getSettings();
 
-        const aiModelSuggestModal = new AiModelSuggestModal(this.plugin.app, editor, editorService);
-        aiModelSuggestModal.open();
+        // --- Step 1: Open modal immediately with cached models ---
+        const initialModal = new AiModelSuggestModal(
+          this.plugin.app,
+          editor,
+          editorService,
+          this.availableModels // Use potentially stale but instantly available models
+        );
+        initialModal.open();
 
-        const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
-        this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
+        // --- Step 2: Fetch fresh models asynchronously ---
+        (async () => {
+          try {
+            const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
+            const openAiKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
+            const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
+            const currentUrls = this.getAiApiUrls(frontmatter);
 
-        try {
-          const openAiKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
-          const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
+            const freshModels = await this.fetchAvailableModels(currentUrls, openAiKey, openRouterKey);
 
-          const models = await this.fetchAvailableModels(this.getAiApiUrls(frontmatter), openAiKey, openRouterKey);
+            // --- Step 3: Compare and potentially update modal ---
+            // Basic comparison: Check if lengths differ or if sets of models differ
+            const currentModelsSet = new Set(this.availableModels);
+            const freshModelsSet = new Set(freshModels);
+            const areDifferent =
+              this.availableModels.length !== freshModels.length ||
+              ![...currentModelsSet].every((model) => freshModelsSet.has(model)) ||
+              ![...freshModelsSet].every((model) => currentModelsSet.has(model));
 
-          aiModelSuggestModal.close();
-          new AiModelSuggestModal(this.plugin.app, editor, editorService, models).open();
-        } catch (e) {
-          aiModelSuggestModal.close();
+            if (areDifferent && freshModels.length > 0) {
+              console.log("[ChatGPT MD] Models updated. Refreshing modal.");
+              this.availableModels = freshModels; // Update the stored models
 
-          new Notice("Could not find any models");
-          console.error(e);
-        }
+              // Close the initial modal and open a new one with fresh data
+              initialModal.close();
+              new AiModelSuggestModal(this.plugin.app, editor, editorService, this.availableModels).open();
+            }
+          } catch (e) {
+            // Don't close the initial modal here, as it might still be useful
+            // Just log the error for background fetching failure
+            console.error("[ChatGPT MD] Error fetching fresh models in background:", e);
+            // Optionally notify the user, but avoid being too intrusive
+            // new Notice("Could not refresh model list in background.");
+          }
+        })(); // Self-invoking async function to run in background
       },
     });
   }
@@ -368,9 +393,35 @@ export class CommandRegistry {
   }
 
   /**
+   * Initialize available models on plugin startup.
+   */
+  public async initializeAvailableModels(): Promise<void> {
+    console.log("[ChatGPT MD] Initializing available models...");
+    try {
+      const settings = this.settingsService.getSettings();
+      const openAiKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
+      const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
+      // Use default URLs for initialization, assuming frontmatter isn't available yet
+      const defaultUrls = {
+        [AI_SERVICE_OPENAI]: settings.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
+        [AI_SERVICE_OPENROUTER]: settings.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
+        [AI_SERVICE_OLLAMA]: settings.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
+      };
+
+      this.availableModels = await this.fetchAvailableModels(defaultUrls, openAiKey, openRouterKey);
+      console.log(`[ChatGPT MD] Found ${this.availableModels.length} available models.`);
+    } catch (error) {
+      console.error("[ChatGPT MD] Error initializing available models:", error);
+      // Optionally show a notice, but avoid blocking startup
+      // new Notice("Could not pre-fetch AI models. They will be fetched on demand.");
+      this.availableModels = []; // Ensure it's an empty array on error
+    }
+  }
+
+  /**
    * Fetch available models from all services
    */
-  private async fetchAvailableModels(
+  public async fetchAvailableModels(
     urls: { [key: string]: string },
     apiKey: string,
     openrouterApiKey: string
