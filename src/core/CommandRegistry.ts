@@ -23,6 +23,7 @@ import {
   NEWLINE,
   ROLE_USER,
   STOP_STREAMING_COMMAND_ID,
+  FETCH_MODELS_TIMEOUT_MS,
 } from "src/Constants";
 import { getHeadingPrefix, isTitleTimestampFormat } from "src/Utilities/TextHelpers";
 import { ApiAuthService } from "src/Services/ApiAuthService";
@@ -374,29 +375,44 @@ export class CommandRegistry {
     apiKey: string,
     openrouterApiKey: string
   ): Promise<string[]> {
+    function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+      return Promise.race([promise, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
+    }
+
     try {
       const apiAuthService = new ApiAuthService();
+      const promises: Promise<string[]>[] = [];
 
-      // Always fetch Ollama models as they don't require an API key
-      const ollamaModels = await fetchAvailableOllamaModels(urls[AI_SERVICE_OLLAMA]);
+      // Add Ollama promise (always fetched)
+      promises.push(withTimeout(fetchAvailableOllamaModels(urls[AI_SERVICE_OLLAMA]), FETCH_MODELS_TIMEOUT_MS, []));
 
-      // Only fetch OpenAI models if a valid API key exists
-      let openAiModels: string[] = [];
+      // Conditionally add OpenAI promise
       if (apiAuthService.isValidApiKey(apiKey)) {
-        openAiModels = await fetchAvailableOpenAiModels(urls[AI_SERVICE_OPENAI], apiKey);
+        promises.push(
+          withTimeout(fetchAvailableOpenAiModels(urls[AI_SERVICE_OPENAI], apiKey), FETCH_MODELS_TIMEOUT_MS, [])
+        );
       }
 
-      // Only fetch OpenRouter models if a valid API key exists
-      let openRouterModels: string[] = [];
+      // Conditionally add OpenRouter promise
       if (apiAuthService.isValidApiKey(openrouterApiKey)) {
-        openRouterModels = await fetchAvailableOpenRouterModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey);
+        promises.push(
+          withTimeout(
+            fetchAvailableOpenRouterModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey),
+            FETCH_MODELS_TIMEOUT_MS,
+            []
+          )
+        );
       }
 
-      return [...ollamaModels, ...openAiModels, ...openRouterModels];
+      // Fetch all models in parallel and flatten the results
+      const results = await Promise.all(promises);
+      return results.flat();
     } catch (error) {
-      new Notice("Error fetching models: " + error);
+      // Handle potential errors during fetch or Promise.all
+      new Notice("Error fetching models: " + (error instanceof Error ? error.message : String(error)));
       console.error("Error fetching models:", error);
-      throw error;
+      // Depending on desired behavior, you might return [] or rethrow
+      return []; // Return empty array on error to avoid breaking the modal
     }
   }
   /**

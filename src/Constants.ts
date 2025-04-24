@@ -66,3 +66,5 @@ stop: null
 stream: true
 temperature: 1
 ---`;
+
+export const FETCH_MODELS_TIMEOUT_MS = 6000;
