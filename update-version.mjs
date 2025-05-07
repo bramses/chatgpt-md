@@ -72,7 +72,8 @@ try {
 
 // Create git commit and tag
 try {
-  const filesToCommit = ["package.json", "manifest.json", "versions.json"];
+  // Only include manifest.json in the commit for non-beta versions
+  const filesToCommit = isBeta ? ["package.json", "versions.json"] : ["package.json", "manifest.json", "versions.json"];
 
   execSync(`git add ${filesToCommit.join(" ")}`);
   execSync(`git commit -m "Bump version to ${versionWithSuffix}${isBeta ? " (beta)" : ""}"`);
