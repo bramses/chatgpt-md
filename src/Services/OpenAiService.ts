@@ -1,13 +1,13 @@
 import { Editor } from "obsidian";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENAI } from "src/Constants";
+import { BaseAiService, IAiApiService, OpenAiModel } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { BaseAiService, IAiApiService, OpenAiModel } from "src/Services/AiService";
+import { ApiService } from "./ApiService";
+import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
+import { ApiResponseParser } from "./ApiResponseParser";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
-import { ApiService } from "./ApiService";
-import { ApiAuthService } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   aiService: AI_SERVICE_OPENAI,
@@ -30,7 +30,7 @@ export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) =>
   try {
     const apiAuthService = new ApiAuthService();
 
-    if (!apiAuthService.isValidApiKey(apiKey)) {
+    if (!isValidApiKey(apiKey)) {
       console.error("OpenAI API key is missing. Please add your OpenAI API key in the settings.");
       return [];
     }

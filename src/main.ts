@@ -22,7 +22,10 @@ export default class ChatGPT_MD extends Plugin {
     this.commandRegistry = new CommandRegistry(this, this.serviceLocator, settingsService);
     this.commandRegistry.registerCommands();
 
-    // Initialize available models after registry is created
-    await this.commandRegistry.initializeAvailableModels();
+    // Initialize available models after registry is created, but don't block startup
+    // Run model initialization in the background
+    this.commandRegistry.initializeAvailableModels().catch((error) => {
+      console.error("[ChatGPT MD] Error initializing models in background:", error);
+    });
   }
 }

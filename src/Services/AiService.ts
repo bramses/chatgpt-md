@@ -1,7 +1,7 @@
 import { Editor, MarkdownView } from "obsidian";
 import { Message } from "src/Models/Message";
 import { ApiService } from "./ApiService";
-import { ApiAuthService } from "./ApiAuthService";
+import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { EditorService } from "./EditorService";
 import {
@@ -339,7 +339,7 @@ export interface OllamaModel {
 /**
  * Determine the AI provider from a URL or model
  */
-export const aiProviderFromUrl = (url?: string, model?: string): string => {
+export const aiProviderFromUrl = (url?: string, model?: string): string | undefined => {
   // Check model first
   if (model?.includes(AI_SERVICE_OPENROUTER)) {
     return AI_SERVICE_OPENROUTER;
@@ -360,6 +360,24 @@ export const aiProviderFromUrl = (url?: string, model?: string): string => {
     return AI_SERVICE_OLLAMA;
   }
 
-  // Default to OpenAI
-  return AI_SERVICE_OPENAI;
+  // Return undefined if no provider can be determined
+  return undefined;
+};
+
+/**
+ * Determine AI provider based on available API keys
+ */
+export const aiProviderFromKeys = (config: Record<string, any>): string | null => {
+  const hasOpenRouterKey = isValidApiKey(config.openrouterApiKey);
+  const hasOpenAIKey = isValidApiKey(config.apiKey);
+
+  if (hasOpenAIKey && hasOpenRouterKey) {
+    return AI_SERVICE_OPENAI; // Default to OpenAI if both keys exist
+  } else if (hasOpenRouterKey) {
+    return AI_SERVICE_OPENROUTER;
+  } else if (hasOpenAIKey) {
+    return AI_SERVICE_OPENAI;
+  }
+
+  return null;
 };

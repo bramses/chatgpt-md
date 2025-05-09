@@ -4,7 +4,7 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
-import { aiProviderFromUrl } from "src/Services/AiService";
+import { aiProviderFromKeys, aiProviderFromUrl } from "src/Services/AiService";
 import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER, YAML_FRONTMATTER_REGEX } from "src/Constants";
 
 /**
@@ -32,7 +32,10 @@ export class FrontmatterService {
 
     // Determine AI service
     const aiService =
-      mergedConfig.aiService || aiProviderFromUrl(mergedConfig.url, mergedConfig.model) || AI_SERVICE_OPENAI;
+      mergedConfig.aiService ||
+      aiProviderFromUrl(mergedConfig.url, mergedConfig.model) ||
+      aiProviderFromKeys(mergedConfig) ||
+      AI_SERVICE_OPENAI;
 
     // Get default config for the determined service
     const serviceDefaults: Record<string, any> = {

@@ -3,11 +3,11 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENROUTER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { BaseAiService, IAiApiService, StreamingResponse } from "src/Services/AiService";
-import { ApiAuthService } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
-import { ApiService } from "./ApiService";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
+import { ApiService } from "./ApiService";
+import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
+import { ApiResponseParser } from "./ApiResponseParser";
 
 // Define a constant for OpenRouter service
 export interface OpenRouterModel {
@@ -71,7 +71,7 @@ export const fetchAvailableOpenRouterModels = async (url: string, apiKey: string
     const apiAuthService = new ApiAuthService();
 
     // Check if API key is empty or undefined
-    if (!apiAuthService.isValidApiKey(apiKey)) {
+    if (!isValidApiKey(apiKey)) {
       console.error("OpenRouter API key is missing. Please add your OpenRouter API key in the settings.");
       return [];
     }
