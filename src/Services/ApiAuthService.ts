@@ -3,6 +3,15 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { NotificationService } from "./NotificationService";
 
 /**
+ * Checks if an API key is valid (not empty or undefined)
+ * @param apiKey The API key to check
+ * @returns True if the API key is valid, false otherwise
+ */
+export function isValidApiKey(apiKey?: string): boolean {
+  return !!apiKey && apiKey.trim() !== "";
+}
+
+/**
  * ApiAuthService handles authentication for API requests
  * It centralizes API key management and validation
  */
@@ -11,15 +20,6 @@ export class ApiAuthService {
 
   constructor(notificationService?: NotificationService) {
     this.notificationService = notificationService || new NotificationService();
-  }
-
-  /**
-   * Checks if an API key is valid (not empty or undefined)
-   * @param apiKey The API key to check
-   * @returns True if the API key is valid, false otherwise
-   */
-  isValidApiKey(apiKey?: string): boolean {
-    return !!apiKey && apiKey.trim() !== "";
   }
 
   /**
@@ -53,7 +53,7 @@ export class ApiAuthService {
       return;
     }
 
-    if (!this.isValidApiKey(apiKey)) {
+    if (!isValidApiKey(apiKey)) {
       const errorMessage = `${serviceName} API key is missing or invalid. Please add your ${serviceName} API key in the settings.`;
       this.notificationService.showError(errorMessage);
       throw new Error(errorMessage);

@@ -17,16 +17,16 @@ import {
   CLEAR_CHAT_COMMAND_ID,
   COMMENT_BLOCK_END,
   COMMENT_BLOCK_START,
+  FETCH_MODELS_TIMEOUT_MS,
   INFER_TITLE_COMMAND_ID,
   MIN_AUTO_INFER_MESSAGES,
   MOVE_TO_CHAT_COMMAND_ID,
   NEWLINE,
   ROLE_USER,
   STOP_STREAMING_COMMAND_ID,
-  FETCH_MODELS_TIMEOUT_MS,
 } from "src/Constants";
 import { getHeadingPrefix, isTitleTimestampFormat } from "src/Utilities/TextHelpers";
-import { ApiAuthService } from "src/Services/ApiAuthService";
+import { ApiAuthService, isValidApiKey } from "../Services/ApiAuthService";
 
 /**
  * Registers and manages commands for the plugin
@@ -438,14 +438,14 @@ export class CommandRegistry {
       promises.push(withTimeout(fetchAvailableOllamaModels(urls[AI_SERVICE_OLLAMA]), FETCH_MODELS_TIMEOUT_MS, []));
 
       // Conditionally add OpenAI promise
-      if (apiAuthService.isValidApiKey(apiKey)) {
+      if (isValidApiKey(apiKey)) {
         promises.push(
           withTimeout(fetchAvailableOpenAiModels(urls[AI_SERVICE_OPENAI], apiKey), FETCH_MODELS_TIMEOUT_MS, [])
         );
       }
 
       // Conditionally add OpenRouter promise
-      if (apiAuthService.isValidApiKey(openrouterApiKey)) {
+      if (isValidApiKey(openrouterApiKey)) {
         promises.push(
           withTimeout(
             fetchAvailableOpenRouterModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey),
