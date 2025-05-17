@@ -22,7 +22,7 @@ data.json
 .env
 
 # Build output
-*.js
+main.js
 !esbuild.config.js
 !rollup.config.js
 !.eslintrc.js
