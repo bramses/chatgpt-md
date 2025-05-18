@@ -14,9 +14,7 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   frequency_penalty: 0,
   max_tokens: 300,
   model: "gpt-4",
-  n: 1,
   presence_penalty: 0,
-  stop: null,
   stream: true,
   system_commands: null,
   tags: [],
@@ -42,7 +40,19 @@ export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) =>
     const models = await apiService.makeGetRequest(`${url}/v1/models`, headers, AI_SERVICE_OPENAI);
 
     return models.data
-      .filter((model: OpenAiModel) => model.id.includes("gpt"))
+      .filter(
+        (model: OpenAiModel) =>
+          (model.id.includes("o3") ||
+            model.id.includes("o4") ||
+            model.id.includes("o1") ||
+            model.id.includes("gpt-4") ||
+            model.id.includes("gpt-3")) &&
+          !model.id.includes("audio") &&
+          !model.id.includes("transcribe") &&
+          !model.id.includes("realtime") &&
+          !model.id.includes("o1-pro") &&
+          !model.id.includes("tts")
+      )
       .sort((a: OpenAiModel, b: OpenAiModel) => {
         if (a.id < b.id) return 1;
         if (a.id > b.id) return -1;
@@ -102,18 +112,23 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
       console.log(`[ChatGPT MD] Added ${systemMessages.length} developer commands to messages`);
     }
 
-    return {
+    // Create base payload
+    const payload: OpenAIStreamPayload = {
       model: modelName,
       messages: processedMessages,
       max_completion_tokens: config.max_tokens,
-      temperature: config.temperature,
-      top_p: config.top_p,
-      presence_penalty: config.presence_penalty,
-      frequency_penalty: config.frequency_penalty,
       stream: config.stream,
-      stop: config.stop,
-      n: config.n,
     };
+
+    // Only include these parameters if the model name doesn't contain "search"
+    if (!modelName.includes("search")) {
+      payload.temperature = config.temperature;
+      payload.top_p = config.top_p;
+      payload.presence_penalty = config.presence_penalty;
+      payload.frequency_penalty = config.frequency_penalty;
+    }
+
+    return payload;
   }
 
   handleAPIError(err: any, config: OpenAIConfig, prefix: string): never {
@@ -217,12 +232,10 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
 export interface OpenAIStreamPayload {
   model: string;
   messages: Array<Message>;
-  temperature: number;
-  top_p: number;
-  presence_penalty: number;
-  frequency_penalty: number;
-  stop: string[] | null;
-  n: number;
+  temperature?: number;
+  top_p?: number;
+  presence_penalty?: number;
+  frequency_penalty?: number;
   max_completion_tokens: number;
   stream: boolean;
 }
@@ -232,9 +245,7 @@ export interface OpenAIConfig {
   frequency_penalty: number;
   max_tokens: number;
   model: string;
-  n: number;
   presence_penalty: number;
-  stop: string[] | null;
   stream: boolean;
   system_commands: string[] | null;
   tags: string[] | null;

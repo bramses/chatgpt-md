@@ -59,10 +59,8 @@ export const DEFAULT_CHAT_FRONT_MATTER = `---
 system_commands: ['I am a helpful assistant.']
 frequency_penalty: 0
 max_tokens: 300
-model: gpt-4o-mini
-n: 1
+model: gpt-4.1-mini
 presence_penalty: 0
-stop: null
 stream: true
 temperature: 1
 ---`;

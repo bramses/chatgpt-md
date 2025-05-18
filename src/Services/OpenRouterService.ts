@@ -27,7 +27,6 @@ export interface OpenRouterStreamPayload {
   top_p: number;
   presence_penalty: number;
   frequency_penalty: number;
-  stop: string[] | null;
   max_tokens: number;
   stream: boolean;
 }
@@ -39,7 +38,6 @@ export interface OpenRouterConfig {
   model: string;
   openrouterApiKey: string;
   presence_penalty: number;
-  stop: string[] | null;
   stream: boolean;
   system_commands: string[] | null;
   tags: string[] | null;
@@ -56,7 +54,6 @@ export const DEFAULT_OPENROUTER_CONFIG: OpenRouterConfig = {
   model: "anthropic/claude-3-opus:beta",
   openrouterApiKey: "",
   presence_penalty: 0.5,
-  stop: null,
   stream: true,
   system_commands: null,
   tags: [],
@@ -151,7 +148,6 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       presence_penalty: config.presence_penalty,
       frequency_penalty: config.frequency_penalty,
       stream: config.stream,
-      stop: config.stop,
     };
   }
 

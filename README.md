@@ -69,7 +69,7 @@ frequency_penalty: 0.5
 stream: true
 stop: null
 n: 1
-model: gpt-4o-mini
+model: gpt-4.1-mini
 
 # Service-specific URLs (optional, will use global settings if not specified)
 openaiUrl: https://api.openai.com
@@ -78,7 +78,7 @@ openaiUrl: https://api.openai.com
 ---
 ```
 💡 Pro tip: Increasing `max_tokens` to a higher value e.g. `4096` for more complex tasks like reasoning, coding or text creation.
-The default model `gpt-4o-mini` is a good compromise between fast and cheap responses. Change this if you have more complex needs.
+The default model `gpt-4.1-mini` is a good compromise between fast and cheap responses. Change this if you have more complex needs.
 
 ### Multi Model Chats
 You can set and change the model for each request in your note. 
