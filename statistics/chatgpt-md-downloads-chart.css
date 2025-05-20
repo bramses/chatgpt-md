@@ -1,0 +1,138 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}
+h1 {
+    text-align: center;
+    color: #333;
+    margin-top: 0;
+}
+.chart-container {
+    position: relative;
+    height: 60vh;
+    width: 100%;
+}
+.slider-container {
+    margin: 20px 0;
+    padding: 0 10px;
+}
+#time-slider {
+    height: 10px;
+    margin-top: 40px;
+}
+.time-display {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+}
+.version-list {
+    margin-top: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.version-tag {
+    border-radius: 16px;
+    padding: 5px 12px;
+    font-size: 14px;
+    color: white;
+}
+.stats {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-around;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+}
+.stat-box {
+    text-align: center;
+}
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #0066cc;
+}
+.stat-label {
+    font-size: 14px;
+    color: #6c757d;
+}
+.noUi-connect {
+    background: #0066cc;
+}
+.noUi-handle {
+    border-radius: 50%;
+    width: 20px !important;
+    height: 20px !important;
+    right: -10px !important;
+    top: -5px !important;
+    background: white;
+    border: 1px solid #0066cc;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+    cursor: grab;
+}
+.noUi-handle::before, .noUi-handle::after {
+    display: none;
+}
+.version-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 13px;
+}
+.version-table th {
+    background-color: #f8f9fa;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    color: #333;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
+}
+.version-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 13px;
+}
+.version-table tr:last-child td {
+    border-bottom: none;
+}
+.version-table tr:hover {
+    background-color: #f8f9fa;
+}
+.version-color {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+.version-name {
+    font-weight: 600;
+    vertical-align: middle;
+}
+.positive-change {
+    color: #28a745;
+}
+.table-container {
+    overflow-x: auto;
+    margin-top: 30px;
+}
+.num-cell {
+    text-align: right;
+}
