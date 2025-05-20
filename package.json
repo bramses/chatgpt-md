@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-md",
-  "version": "2.3.6-beta",
+  "version": "2.4.0",
   "description": "A seamless integration of openAIs GPT LLMs and Ollama into Obsidian.",
   "main": "main.js",
   "scripts": {
@@ -13,9 +13,9 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@codemirror/state": "^6.0.0",
-    "@codemirror/view": "^6.0.0",
-    "@types/node": "^22.15.18",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.36.8",
+    "@types/node": "^22.15.19",
     "@typescript-eslint/eslint-plugin": "8.32.1",
     "@typescript-eslint/parser": "8.32.1",
     "builtin-modules": "5.0.0",
