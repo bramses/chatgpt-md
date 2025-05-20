@@ -4,16 +4,14 @@
 
 ![Chatting with links about vacation plans](images/chat-with-link.gif)
 
-## What's New in v2.2.0 🚀
-- **Perplexity Source Citations**: Added support for source citations when using Perplexity models via OpenRouter.ai (openrouter@perplexity/llama-3.1-sonar-small-128k-online, openrouter@perplexity/llama-3.1-sonar-large-128k-online). Get web sources for your queries without needing a Perplexity Pro subscription - pay only for the tokens you use via OpenRouter.ai.
-- **Improved URL Configuration**: Each AI service now has its own dedicated URL parameter in settings and frontmatter:
-  - `openaiUrl` for OpenAI API
-  - `openrouterUrl` for OpenRouter.ai
-  - `ollamaUrl` for Ollama
-- **Enhanced Mobile Support**: Fixed Ollama streaming without CORS issues on mobile devices
-- **Improved System Commands**: Fixed missing system commands from notes' frontmatter
-- **Template Organization**: Templates are now ordered alphabetically in the template suggest modal
-- **Settings Migration**: Added automatic migration of service URLs for better consistency
+## What's New in v2.4.0 🚀
+- **🌐 GPT-4o Web Search Integration**: Experience the power of `gpt-4o-search-preview` - now your conversations can directly access and cite information from the web, bringing real-time knowledge into your notes
+- **Enhanced Model Support**: Added compatibility with OpenAI's latest models:
+  - **Reasoning Models**: Full support for o1, o3, and o4-mini models designed for complex reasoning tasks
+  - **Next-Gen GPT Models**: Access to gpt-4.1 (Flagship GPT model for complex tasks) and gpt-4.5 (Largest and most capable GPT model)
+- **Better Default Settings**: Upgraded from gpt-4o-mini to the more capable but still cost-effective gpt-4.1-mini
+- **Smart Parameter Handling**: Automatically omits breaking parameters when using search models
+- **Improved Model Filtering**: Better filtering of non-chat models from model selection lists
 
 ## A simple and quick Start 🏁
 Get started in just a few simple steps:
@@ -31,6 +29,8 @@ Start chatting, don't worry too much about the more advanced features. They will
   * Engage directly with ChatGPT, OpenRouter.ai models, and Ollama from any Markdown note, edit questions or responses on-the-fly, and continue the chat seamlessly.
 * **Privacy & Zero API Costs:** 
   * Use local LLMs via Ollama, keeping your chats on your computer and avoiding API costs.
+* **Web Access Models:**
+  * Get real-time information from the web with OpenAI's `gpt-4o-search-preview` and Perplexity's `openrouter@perplexity/llama-3.1-sonar-small-128k-online` (via openrouter.ai).
 * **Multiple AI Providers:**
   * Choose from OpenAI, OpenRouter.ai (with access to models like Gemini, Claude, DeepSeek, Llama, Perplexity), or local models via Ollama.
 * **System Commands:** 
@@ -69,7 +69,7 @@ frequency_penalty: 0.5
 stream: true
 stop: null
 n: 1
-model: gpt-4o-mini
+model: gpt-4.1-mini
 
 # Service-specific URLs (optional, will use global settings if not specified)
 openaiUrl: https://api.openai.com
@@ -78,7 +78,7 @@ openaiUrl: https://api.openai.com
 ---
 ```
 💡 Pro tip: Increasing `max_tokens` to a higher value e.g. `4096` for more complex tasks like reasoning, coding or text creation.
-The default model `gpt-4o-mini` is a good compromise between fast and cheap responses. Change this if you have more complex needs.
+The default model `gpt-4.1-mini` is a good compromise between fast and cheap responses. Change this if you have more complex needs.
 
 ### Multi Model Chats
 You can set and change the model for each request in your note. 
@@ -148,6 +148,18 @@ Run commands from Obsidian's command pallet via `cmd + p` or `ctrl + p` and star
 
 #### Formatting Tools
 - **Add Divider**: Insert horizontal rulers to organize content visually.
+
+## Beta Testing 🧪
+Want to try the latest features before they're officially released? You can beta test ChatGPT MD using the [BRAT (Beta Reviewer's Auto-update Tool)](https://github.com/TfTHacker/obsidian42-brat) community plugin:
+
+1. Install the BRAT plugin from Obsidian's Community Plugins
+2. Open BRAT settings and add `bramses/chatgpt-md` as a beta plugin
+3. Select "latest version" from the dropdown in the BRAT plugin settings
+4. Enable the ChatGPT MD plugin in your community plugins list
+
+This gives you early access to new features while they're still being developed and tested.
+
+⚠️ **WARNING**: Beta testing is dangerous and happens at your own risk. Always test beta versions on a new empty vault, not on your main vault. Beta features can break and possibly lead to data loss.
 
 ## FAQs ❓
 #### How do I start chatting with ChatGPT MD?
