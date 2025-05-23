@@ -1,4 +1,10 @@
-import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER, ROLE_ASSISTANT } from "src/Constants";
+import {
+  AI_SERVICE_LMSTUDIO,
+  AI_SERVICE_OLLAMA,
+  AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENROUTER,
+  ROLE_ASSISTANT,
+} from "src/Constants";
 import { Editor } from "obsidian";
 import { NotificationService } from "./NotificationService";
 import { getHeaderRole, unfinishedCodeBlock } from "src/Utilities/TextHelpers";
@@ -58,6 +64,8 @@ export class ApiResponseParser {
         return data.choices[0].message.content;
       case AI_SERVICE_OPENROUTER:
         return data.choices[0].message.content;
+      case AI_SERVICE_LMSTUDIO:
+        return data.choices[0].message.content;
       case AI_SERVICE_OLLAMA:
         // Check for Ollama's chat API format which has a message object with content
         if (data.message && data.message.content) {
@@ -96,6 +104,7 @@ export class ApiResponseParser {
     switch (serviceType) {
       case AI_SERVICE_OPENAI:
       case AI_SERVICE_OPENROUTER:
+      case AI_SERVICE_LMSTUDIO:
         return this.processOpenAIFormat(line, currentText, editor, initialCursor, setAtCursor);
       case AI_SERVICE_OLLAMA:
         return this.processOllamaFormat(line, currentText, editor, initialCursor, setAtCursor);

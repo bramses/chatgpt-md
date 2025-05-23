@@ -4,6 +4,7 @@ import { DEFAULT_CHAT_FRONT_MATTER, DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_U
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
+import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
 
 interface SettingDefinition {
   id: keyof ChatGPT_MDSettings;
@@ -75,6 +76,14 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         description: `URL for Ollama API\nDefault URL: ${DEFAULT_OLLAMA_CONFIG.url}`,
         type: "text",
         placeholder: DEFAULT_OLLAMA_CONFIG.url,
+        group: "Service URLs",
+      },
+      {
+        id: "lmstudioUrl",
+        name: "LM Studio API URL",
+        description: `URL for LM Studio API\nDefault URL: ${DEFAULT_LMSTUDIO_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_LMSTUDIO_CONFIG.url,
         group: "Service URLs",
       },
 

@@ -5,6 +5,7 @@ import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { EditorService } from "./EditorService";
 import {
+  AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
@@ -344,7 +345,14 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
   if (model?.includes(AI_SERVICE_OPENROUTER)) {
     return AI_SERVICE_OPENROUTER;
   }
+  if (model?.startsWith("lmstudio@")) {
+    return AI_SERVICE_LMSTUDIO;
+  }
   if (model?.includes("local")) {
+    // Check URL to distinguish between Ollama and LM Studio
+    if (url?.includes("1234")) {
+      return AI_SERVICE_LMSTUDIO;
+    }
     return AI_SERVICE_OLLAMA;
   }
 
@@ -352,9 +360,13 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
   // Define URL patterns
   const OPENROUTER_URL_PATTERN = "openrouter";
   const LOCAL_URL_PATTERNS = ["localhost", "127.0.0.1"];
+  const LMSTUDIO_URL_PATTERN = "1234"; // LM Studio default port
 
   if (url?.includes(OPENROUTER_URL_PATTERN)) {
     return AI_SERVICE_OPENROUTER;
+  }
+  if (url?.includes(LMSTUDIO_URL_PATTERN)) {
+    return AI_SERVICE_LMSTUDIO;
   }
   if (LOCAL_URL_PATTERNS.some((pattern) => url?.includes(pattern))) {
     return AI_SERVICE_OLLAMA;

@@ -7,6 +7,7 @@ import {
 } from "../Constants";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
+import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
 
 /**
  * API key settings
@@ -72,6 +73,8 @@ export interface ServiceUrlSettings {
   openrouterUrl: string;
   /** URL for Ollama API */
   ollamaUrl: string;
+  /** URL for LM Studio API */
+  lmstudioUrl: string;
 }
 
 /**
@@ -97,6 +100,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   openaiUrl: DEFAULT_OPENAI_CONFIG.url,
   openrouterUrl: DEFAULT_OPENROUTER_CONFIG.url,
   ollamaUrl: DEFAULT_OLLAMA_CONFIG.url,
+  lmstudioUrl: DEFAULT_LMSTUDIO_CONFIG.url,
 
   // Folders
   chatFolder: "ChatGPT_MD/chats",
