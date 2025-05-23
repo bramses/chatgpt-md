@@ -1,4 +1,4 @@
-import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
+import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER, AI_SERVICE_LMSTUDIO } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { NotificationService } from "./NotificationService";
 
@@ -36,6 +36,8 @@ export class ApiAuthService {
         return settings.openrouterApiKey;
       case AI_SERVICE_OLLAMA:
         return ""; // Ollama doesn't use an API key
+      case AI_SERVICE_LMSTUDIO:
+        return ""; // LM Studio doesn't use an API key
       default:
         return "";
     }
@@ -48,8 +50,8 @@ export class ApiAuthService {
    * @throws Error if the API key is invalid
    */
   validateApiKey(apiKey: string | undefined, serviceName: string): void {
-    // Skip validation for Ollama as it doesn't require an API key
-    if (serviceName === AI_SERVICE_OLLAMA) {
+    // Skip validation for Ollama and LM Studio as they don't require an API key
+    if (serviceName === AI_SERVICE_OLLAMA || serviceName === AI_SERVICE_LMSTUDIO) {
       return;
     }
 
@@ -82,6 +84,9 @@ export class ApiAuthService {
         break;
       case AI_SERVICE_OLLAMA:
         // Ollama doesn't require authentication headers
+        break;
+      case AI_SERVICE_LMSTUDIO:
+        // LM Studio doesn't require authentication headers
         break;
     }
 

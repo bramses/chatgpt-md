@@ -6,12 +6,14 @@ import { AiModelSuggestModal } from "src/Views/AiModelSuggestModel";
 import { DEFAULT_OPENAI_CONFIG, fetchAvailableOpenAiModels } from "src/Services/OpenAiService";
 import { DEFAULT_OLLAMA_CONFIG, fetchAvailableOllamaModels } from "src/Services/OllamaService";
 import { DEFAULT_OPENROUTER_CONFIG, fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
+import { DEFAULT_LMSTUDIO_CONFIG, fetchAvailableLmStudioModels } from "src/Services/LmStudioService";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_LMSTUDIO,
   CALL_CHATGPT_API_COMMAND_ID,
   CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
   CLEAR_CHAT_COMMAND_ID,
@@ -135,6 +137,8 @@ export class CommandRegistry {
                 settingsWithApiKey.model = "llama2";
               } else if (frontmatter.aiService === AI_SERVICE_OPENROUTER) {
                 settingsWithApiKey.model = "anthropic/claude-3-opus:beta";
+              } else if (frontmatter.aiService === AI_SERVICE_LMSTUDIO) {
+                settingsWithApiKey.model = "local-model";
               }
             }
 
@@ -184,7 +188,15 @@ export class CommandRegistry {
             const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
             const openAiKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
             const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
-            const currentUrls = this.getAiApiUrls(frontmatter);
+
+            // Use the same URL structure as initializeAvailableModels
+            const currentUrls = {
+              [AI_SERVICE_OPENAI]: frontmatter.openaiUrl || settings.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
+              [AI_SERVICE_OPENROUTER]:
+                frontmatter.openrouterUrl || settings.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
+              [AI_SERVICE_OLLAMA]: frontmatter.ollamaUrl || settings.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
+              [AI_SERVICE_LMSTUDIO]: frontmatter.lmstudioUrl || settings.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
+            };
 
             const freshModels = await this.fetchAvailableModels(currentUrls, openAiKey, openRouterKey);
 
@@ -389,6 +401,7 @@ export class CommandRegistry {
       openai: frontmatter.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
       openrouter: frontmatter.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
       ollama: frontmatter.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
+      lmstudio: frontmatter.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
     };
   }
 
@@ -406,6 +419,7 @@ export class CommandRegistry {
         [AI_SERVICE_OPENAI]: settings.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
         [AI_SERVICE_OPENROUTER]: settings.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
         [AI_SERVICE_OLLAMA]: settings.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
+        [AI_SERVICE_LMSTUDIO]: settings.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
       };
 
       this.availableModels = await this.fetchAvailableModels(defaultUrls, openAiKey, openRouterKey);
@@ -436,6 +450,9 @@ export class CommandRegistry {
 
       // Add Ollama promise (always fetched)
       promises.push(withTimeout(fetchAvailableOllamaModels(urls[AI_SERVICE_OLLAMA]), FETCH_MODELS_TIMEOUT_MS, []));
+
+      // Add LM Studio promise (always fetched, no API key required)
+      promises.push(withTimeout(fetchAvailableLmStudioModels(urls[AI_SERVICE_LMSTUDIO]), FETCH_MODELS_TIMEOUT_MS, []));
 
       // Conditionally add OpenAI promise
       if (isValidApiKey(apiKey)) {

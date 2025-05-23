@@ -4,8 +4,15 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
+import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
 import { aiProviderFromKeys, aiProviderFromUrl } from "src/Services/AiService";
-import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER, YAML_FRONTMATTER_REGEX } from "src/Constants";
+import {
+  AI_SERVICE_OLLAMA,
+  AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENROUTER,
+  AI_SERVICE_LMSTUDIO,
+  YAML_FRONTMATTER_REGEX,
+} from "src/Constants";
 
 /**
  * Service responsible for frontmatter parsing and generation
@@ -42,6 +49,7 @@ export class FrontmatterService {
       [AI_SERVICE_OPENAI]: DEFAULT_OPENAI_CONFIG,
       [AI_SERVICE_OLLAMA]: DEFAULT_OLLAMA_CONFIG,
       [AI_SERVICE_OPENROUTER]: DEFAULT_OPENROUTER_CONFIG,
+      [AI_SERVICE_LMSTUDIO]: DEFAULT_LMSTUDIO_CONFIG,
     };
     const defaultConfig = serviceDefaults[aiService] || DEFAULT_OPENAI_CONFIG;
 
@@ -169,6 +177,18 @@ export class FrontmatterService {
           max_tokens: DEFAULT_OPENROUTER_CONFIG.max_tokens,
           presence_penalty: DEFAULT_OPENROUTER_CONFIG.presence_penalty,
           frequency_penalty: DEFAULT_OPENROUTER_CONFIG.frequency_penalty,
+        };
+        break;
+      case AI_SERVICE_LMSTUDIO:
+        frontmatterObj = {
+          ...frontmatterObj,
+          model: DEFAULT_LMSTUDIO_CONFIG.model,
+          url: DEFAULT_LMSTUDIO_CONFIG.url,
+          temperature: DEFAULT_LMSTUDIO_CONFIG.temperature,
+          top_p: DEFAULT_LMSTUDIO_CONFIG.top_p,
+          max_tokens: DEFAULT_LMSTUDIO_CONFIG.max_tokens,
+          presence_penalty: DEFAULT_LMSTUDIO_CONFIG.presence_penalty,
+          frequency_penalty: DEFAULT_LMSTUDIO_CONFIG.frequency_penalty,
         };
         break;
     }
