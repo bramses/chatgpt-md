@@ -7,10 +7,10 @@ import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
 import { aiProviderFromKeys, aiProviderFromUrl } from "src/Services/AiService";
 import {
+  AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
-  AI_SERVICE_LMSTUDIO,
   YAML_FRONTMATTER_REGEX,
 } from "src/Constants";
 

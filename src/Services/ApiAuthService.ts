@@ -1,4 +1,4 @@
-import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER, AI_SERVICE_LMSTUDIO } from "src/Constants";
+import { AI_SERVICE_LMSTUDIO, AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { NotificationService } from "./NotificationService";
 

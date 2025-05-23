@@ -15,7 +15,7 @@ import { OpenAiService } from "src/Services/OpenAiService";
 import { OllamaService } from "src/Services/OllamaService";
 import { OpenRouterService } from "src/Services/OpenRouterService";
 import { LmStudioService } from "src/Services/LmStudioService";
-import { AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER, AI_SERVICE_LMSTUDIO } from "src/Constants";
+import { AI_SERVICE_LMSTUDIO, AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
 import { SettingsService } from "src/Services/SettingsService";
 
 /**

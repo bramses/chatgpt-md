@@ -5,13 +5,13 @@ import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { EditorService } from "./EditorService";
 import {
+  AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
   API_ENDPOINTS,
   NEWLINE,
   ROLE_USER,
-  AI_SERVICE_LMSTUDIO,
 } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ErrorService } from "./ErrorService";
