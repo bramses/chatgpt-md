@@ -246,7 +246,7 @@ for (let i = 1; i < downloadCounts.length; i++) {
   const downloadDifference = downloadCounts[i] - downloadCounts[i - 1];
   const rate = daysDifference > 0 ? downloadDifference / daysDifference : 0;
   derivativeData.push({
-    x: dataPoints[i].date.toISOString(),
+    x: dataPoints[i - 1].date.toISOString(), // Use the previous day's date since this is the rate FROM that day
     y: Math.round(rate), // Round to integer
   });
 }
@@ -298,17 +298,26 @@ const versionDatasets = [];
 
 // First create an "Initial" dataset for data before the first version
 if (firstVersionIdx > 0) {
+  // Create point colors array for the initial dataset
+  const initialPointColors = Array(firstVersionIdx + 1).fill(versionColors[0]);
+  // Make the last point (which will overlap with first version) transparent so the next version's color shows
+  if (firstVersionIdx < dates.length - 1) {
+    initialPointColors[firstVersionIdx] = "transparent";
+  }
+
   versionDatasets.push({
     label: "Initial",
     data: downloadCounts
-      .slice(0, firstVersionIdx)
-      .concat(Array(dates.length - firstVersionIdx).fill(null)),
+      .slice(0, firstVersionIdx + 1) // Include one extra point to connect with first version
+      .concat(Array(dates.length - firstVersionIdx - 1).fill(null)),
     borderColor: versionColors[0],
     backgroundColor: `${versionColors[0]}22`,
     borderWidth: 3,
     pointRadius: 1,
     pointHoverRadius: 4,
-    pointBackgroundColor: versionColors[0],
+    pointBackgroundColor: initialPointColors.concat(
+      Array(dates.length - firstVersionIdx - 1).fill("transparent"),
+    ),
     fill: true,
     tension: 0.1,
     yAxisID: "y",
@@ -319,6 +328,7 @@ if (firstVersionIdx > 0) {
 for (let i = 0; i < versionReleases.length; i++) {
   const currentVersion = versionReleases[i];
   const currentIdx = currentVersion.index;
+  const currentColor = versionColors[i + (firstVersionIdx > 0 ? 1 : 0)];
 
   // Find the next data point where a different version appears
   let nextIdx = dates.length; // default to end of data
@@ -333,19 +343,44 @@ for (let i = 0; i < versionReleases.length; i++) {
     }
   }
 
+  // Include one extra data point at the end to ensure continuity (except for the last version)
+  const endIdx =
+    i < versionReleases.length - 1 && nextIdx < dates.length
+      ? nextIdx + 1
+      : nextIdx;
+
+  // Create point colors array for this version
+  const dataLength = endIdx - currentIdx;
+  const pointColors = Array(dates.length).fill("transparent");
+
+  // Fill the relevant range with the current version's color
+  for (let j = currentIdx; j < endIdx; j++) {
+    pointColors[j] = currentColor;
+  }
+
+  // If this is not the last version and we have an overlapping point,
+  // make the last point transparent so the next version's color shows
+  if (
+    i < versionReleases.length - 1 &&
+    endIdx > currentIdx &&
+    endIdx <= dates.length
+  ) {
+    pointColors[endIdx - 1] = "transparent";
+  }
+
   // Create a dataset for this version
   versionDatasets.push({
     label: `v${currentVersion.version}`,
     data: Array(currentIdx)
       .fill(null)
-      .concat(downloadCounts.slice(currentIdx, nextIdx))
-      .concat(Array(dates.length - nextIdx).fill(null)),
-    borderColor: versionColors[i + (firstVersionIdx > 0 ? 1 : 0)],
-    backgroundColor: `${versionColors[i + (firstVersionIdx > 0 ? 1 : 0)]}22`,
+      .concat(downloadCounts.slice(currentIdx, endIdx))
+      .concat(Array(dates.length - endIdx).fill(null)),
+    borderColor: currentColor,
+    backgroundColor: `${currentColor}22`,
     borderWidth: 3,
     pointRadius: 1,
     pointHoverRadius: 4,
-    pointBackgroundColor: versionColors[i + (firstVersionIdx > 0 ? 1 : 0)],
+    pointBackgroundColor: pointColors,
     fill: true,
     tension: 0.1,
     yAxisID: "y",
