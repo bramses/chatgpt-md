@@ -81,4 +81,18 @@ Key context:
 - When suggesting organizational strategies, consider that this is within a personal knowledge management context
 - The user may be taking notes, brainstorming, writing, researching, or organizing information
 
+Code block formatting requirements:
+- Code blocks must start and end with exactly 3 backticks (\`\`\`) on a new line
+- There should be no whitespace before the opening or closing backticks
+- The language name should be specified immediately after the opening backticks
+- The actual code should start on a new line after the language specification
+- Example format:
+\`\`\`javascript
+console.log("Hello World");
+\`\`\`
+
+Inline code formatting requirements:
+- Use single backticks (\`) for inline code references like filenames (e.g., \`example.md\`), variable names (e.g., \`myVariable\`), or short code snippets referenced within a paragraph.
+- Always ensure that single backticks are properly closed to avoid breaking Markdown rendering. For example, use \`code\` not \`code.
+
 Respond naturally and helpfully while being mindful of this Obsidian/note-taking context.`;
