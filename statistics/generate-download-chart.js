@@ -637,7 +637,6 @@ const htmlContent = `<!DOCTYPE html>
                         <th>Version</th>
                         <th>Release Date</th>
                         <th class="num-cell">Downloads at Release</th>
-                        <th class="num-cell">Downloads at End</th>
                         <th class="num-cell">Download Change</th>
                         <th class="num-cell">Duration (Days)</th>
                         <th class="num-cell">Avg Daily Growth</th>
@@ -660,7 +659,6 @@ const htmlContent = `<!DOCTYPE html>
                           day: "numeric",
                         })}</td>
                         <td class="num-cell">${v.downloads.toLocaleString()}</td>
-                        <td class="num-cell">${v.endDownloads.toLocaleString()}</td>
                         <td class="num-cell ${
                           v.downloadChange > 0 ? "positive-change" : ""
                         }">${

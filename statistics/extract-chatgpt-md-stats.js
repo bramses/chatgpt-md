@@ -61,6 +61,12 @@ for (const commit of commits) {
       // Skip non-version keys
       if (key === "downloads" || key === "updated") continue;
 
+      // Skip beta releases (versions ending with "-beta")
+      if (key.endsWith("-beta")) {
+        console.log(`Skipping beta version: ${key}`);
+        continue;
+      }
+
       // Add version info
       dataPoint.versions[key] = pluginData[key];
     }
