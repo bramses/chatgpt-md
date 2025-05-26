@@ -127,7 +127,9 @@ export class ApiResponseParser {
     if (line.trim() === "") return currentText;
 
     try {
-      const json = JSON.parse(line.replace("data: ", ""));
+      // Robustly extract JSON payload from SSE data line
+      const payloadString = line.substring("data:".length).trimStart();
+      const json = JSON.parse(payloadString);
 
       // Collect citations if they exist in this chunk
       if (json.citations && json.citations.length > 0) {
