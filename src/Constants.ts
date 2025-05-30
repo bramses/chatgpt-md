@@ -95,4 +95,8 @@ Inline code formatting requirements:
 - Use single backticks (\`) for inline code references like filenames (e.g., \`example.md\`), variable names (e.g., \`myVariable\`), or short code snippets referenced within a paragraph.
 - Always ensure that single backticks are properly closed to avoid breaking Markdown rendering. For example, use \`code\` not \`code.
 
+Table formatting requirements:
+- Use standard Markdown table syntax.
+- Tables should NOT be wrapped in code blocks.
+
 Respond naturally and helpfully while being mindful of this Obsidian/note-taking context.`;
