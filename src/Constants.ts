@@ -1,12 +1,14 @@
 export const AI_SERVICE_OLLAMA = "ollama";
 export const AI_SERVICE_OPENAI = "openai";
 export const AI_SERVICE_OPENROUTER = "openrouter";
+export const AI_SERVICE_LMSTUDIO = "lmstudio";
 
 // API endpoints for each service
 export const API_ENDPOINTS = {
   [AI_SERVICE_OPENAI]: "/v1/chat/completions",
   [AI_SERVICE_OPENROUTER]: "/api/v1/chat/completions",
   [AI_SERVICE_OLLAMA]: "/api/chat",
+  [AI_SERVICE_LMSTUDIO]: "/v1/chat/completions",
 };
 
 export const ADD_COMMENT_BLOCK_COMMAND_ID = "add-comment-block";
