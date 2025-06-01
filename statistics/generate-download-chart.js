@@ -83,11 +83,7 @@ dataPoints.forEach((point, index) => {
       processedVersions.add(version);
 
       // Log found versions for debugging
-      console.log(
-        `Found version ${version} at index ${index} (${
-          point.date.toISOString().split("T")[0]
-        })`,
-      );
+      console.log(`Found version ${version} at index ${index} (${point.date.toISOString().split("T")[0]})`);
 
       versionReleases.push({
         version,
@@ -163,7 +159,7 @@ for (let i = 0; i < versionReleases.length; i++) {
 
       // Log this special case
       console.log(
-        `Version ${currentVersion.version} appears on the same date as the next version ${nextVersion.version}, setting zero duration and impact.`,
+        `Version ${currentVersion.version} appears on the same date as the next version ${nextVersion.version}, setting zero duration and impact.`
       );
 
       // Skip to the next version
@@ -174,21 +170,13 @@ for (let i = 0; i < versionReleases.length; i++) {
   // Regular case: calculate metrics
   const startDownloads = currentVersion.downloads;
   const endDownloads =
-    nextIdx < downloadCounts.length
-      ? downloadCounts[nextIdx - 1]
-      : downloadCounts[downloadCounts.length - 1];
+    nextIdx < downloadCounts.length ? downloadCounts[nextIdx - 1] : downloadCounts[downloadCounts.length - 1];
   const downloadChange = endDownloads - startDownloads;
 
   // Calculate duration in days
   const startDate = dataPoints[currentIdx].date;
-  const endDate =
-    nextIdx < dataPoints.length
-      ? dataPoints[nextIdx - 1].date
-      : dataPoints[dataPoints.length - 1].date;
-  const durationDays = Math.max(
-    1,
-    Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)),
-  );
+  const endDate = nextIdx < dataPoints.length ? dataPoints[nextIdx - 1].date : dataPoints[dataPoints.length - 1].date;
+  const durationDays = Math.max(1, Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)));
 
   // Calculate average daily growth
   const avgDailyGrowth = Math.round(downloadChange / durationDays);
@@ -207,8 +195,7 @@ versionReleases.forEach((release, index) => {
 });
 
 // Use index of the first version release in the sorted data
-const firstVersionIdx =
-  versionReleases.length > 0 ? versionReleases[0].index : 0;
+const firstVersionIdx = versionReleases.length > 0 ? versionReleases[0].index : 0;
 
 // Generate unique colors for each version
 function generateColors(count) {
@@ -241,8 +228,7 @@ const derivativeData = [];
 
 // Calculate rate of change (downloads per day)
 for (let i = 1; i < downloadCounts.length; i++) {
-  const daysDifference =
-    (dataPoints[i].date - dataPoints[i - 1].date) / (1000 * 60 * 60 * 24); // Convert ms to days
+  const daysDifference = (dataPoints[i].date - dataPoints[i - 1].date) / (1000 * 60 * 60 * 24); // Convert ms to days
   const downloadDifference = downloadCounts[i] - downloadCounts[i - 1];
   const rate = daysDifference > 0 ? downloadDifference / daysDifference : 0;
   derivativeData.push({
@@ -258,9 +244,7 @@ const windowSize7Day = 7; // 7-day window
 for (let i = 0; i < derivativeData.length; i++) {
   // Calculate the start index for the window (max of 0 or i - windowSize + 1)
   const startIdx = Math.max(0, i - windowSize7Day + 1);
-  const windowValues = derivativeData
-    .slice(startIdx, i + 1)
-    .map((item) => item.y);
+  const windowValues = derivativeData.slice(startIdx, i + 1).map((item) => item.y);
 
   // Calculate the average of values in the window
   const sum = windowValues.reduce((acc, val) => acc + val, 0);
@@ -279,9 +263,7 @@ const windowSize30Day = 30; // 30-day window
 for (let i = 0; i < derivativeData.length; i++) {
   // Calculate the start index for the window (max of 0 or i - windowSize + 1)
   const startIdx = Math.max(0, i - windowSize30Day + 1);
-  const windowValues = derivativeData
-    .slice(startIdx, i + 1)
-    .map((item) => item.y);
+  const windowValues = derivativeData.slice(startIdx, i + 1).map((item) => item.y);
 
   // Calculate the average of values in the window
   const sum = windowValues.reduce((acc, val) => acc + val, 0);
@@ -315,9 +297,7 @@ if (firstVersionIdx > 0) {
     borderWidth: 3,
     pointRadius: 1,
     pointHoverRadius: 4,
-    pointBackgroundColor: initialPointColors.concat(
-      Array(dates.length - firstVersionIdx - 1).fill("transparent"),
-    ),
+    pointBackgroundColor: initialPointColors.concat(Array(dates.length - firstVersionIdx - 1).fill("transparent")),
     fill: true,
     tension: 0.1,
     yAxisID: "y",
@@ -344,10 +324,7 @@ for (let i = 0; i < versionReleases.length; i++) {
   }
 
   // Include one extra data point at the end to ensure continuity (except for the last version)
-  const endIdx =
-    i < versionReleases.length - 1 && nextIdx < dates.length
-      ? nextIdx + 1
-      : nextIdx;
+  const endIdx = i < versionReleases.length - 1 && nextIdx < dates.length ? nextIdx + 1 : nextIdx;
 
   // Create point colors array for this version
   const dataLength = endIdx - currentIdx;
@@ -360,11 +337,7 @@ for (let i = 0; i < versionReleases.length; i++) {
 
   // If this is not the last version and we have an overlapping point,
   // make the last point transparent so the next version's color shows
-  if (
-    i < versionReleases.length - 1 &&
-    endIdx > currentIdx &&
-    endIdx <= dates.length
-  ) {
+  if (i < versionReleases.length - 1 && endIdx > currentIdx && endIdx <= dates.length) {
     pointColors[endIdx - 1] = "transparent";
   }
 
@@ -603,17 +576,13 @@ const htmlContent = `<!DOCTYPE html>
                 <div class="stat-label">Versions Released</div>
             </div>
             <div class="stat-box">
-                <div class="stat-value">${downloadCounts[
-                  downloadCounts.length - 1
-                ].toLocaleString()}</div>
+                <div class="stat-value">${downloadCounts[downloadCounts.length - 1].toLocaleString()}</div>
                 <div class="stat-label">Latest Downloads</div>
             </div>
             <div class="stat-box">
-                <div class="stat-value">${new Date(
-                  dataPoints[0].date,
-                ).toLocaleDateString()} - ${new Date(
-  dataPoints[dataPoints.length - 1].date,
-).toLocaleDateString()}</div>
+                <div class="stat-value">${new Date(dataPoints[0].date).toLocaleDateString()} - ${new Date(
+                  dataPoints[dataPoints.length - 1].date
+                ).toLocaleDateString()}</div>
                 <div class="stat-label">Date Range</div>
             </div>
         </div>
@@ -659,18 +628,14 @@ const htmlContent = `<!DOCTYPE html>
                           day: "numeric",
                         })}</td>
                         <td class="num-cell">${v.downloads.toLocaleString()}</td>
-                        <td class="num-cell ${
-                          v.downloadChange > 0 ? "positive-change" : ""
-                        }">${
+                        <td class="num-cell ${v.downloadChange > 0 ? "positive-change" : ""}">${
                           v.downloadChange > 0 ? "+" : ""
                         }${v.downloadChange.toLocaleString()}</td>
                         <td class="num-cell">${v.durationDays}</td>
-                        <td class="num-cell ${
-                          v.avgDailyGrowth > 0 ? "positive-change" : ""
-                        }">${
+                        <td class="num-cell ${v.avgDailyGrowth > 0 ? "positive-change" : ""}">${
                           v.avgDailyGrowth > 0 ? "+" : ""
                         }${v.avgDailyGrowth.toLocaleString()}</td>
-                    </tr>`,
+                    </tr>`
                       )
                       .join("")}
                 </tbody>

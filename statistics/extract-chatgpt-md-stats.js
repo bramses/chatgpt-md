@@ -37,9 +37,7 @@ for (const commit of commits) {
 
     // Check if the plugin exists in this version of the file
     if (!statsData[pluginName]) {
-      console.log(
-        `Plugin "${pluginName}" not found in commit ${commit.hash}. Stopping.`,
-      );
+      console.log(`Plugin "${pluginName}" not found in commit ${commit.hash}. Stopping.`);
       break;
     }
 
@@ -73,9 +71,7 @@ for (const commit of commits) {
 
     rawData.push(dataPoint);
     console.log(
-      `Collected data from ${date}: ${downloads} downloads with ${
-        Object.keys(dataPoint.versions).length
-      } versions`,
+      `Collected data from ${date}: ${downloads} downloads with ${Object.keys(dataPoint.versions).length} versions`
     );
   } catch (error) {
     console.error(`Error processing commit ${commit.hash}: ${error.message}`);
@@ -101,7 +97,7 @@ for (let i = 0; i < rawData.length; i++) {
     if (current.downloads > prev.downloads) {
       console.log(
         `Anomaly detected: ${current.date} (${current.hash.substring(0, 8)}) ` +
-          `has ${current.downloads} downloads which is > previous ${prev.downloads}`,
+          `has ${current.downloads} downloads which is > previous ${prev.downloads}`
       );
       isValid = false;
     }
@@ -113,7 +109,7 @@ for (let i = 0; i < rawData.length; i++) {
     if (current.downloads < next.downloads) {
       console.log(
         `Anomaly detected: ${current.date} (${current.hash.substring(0, 8)}) ` +
-          `has ${current.downloads} downloads which is < next ${next.downloads}`,
+          `has ${current.downloads} downloads which is < next ${next.downloads}`
       );
       isValid = false;
     }
