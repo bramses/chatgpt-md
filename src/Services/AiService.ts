@@ -11,6 +11,8 @@ import {
   AI_SERVICE_OPENROUTER,
   API_ENDPOINTS,
   NEWLINE,
+  PLUGIN_SYSTEM_MESSAGE,
+  ROLE_SYSTEM,
   ROLE_USER,
 } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
@@ -240,7 +242,8 @@ export abstract class BaseAiService implements IAiApiService {
 
       try {
         // Use a separate try/catch block for the API call to handle errors without returning them to the chat
-        return await this.callNonStreamingAPI(apiKey, [{ role: ROLE_USER, content: prompt }], config);
+        // For title inference, we call the API directly without the plugin system message
+        return await this.callNonStreamingAPIForTitleInference(apiKey, [{ role: ROLE_USER, content: prompt }], config);
       } catch (apiError) {
         // Log the error but don't return it to the chat
         console.error(`[ChatGPT MD] Error calling API for title inference:`, apiError);
@@ -252,6 +255,32 @@ export abstract class BaseAiService implements IAiApiService {
       return "";
     }
   };
+
+  /**
+   * Call non-streaming API specifically for title inference (without plugin system message)
+   */
+  protected async callNonStreamingAPIForTitleInference(
+    apiKey: string | undefined,
+    messages: Message[],
+    config: Record<string, any>
+  ): Promise<any> {
+    try {
+      config.stream = false;
+      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, true); // Skip plugin system message
+
+      const response = await this.apiService.makeNonStreamingRequest(
+        this.getApiEndpoint(config),
+        payload,
+        headers,
+        this.serviceType
+      );
+
+      // Return simple object with response and model
+      return response;
+    } catch (err) {
+      throw err; // Re-throw for title inference error handling
+    }
+  }
 
   /**
    * Stop streaming
@@ -286,14 +315,36 @@ export abstract class BaseAiService implements IAiApiService {
   }
 
   /**
+   * Add plugin system message to messages array
+   * This ensures the LLM understands the Obsidian context
+   */
+  protected addPluginSystemMessage(messages: Message[]): Message[] {
+    const pluginSystemMessage: Message = {
+      role: ROLE_SYSTEM,
+      content: PLUGIN_SYSTEM_MESSAGE,
+    };
+
+    // Add the plugin system message at the beginning
+    return [pluginSystemMessage, ...messages];
+  }
+
+  /**
    * Prepare API call with common setup
    */
-  protected prepareApiCall(apiKey: string | undefined, messages: Message[], config: Record<string, any>) {
+  protected prepareApiCall(
+    apiKey: string | undefined,
+    messages: Message[],
+    config: Record<string, any>,
+    skipPluginSystemMessage: boolean = false
+  ) {
     // Validate API key
     this.apiAuthService.validateApiKey(apiKey, this.serviceType);
 
+    // Add plugin system message to help LLM understand context (unless skipped)
+    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages);
+
     // Create payload and headers
-    const payload = this.createPayload(config, messages);
+    const payload = this.createPayload(config, finalMessages);
     const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.serviceType);
 
     return { payload, headers };

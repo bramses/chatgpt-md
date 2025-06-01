@@ -1,6 +1,6 @@
 import { Editor } from "obsidian";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_OPENAI } from "src/Constants";
+import { AI_SERVICE_OPENAI, PLUGIN_SYSTEM_MESSAGE, ROLE_DEVELOPER } from "src/Constants";
 import { BaseAiService, IAiApiService, OpenAiModel } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ApiService } from "./ApiService";
@@ -104,7 +104,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     if (config.system_commands && config.system_commands.length > 0) {
       // Add system commands to the beginning of the messages
       const systemMessages = config.system_commands.map((command) => ({
-        role: "developer",
+        role: ROLE_DEVELOPER,
         content: command,
       }));
 
@@ -226,6 +226,20 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
 
   protected showNoTitleInferredNotification(): void {
     this.notificationService.showWarning("Could not infer title. The file name was not changed.");
+  }
+
+  /**
+   * Override addPluginSystemMessage to use "developer" role for OpenAI
+   * This ensures the LLM understands the Obsidian context with the correct role
+   */
+  protected addPluginSystemMessage(messages: Message[]): Message[] {
+    const pluginSystemMessage: Message = {
+      role: ROLE_DEVELOPER,
+      content: PLUGIN_SYSTEM_MESSAGE,
+    };
+
+    // Add the plugin system message at the beginning
+    return [pluginSystemMessage, ...messages];
   }
 }
 

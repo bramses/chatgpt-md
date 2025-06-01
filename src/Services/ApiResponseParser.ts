@@ -16,7 +16,12 @@ import { ApiService } from "./ApiService";
  */
 export class ApiResponseParser {
   private notificationService: NotificationService;
-  private collectedCitations: Set<string> = new Set(); // Store citations as they come in
+  private collectedCitations: Set<string> = new Set();
+
+  // Table buffering properties
+  private tableBuffer: string = "";
+  private isInTable: boolean = false;
+  private tableStartPosition: { line: number; ch: number } | null = null;
 
   constructor(notificationService?: NotificationService) {
     this.notificationService = notificationService || new NotificationService();
@@ -127,16 +132,15 @@ export class ApiResponseParser {
     if (line.trim() === "") return currentText;
 
     try {
-      const json = JSON.parse(line.replace("data: ", ""));
+      // Robustly extract JSON payload from SSE data line
+      const payloadString = line.substring("data:".length).trimStart();
+      const json = JSON.parse(payloadString);
 
       // Collect citations if they exist in this chunk
       if (json.citations && json.citations.length > 0) {
-        console.log("Found citations in chunk:", json.citations);
         for (const citation of json.citations) {
           this.collectedCitations.add(citation);
-          console.log("Added citation to set:", citation);
         }
-        console.log("Current citations set size:", this.collectedCitations.size);
       }
 
       if (json.choices && json.choices[0]) {
@@ -144,22 +148,8 @@ export class ApiResponseParser {
 
         // Handle content in delta if it exists
         if (delta && delta.content) {
-          // Only update the editor with the new delta content, not the full text
-          if (setAtCursor) {
-            editor.replaceSelection(delta.content);
-          } else {
-            // Insert just the new content at the current cursor position
-            const cursor = editor.getCursor();
-            editor.replaceRange(delta.content, cursor);
-            // Move the cursor to the end of the inserted text
-            editor.setCursor({
-              line: cursor.line,
-              ch: cursor.ch + delta.content.length,
-            });
-          }
-
-          // Return the accumulated text for tracking
-          return currentText + delta.content;
+          // Use table buffering logic to handle content
+          return this.processContentWithTableBuffering(delta.content, currentText, editor, setAtCursor);
         }
       }
 
@@ -189,42 +179,14 @@ export class ApiResponseParser {
       if (json.message && json.message.content) {
         const content = json.message.content;
 
-        // Only update the editor with the new content, not the full text
-        if (setAtCursor) {
-          editor.replaceSelection(content);
-        } else {
-          // Insert just the new content at the current cursor position
-          const cursor = editor.getCursor();
-          editor.replaceRange(content, cursor);
-          // Move the cursor to the end of the inserted text
-          editor.setCursor({
-            line: cursor.line,
-            ch: cursor.ch + content.length,
-          });
-        }
-
-        // Return the accumulated text for tracking
-        return currentText + content;
+        // Use table buffering logic to handle content
+        return this.processContentWithTableBuffering(content, currentText, editor, setAtCursor);
       }
 
       // Check for Ollama's generate API format which has a response field
       if (json.response) {
-        // Only update the editor with the new response content, not the full text
-        if (setAtCursor) {
-          editor.replaceSelection(json.response);
-        } else {
-          // Insert just the new content at the current cursor position
-          const cursor = editor.getCursor();
-          editor.replaceRange(json.response, cursor);
-          // Move the cursor to the end of the inserted text
-          editor.setCursor({
-            line: cursor.line,
-            ch: cursor.ch + json.response.length,
-          });
-        }
-
-        // Return the accumulated text for tracking
-        return currentText + json.response;
+        // Use table buffering logic to handle content
+        return this.processContentWithTableBuffering(json.response, currentText, editor, setAtCursor);
       }
 
       return currentText;
@@ -282,37 +244,46 @@ export class ApiResponseParser {
         }
       }
     } catch (error) {
-      console.error("Error processing stream:", error);
+      // console.error("Error processing stream:", error);
     }
 
-    // Check if streaming was aborted - moved outside try/catch for cleaner code
     if (apiService && apiService.wasAborted()) {
       wasAborted = true;
       apiService.resetAbortedFlag();
 
-      // Remove the partial assistant response by restoring the editor to its state before the response
+      this.resetTableState();
+
       if (!setAtCursor) {
-        // Remove everything from the initial cursor position (before the assistant header) to the current cursor position
         editor.replaceRange("", cursorPositions.initialCursor, editor.getCursor());
       }
 
       return { text: "", wasAborted };
     }
 
-    // Handle normal completion (not aborted)
-    // Check for unfinished code blocks and add closing backticks if needed
+    if (this.isInTable && this.tableBuffer) {
+      if (this.tableStartPosition && !setAtCursor) {
+        const currentCursor = editor.getCursor();
+        editor.replaceRange(this.tableBuffer, this.tableStartPosition, currentCursor);
+        editor.setCursor({
+          line: this.tableStartPosition.line,
+          ch: this.tableStartPosition.ch + this.tableBuffer.length,
+        });
+      } else if (setAtCursor) {
+        editor.replaceSelection(this.tableBuffer);
+      }
+
+      text += this.tableBuffer;
+
+      this.resetTableState();
+    }
+
     if (unfinishedCodeBlock(text)) {
-      // Add closing code block
       const cursor = editor.getCursor();
       editor.replaceRange("\n```", cursor);
       text += "\n```";
     }
 
-    // Now append any collected citations after the entire response is complete
     if (this.collectedCitations.size > 0) {
-      console.log("Completed streaming response, appending citations");
-      console.log("Citations to append:", Array.from(this.collectedCitations));
-
       const citations = Array.from(this.collectedCitations);
 
       const citationsText =
@@ -323,20 +294,15 @@ export class ApiResponseParser {
           })
           .join("\n");
 
-      // Add citations at the current cursor position
       const cursor = editor.getCursor();
       editor.replaceRange(citationsText, cursor);
       editor.setCursor({ line: cursor.line, ch: cursor.ch + citationsText.length });
 
-      // Append to text variable to include citations in returned text
       text += citationsText;
 
-      // Clear the collected citations after they've been appended
       this.collectedCitations.clear();
-      console.log("Citations set cleared after appending to response");
     }
 
-    // Clean up any trailing content if not setting at cursor
     if (!setAtCursor) {
       const cursor = editor.getCursor();
       editor.replaceRange("", cursor, {
@@ -346,5 +312,233 @@ export class ApiResponseParser {
     }
 
     return { text, wasAborted };
+  }
+
+  /**
+   * Detect if a line contains a markdown table row
+   */
+  private isTableRow(line: string): boolean {
+    const trimmed = line.trim();
+    if (!trimmed.includes("|") || trimmed.length < 3) return false;
+
+    if (this.isTableSeparator(trimmed)) return false;
+
+    const parts = trimmed.split("|");
+    return parts.length >= 2 && parts.some((part) => part.trim().length > 0);
+  }
+
+  /**
+   * Detect if a line is a table separator (header separator)
+   */
+  private isTableSeparator(line: string): boolean {
+    const trimmed = line.trim();
+    if (!trimmed.includes("|") || !trimmed.includes("-")) return false;
+
+    return /^[\|\-\:\s]+$/.test(trimmed);
+  }
+
+  /**
+   * Detect if we've reached the end of a table
+   */
+  private isTableEnd(currentText: string, newContent: string): boolean {
+    const lines = (currentText + newContent).split("\n");
+    const lastNonEmptyLine = lines.filter((line) => line.trim() !== "").pop() || "";
+
+    return this.isInTable && !this.isTableRow(lastNonEmptyLine) && !this.isTableSeparator(lastNonEmptyLine);
+  }
+
+  /**
+   * Check if the buffered content contains a complete table
+   */
+  private isCompleteTable(content: string): boolean {
+    const lines = content.split("\n").filter((line) => line.trim() !== "");
+    if (lines.length < 2) return false;
+
+    let hasHeader = false;
+    let hasSeparator = false;
+    let hasDataRow = false;
+
+    for (const line of lines) {
+      if (this.isTableRow(line)) {
+        if (!hasSeparator) {
+          hasHeader = true;
+        } else {
+          hasDataRow = true;
+        }
+      } else if (this.isTableSeparator(line)) {
+        hasSeparator = true;
+      }
+    }
+
+    return hasHeader && hasSeparator && hasDataRow;
+  }
+
+  /**
+   * Reset table buffering state
+   */
+  private resetTableState(): void {
+    this.isInTable = false;
+    this.tableBuffer = "";
+    this.tableStartPosition = null;
+  }
+
+  /**
+   * Process content with table buffering logic
+   */
+  private processContentWithTableBuffering(
+    content: string,
+    currentText: string,
+    editor: Editor,
+    setAtCursor?: boolean
+  ): string {
+    if (!this.isInTable) {
+      if (content.includes("|")) {
+        const recentContext = currentText.slice(-200);
+        const combinedContent = recentContext + content;
+        const lines = combinedContent.split("\n");
+
+        const hasTablePattern = lines.some((line) => {
+          const trimmed = line.trim();
+          return trimmed.includes("|") && (this.isTableRow(trimmed) || this.isTableSeparator(trimmed));
+        });
+
+        if (hasTablePattern) {
+          this.isInTable = true;
+          this.tableBuffer = content;
+          this.tableStartPosition = editor.getCursor();
+          return currentText + content;
+        }
+      }
+    }
+
+    if (this.isInTable) {
+      this.tableBuffer += content;
+
+      const shouldFlushTable = this.shouldFlushTable(this.tableBuffer, content);
+
+      if (shouldFlushTable) {
+        const { tableContent, remainingContent } = this.extractTableFromBuffer(this.tableBuffer);
+
+        if (this.tableStartPosition && !setAtCursor) {
+          const currentCursor = editor.getCursor();
+          editor.replaceRange(tableContent, this.tableStartPosition, currentCursor);
+          editor.setCursor({
+            line: this.tableStartPosition.line,
+            ch: this.tableStartPosition.ch + tableContent.length,
+          });
+        } else if (setAtCursor) {
+          editor.replaceSelection(tableContent);
+        }
+
+        this.resetTableState();
+
+        if (remainingContent) {
+          if (setAtCursor) {
+            editor.replaceSelection(remainingContent);
+          } else {
+            const cursor = editor.getCursor();
+            editor.replaceRange(remainingContent, cursor);
+            editor.setCursor({
+              line: cursor.line,
+              ch: cursor.ch + remainingContent.length,
+            });
+          }
+          return currentText + tableContent + remainingContent;
+        }
+
+        return currentText + tableContent;
+      }
+
+      return currentText + content;
+    }
+
+    if (setAtCursor) {
+      editor.replaceSelection(content);
+    } else {
+      const cursor = editor.getCursor();
+      editor.replaceRange(content, cursor);
+      editor.setCursor({
+        line: cursor.line,
+        ch: cursor.ch + content.length,
+      });
+    }
+
+    return currentText + content;
+  }
+
+  /**
+   * Determine if we should flush the table buffer
+   */
+  private shouldFlushTable(buffer: string, newContent: string): boolean {
+    const lines = buffer.split("\n");
+
+    const hasDoubleNewline = buffer.includes("\n\n");
+    if (hasDoubleNewline) return true;
+
+    const isComplete = this.isCompleteTable(buffer);
+
+    if (isComplete && newContent.includes("\n")) {
+      const lastLines = lines.slice(-3).filter((line) => line.trim() !== "");
+      const hasNonTableContent = lastLines.some((line) => {
+        const trimmed = line.trim();
+        return trimmed !== "" && !this.isTableRow(trimmed) && !this.isTableSeparator(trimmed);
+      });
+
+      if (hasNonTableContent) return true;
+    }
+
+    if (buffer.length > 2000) return true;
+
+    return false;
+  }
+
+  /**
+   * Extract table content from buffer and separate any non-table content
+   */
+  private extractTableFromBuffer(buffer: string): { tableContent: string; remainingContent: string } {
+    const reconstructedBuffer = this.reconstructTableLines(buffer);
+
+    const lines = reconstructedBuffer.split("\n");
+    const tableLines: string[] = [];
+    let remainingLines: string[] = [];
+    let foundTableEnd = false;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      if (!foundTableEnd) {
+        if (trimmed === "" || this.isTableRow(trimmed) || this.isTableSeparator(trimmed)) {
+          tableLines.push(line);
+        } else {
+          foundTableEnd = true;
+          remainingLines = lines.slice(i);
+          break;
+        }
+      }
+    }
+
+    let tableContent = tableLines.join("\n");
+
+    if (tableContent && !tableContent.endsWith("\n")) {
+      tableContent += "\n";
+    }
+
+    const remainingContent = remainingLines.join("\n");
+
+    return { tableContent, remainingContent };
+  }
+
+  /**
+   * Reconstruct proper table lines from potentially malformed streaming content
+   */
+  private reconstructTableLines(content: string): string {
+    let reconstructed = content;
+
+    reconstructed = reconstructed.replace(/\|\|/g, "|\n|");
+
+    reconstructed = reconstructed.replace(/\n\n+/g, "\n");
+
+    return reconstructed;
   }
 }
