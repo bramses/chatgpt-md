@@ -72,12 +72,15 @@ export class FrontmatterService {
    */
   updateFrontmatterField(editor: Editor, key: string, value: any): void {
     const content = editor.getValue();
-    const frontmatterMatches = content.match(YAML_FRONTMATTER_REGEX);
+
+    // Create a regex that only matches frontmatter at the start of the document
+    const frontmatterRegex = /^---[\s\S]*?---/;
+    const frontmatterMatch = content.match(frontmatterRegex);
     let newContent;
 
-    if (frontmatterMatches) {
+    if (frontmatterMatch) {
       // Extract existing frontmatter
-      const frontmatter = frontmatterMatches[0];
+      const frontmatter = frontmatterMatch[0];
       let extractedFrontmatter = frontmatter.replace(/---/g, "");
 
       // Check if the key already exists in frontmatter
@@ -87,11 +90,15 @@ export class FrontmatterService {
         extractedFrontmatter = extractedFrontmatter.replace(keyRegex, `${key}: ${value}`);
       } else {
         // Key doesn't exist, add it
-        extractedFrontmatter += `\n${key}: ${value}`;
+        // Ensure the extracted frontmatter ends with a newline before adding new content
+        if (!extractedFrontmatter.endsWith("\n")) {
+          extractedFrontmatter += "\n";
+        }
+        extractedFrontmatter += `${key}: ${value}\n`;
       }
 
-      // Replace the old frontmatter with the new one
-      newContent = content.replace(YAML_FRONTMATTER_REGEX, `---${extractedFrontmatter}---`);
+      // Replace only the frontmatter at the beginning
+      newContent = content.replace(frontmatterRegex, `---${extractedFrontmatter}---`);
     } else {
       // No frontmatter exists, create new one
       newContent = `---\n${key}: ${value}\n---\n${content}`;
