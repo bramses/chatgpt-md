@@ -6,13 +6,7 @@ import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
 import { aiProviderFromKeys, aiProviderFromUrl } from "src/Services/AiService";
-import {
-  AI_SERVICE_LMSTUDIO,
-  AI_SERVICE_OLLAMA,
-  AI_SERVICE_OPENAI,
-  AI_SERVICE_OPENROUTER,
-  YAML_FRONTMATTER_REGEX,
-} from "src/Constants";
+import { AI_SERVICE_LMSTUDIO, AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
 
 /**
  * Service responsible for frontmatter parsing and generation
@@ -24,12 +18,10 @@ export class FrontmatterService {
    * Get frontmatter from a markdown view
    */
   getFrontmatter(view: MarkdownView, settings: ChatGPT_MDSettings): any {
-    // Extract frontmatter from the file
-    const fileContent = view.editor.getValue();
-    const frontmatterMatch = fileContent.match(YAML_FRONTMATTER_REGEX);
+    // Use Obsidian's built-in metadata cache to get frontmatter
+    const frontmatter = view.file ? this.app.metadataCache.getFileCache(view.file)?.frontmatter || {} : {};
 
-    // Parse frontmatter configurations
-    const frontmatter = frontmatterMatch ? parseSettingsFrontmatter(frontmatterMatch[0]) : {};
+    // Parse default frontmatter from settings
     const defaultFrontmatter = settings.defaultChatFrontmatter
       ? parseSettingsFrontmatter(settings.defaultChatFrontmatter)
       : {};
@@ -71,40 +63,16 @@ export class FrontmatterService {
    * @returns The updated content
    */
   updateFrontmatterField(editor: Editor, key: string, value: any): void {
-    const content = editor.getValue();
-
-    // Create a regex that only matches frontmatter at the start of the document
-    const frontmatterRegex = /^---[\s\S]*?---/;
-    const frontmatterMatch = content.match(frontmatterRegex);
-    let newContent;
-
-    if (frontmatterMatch) {
-      // Extract existing frontmatter
-      const frontmatter = frontmatterMatch[0];
-      let extractedFrontmatter = frontmatter.replace(/---/g, "");
-
-      // Check if the key already exists in frontmatter
-      const keyRegex = new RegExp(`^${key}:\\s*(.*)$`, "m");
-      if (keyRegex.test(extractedFrontmatter)) {
-        // Key exists, update it
-        extractedFrontmatter = extractedFrontmatter.replace(keyRegex, `${key}: ${value}`);
-      } else {
-        // Key doesn't exist, add it
-        // Ensure the extracted frontmatter ends with a newline before adding new content
-        if (!extractedFrontmatter.endsWith("\n")) {
-          extractedFrontmatter += "\n";
-        }
-        extractedFrontmatter += `${key}: ${value}\n`;
-      }
-
-      // Replace only the frontmatter at the beginning
-      newContent = content.replace(frontmatterRegex, `---${extractedFrontmatter}---`);
-    } else {
-      // No frontmatter exists, create new one
-      newContent = `---\n${key}: ${value}\n---\n${content}`;
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view || !view.file) {
+      console.error("[ChatGPT MD] No active file found");
+      return;
     }
 
-    editor.setValue(newContent);
+    // Use Obsidian's built-in frontmatter processing method
+    this.app.fileManager.processFrontMatter(view.file, (frontmatter) => {
+      frontmatter[key] = value;
+    });
   }
 
   /**

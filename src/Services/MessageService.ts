@@ -1,4 +1,4 @@
-import { Editor } from "obsidian";
+import { Editor, App, MarkdownView } from "obsidian";
 import { Message } from "src/Models/Message";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { FileService } from "./FileService";
@@ -22,7 +22,8 @@ import { getHeadingPrefix } from "../Utilities/TextHelpers";
 export class MessageService {
   constructor(
     private fileService: FileService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private app?: App
   ) {}
 
   /**
@@ -67,9 +68,29 @@ export class MessageService {
 
   /**
    * Remove YAML frontmatter from text
+   * For text from files, tries to use Obsidian's metadata cache if app context is available
    */
   removeYAMLFrontMatter(note: string | undefined): string | undefined {
     return note ? note.replace(YAML_FRONTMATTER_REGEX, "").trim() : note;
+  }
+
+  /**
+   * Get content without frontmatter from current editor using Obsidian's metadata cache when possible
+   */
+  getContentWithoutFrontmatter(editor: Editor): string {
+    const content = editor.getValue();
+
+    // Try to use Obsidian's metadata cache for accurate frontmatter detection
+    if (this.app) {
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (view?.file && this.app.metadataCache.getFileCache(view.file)?.frontmatter) {
+        const frontmatterMatch = content.match(/^---[\s\S]*?---\n?/);
+        return frontmatterMatch ? content.substring(frontmatterMatch[0].length).trim() : content;
+      }
+    }
+
+    // Fallback to regex-based removal
+    return this.removeYAMLFrontMatter(content) || "";
   }
 
   /**
@@ -133,7 +154,7 @@ export class MessageService {
    * Clean messages from the editor content
    */
   cleanMessagesFromNote(editor: Editor): string[] {
-    const messages = this.splitMessages(this.removeYAMLFrontMatter(editor.getValue()));
+    const messages = this.splitMessages(this.getContentWithoutFrontmatter(editor));
     return messages.map((msg) => this.removeCommentsFromMessages(msg));
   }
 
@@ -154,7 +175,7 @@ export class MessageService {
         const links = this.findLinksInMessage(message);
         for (const link of links) {
           try {
-            let content = await this.fileService.getLinkedNoteContent(link.title);
+            let content = await this.fileService.getLinkedNoteContentWithoutFrontmatter(link.title);
 
             if (content) {
               // remove the assistant and user delimiters
@@ -163,7 +184,7 @@ export class MessageService {
                 `${NEWLINE}${HORIZONTAL_LINE_MD}${NEWLINE}#+ ${ROLE_IDENTIFIER}(?:${ROLE_USER}|${ROLE_ASSISTANT}).*$`,
                 "gm"
               );
-              content = content?.replace(regex, "").replace(YAML_FRONTMATTER_REGEX, "");
+              content = content?.replace(regex, "");
 
               message = message.replace(
                 new RegExp(this.escapeRegExp(link.link), "g"),

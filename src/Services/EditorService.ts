@@ -30,7 +30,7 @@ export class EditorService {
     this.fileService = fileService || new FileService(app);
     this.editorContentService = editorContentService || new EditorContentService();
     const notificationService = new NotificationService();
-    this.messageService = messageService || new MessageService(this.fileService, notificationService);
+    this.messageService = messageService || new MessageService(this.fileService, notificationService, app);
     this.frontmatterService = frontmatterService || new FrontmatterService(app);
     this.templateService = templateService || new TemplateService(app, this.fileService, this.editorContentService);
   }

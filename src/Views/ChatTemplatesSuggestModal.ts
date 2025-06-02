@@ -65,9 +65,10 @@ export class ChatTemplatesSuggestModal extends SuggestModal<ChatTemplate> {
     new Notice(`Selected ${template.title}`);
     const templateText = await this.app.vault.read(template.file);
 
-    // Check if the template already has frontmatter
+    // Check if the template already has frontmatter using Obsidian's metadata cache
     let finalContent = templateText;
-    const hasFrontmatter = /^---\n[\s\S]*?\n---/.test(templateText);
+    const frontmatter = this.app.metadataCache.getFileCache(template.file)?.frontmatter;
+    const hasFrontmatter = frontmatter && Object.keys(frontmatter).length > 0;
 
     // If template doesn't have frontmatter, add the default frontmatter from settings
     if (!hasFrontmatter && this.settings.defaultChatFrontmatter) {

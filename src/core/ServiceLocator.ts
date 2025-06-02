@@ -61,7 +61,7 @@ export class ServiceLocator {
     // Initialize specialized services
     this.fileService = new FileService(this.app);
     this.editorContentService = new EditorContentService();
-    this.messageService = new MessageService(this.fileService, this.notificationService);
+    this.messageService = new MessageService(this.fileService, this.notificationService, this.app);
     this.frontmatterService = new FrontmatterService(this.app);
     this.templateService = new TemplateService(this.app, this.fileService, this.editorContentService);
 

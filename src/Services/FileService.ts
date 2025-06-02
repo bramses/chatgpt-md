@@ -93,6 +93,32 @@ export class FileService {
   }
 
   /**
+   * Get the content of a linked note without frontmatter
+   */
+  async getLinkedNoteContentWithoutFrontmatter(linkPath: string): Promise<string | null> {
+    try {
+      const file = this.app.metadataCache.getFirstLinkpathDest(linkPath, "");
+      if (!file) return null;
+
+      const content = await this.app.vault.read(file);
+      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+
+      if (frontmatter) {
+        // Find where the frontmatter ends and return content after it
+        const frontmatterMatch = content.match(/^---[\s\S]*?---\n?/);
+        if (frontmatterMatch) {
+          return content.substring(frontmatterMatch[0].length).trim();
+        }
+      }
+
+      return content;
+    } catch (error) {
+      console.error(`Error reading linked note: ${linkPath}`, error);
+      return null;
+    }
+  }
+
+  /**
    * Format a date according to the given format
    */
   formatDate(date: Date, format: string): string {

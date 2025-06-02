@@ -1,13 +1,6 @@
 import { Editor } from "obsidian";
 import { getHeaderRole, getHeadingPrefix } from "src/Utilities/TextHelpers";
-import {
-  HORIZONTAL_LINE_CLASS,
-  NEWLINE,
-  ROLE_ASSISTANT,
-  ROLE_IDENTIFIER,
-  ROLE_USER,
-  YAML_FRONTMATTER_REGEX,
-} from "src/Constants";
+import { HORIZONTAL_LINE_CLASS, NEWLINE, ROLE_ASSISTANT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 
 /**
  * Service responsible for editor content manipulation
@@ -41,18 +34,14 @@ export class EditorContentService {
    */
   clearChat(editor: Editor): void {
     const content = editor.getValue();
-    const frontmatterMatches = content.match(YAML_FRONTMATTER_REGEX);
+    const frontmatterMatch = content.match(/^---[\s\S]*?---\n*/);
 
-    if (frontmatterMatches?.length) {
-      const [frontmatter] = frontmatterMatches;
-
-      // Clear editor and restore frontmatter
-      editor.setValue(frontmatter);
-
-      // Position cursor at the end of the document
+    if (frontmatterMatch) {
+      // Keep only the frontmatter section
+      editor.setValue(frontmatterMatch[0]);
       editor.setCursor({ line: editor.lastLine() + 1, ch: 0 });
     } else {
-      // Clear editor
+      // No frontmatter, clear everything
       editor.setValue("");
     }
   }
