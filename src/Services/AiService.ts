@@ -509,22 +509,40 @@ export interface OllamaModel {
  * Determine the AI provider from a URL or model
  */
 export const aiProviderFromUrl = (url?: string, model?: string): string | undefined => {
-  // Check model first
+  // Check model first for service prefixes
+  if (model?.startsWith("openai@")) {
+    return AI_SERVICE_OPENAI;
+  }
   if (model?.includes(AI_SERVICE_OPENROUTER)) {
     return AI_SERVICE_OPENROUTER;
   }
   if (model?.startsWith("lmstudio@")) {
     return AI_SERVICE_LMSTUDIO;
   }
+  if (model?.startsWith("anthropic@")) {
+    return AI_SERVICE_ANTHROPIC;
+  }
+  if (model?.startsWith("ollama@")) {
+    return AI_SERVICE_OLLAMA;
+  }
+  if (model?.startsWith("local@")) {
+    // Backward compatibility: local@ prefix points to Ollama
+    return AI_SERVICE_OLLAMA;
+  }
   if (model?.includes("claude")) {
     return AI_SERVICE_ANTHROPIC;
   }
   if (model?.includes("local")) {
-    // Check URL to distinguish between Ollama and LM Studio
+    // Check URL to distinguish between Ollama and LM Studio for legacy "local" models
     if (url?.includes("1234")) {
       return AI_SERVICE_LMSTUDIO;
     }
     return AI_SERVICE_OLLAMA;
+  }
+
+  // Check for common OpenAI model patterns (backward compatibility)
+  if (model?.includes("gpt") || model?.includes("o1") || model?.includes("o3") || model?.includes("o4")) {
+    return AI_SERVICE_OPENAI;
   }
 
   // Then check URL patterns
@@ -545,6 +563,12 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
   }
   if (LOCAL_URL_PATTERNS.some((pattern) => url?.includes(pattern))) {
     return AI_SERVICE_OLLAMA;
+  }
+
+  // Default to OpenAI for models without explicit service identification
+  // This maintains backward compatibility for existing configurations
+  if (model && !url) {
+    return AI_SERVICE_OPENAI;
   }
 
   // Return undefined if no provider can be determined

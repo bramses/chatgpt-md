@@ -26,7 +26,7 @@ export interface OllamaConfig {
 
 export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
   aiService: AI_SERVICE_OLLAMA,
-  model: "llama2",
+  model: "ollama@llama2",
   url: "http://localhost:11434",
   stream: true,
   title: "Untitled",
@@ -48,7 +48,7 @@ export const fetchAvailableOllamaModels = async (url: string) => {
         if (a.name > b.name) return -1;
         return 0;
       })
-      .map((model: OllamaModel) => `local@${model.name}`);
+      .map((model: OllamaModel) => `ollama@${model.name}`);
   } catch (error) {
     console.error("Error fetching models:", error);
     return [];
