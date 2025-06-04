@@ -9,6 +9,7 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = process.argv[2] === "production";
+const analyze = process.env.ANALYZE === "true";
 
 const context = await esbuild.context({
   banner: {
@@ -36,13 +37,58 @@ const context = await esbuild.context({
   target: "es2018",
   logLevel: "info",
   sourcemap: prod ? false : "inline",
+
+  // Enhanced tree shaking and optimization options
   treeShaking: true,
-  outfile: "main.js",
   minify: prod,
+
+  // Production-only optimizations
+  ...(prod && {
+    // More aggressive minification
+    minifyWhitespace: true,
+    minifyIdentifiers: true,
+    minifySyntax: true,
+
+    // Advanced optimization flags
+    legalComments: "none", // Remove all comments to reduce size
+    keepNames: false, // Allow name mangling for smaller bundles
+
+    // Dead code elimination
+    drop: ["console", "debugger"], // Remove console.log and debugger statements
+
+    // Pure annotations for better tree shaking
+    pure: ["console.log", "console.info", "console.warn", "console.debug", "console.trace"],
+
+    // Platform-specific optimizations
+    platform: "node",
+
+    // Bundle analysis
+    metafile: analyze,
+  }),
+
+  outfile: "main.js",
 });
 
 if (prod) {
-  await context.rebuild();
+  const result = await context.rebuild();
+
+  // Optional: Log bundle analysis info in production
+  if (result.metafile) {
+    console.log("📦 Bundle analysis:");
+    console.log(`📏 Output size: ${(result.metafile.outputs["main.js"]?.bytes || 0 / 1024).toFixed(2)} KB`);
+
+    // Show largest dependencies
+    const inputs = Object.entries(result.metafile.inputs)
+      .map(([path, data]) => ({ path, bytes: data.bytes }))
+      .sort((a, b) => b.bytes - a.bytes)
+      .slice(0, 10);
+
+    console.log("🔍 Largest source files:");
+    inputs.forEach(({ path, bytes }) => {
+      console.log(`  ${path}: ${(bytes / 1024).toFixed(2)} KB`);
+    });
+  }
+
   process.exit(0);
 } else {
   await context.watch();

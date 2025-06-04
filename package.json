@@ -7,6 +7,12 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "build:analyze": "tsc -noEmit -skipLibCheck && ANALYZE=true node esbuild.config.mjs production",
+    "build:size": "npm run build && du -h main.js",
+    "analyze": "node scripts/analyze-bundle.mjs",
+    "build:full-analysis": "npm run build && npm run analyze",
+    "yarn:build:size": "yarn build && du -h main.js",
+    "yarn:build:full-analysis": "yarn build && yarn analyze",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "version": "node version-bump.mjs && git add manifest.json versions.json",
