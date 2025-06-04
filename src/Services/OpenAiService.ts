@@ -13,7 +13,7 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   aiService: AI_SERVICE_OPENAI,
   frequency_penalty: 0,
   max_tokens: 300,
-  model: "gpt-4",
+  model: "openai@gpt-4",
   presence_penalty: 0,
   stream: true,
   system_commands: null,
@@ -58,7 +58,7 @@ export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) =>
         if (a.id > b.id) return -1;
         return 0;
       })
-      .map((model: OpenAiModel) => model.id);
+      .map((model: OpenAiModel) => `openai@${model.id}`);
   } catch (error) {
     console.error("Error fetching models:", error);
     return [];

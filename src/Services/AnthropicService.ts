@@ -12,7 +12,7 @@ import { NotificationService } from "./NotificationService";
 export const DEFAULT_ANTHROPIC_CONFIG: AnthropicConfig = {
   aiService: AI_SERVICE_ANTHROPIC,
   max_tokens: 1024,
-  model: "claude-3-7-sonnet-20250219",
+  model: "anthropic@claude-3-5-sonnet-latest",
   stream: true,
   system_commands: null,
   tags: [],
@@ -31,16 +31,14 @@ export const fetchAvailableAnthropicModels = async (url: string, apiKey: string)
     }
 
     // Since Anthropic doesn't have a models endpoint like OpenAI,
-    // we'll return a static list of available models
+    // we'll return a static list of available models with anthropic@ prefix
     return [
-      "claude-3-7-sonnet-20250219",
-      "claude-3-5-sonnet-20240620",
-      "claude-3-opus-20240229",
-      "claude-3-sonnet-20240229",
-      "claude-3-haiku-20240307",
-      "claude-2.1",
-      "claude-2.0",
-      "claude-instant-1.2",
+      "anthropic@claude-opus-4-0",
+      "anthropic@claude-sonnet-4-0",
+      "anthropic@claude-3-7-sonnet-latest",
+      "anthropic@claude-3-5-sonnet-latest",
+      "anthropic@claude-3-5-haiku-latest",
+      "anthropic@claude-3-opus-latest",
     ];
   } catch (error) {
     console.error("Error fetching models:", error);
