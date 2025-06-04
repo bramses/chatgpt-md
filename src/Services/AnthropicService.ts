@@ -89,13 +89,6 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     // Remove the provider prefix if it exists in the model name
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
-    // Process system commands - for Anthropic, we handle them in the system field
-    let systemPrompt = "";
-    if (config.system_commands && config.system_commands.length > 0) {
-      systemPrompt = config.system_commands.join("\n\n");
-      console.log(`[ChatGPT MD] Added system commands to Anthropic system prompt`);
-    }
-
     // Convert messages to Anthropic format
     const anthropicMessages = this.convertToAnthropicMessages(messages);
 
@@ -106,11 +99,6 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
       max_tokens: config.max_tokens,
       stream: config.stream,
     };
-
-    // Add system prompt if available
-    if (systemPrompt) {
-      payload.system = systemPrompt;
-    }
 
     // Add temperature if available
     if (config.temperature !== undefined) {
@@ -200,7 +188,7 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
   }
 
   /**
-   * Override prepareApiCall to add Anthropic-specific headers
+   * Override prepareApiCall to add Anthropic-specific headers and handle system message combination
    */
   protected prepareApiCall(
     apiKey: string | undefined,
@@ -208,8 +196,36 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     config: Record<string, any>,
     skipPluginSystemMessage: boolean = false
   ) {
-    // Use base implementation for common logic
-    const { payload, headers } = super.prepareApiCall(apiKey, messages, config, skipPluginSystemMessage);
+    // Validate API key
+    this.apiAuthService.validateApiKey(apiKey, this.serviceType);
+
+    // Add plugin system message to help LLM understand context (unless skipped)
+    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages);
+
+    // Create payload and headers
+    const anthropicConfig = config as AnthropicConfig;
+    const payload = this.createPayload(anthropicConfig, finalMessages);
+    const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.serviceType);
+
+    // Handle system message combination for Anthropic
+    if (!skipPluginSystemMessage) {
+      const systemParts: string[] = [];
+
+      // Always add plugin system message first
+      systemParts.push(PLUGIN_SYSTEM_MESSAGE);
+
+      // Add user system commands if they exist
+      if (anthropicConfig.system_commands && anthropicConfig.system_commands.length > 0) {
+        systemParts.push(anthropicConfig.system_commands.join("\n\n"));
+      }
+
+      // Combine all system messages
+      payload.system = systemParts.join("\n\n");
+      console.log(`[ChatGPT MD] Combined plugin system message with user system commands for Anthropic`);
+    } else if (anthropicConfig.system_commands && anthropicConfig.system_commands.length > 0) {
+      // If plugin system message is skipped (like for title inference), only use user system commands
+      payload.system = anthropicConfig.system_commands.join("\n\n");
+    }
 
     // Add Anthropic-specific header for direct browser access
     headers["anthropic-dangerous-direct-browser-access"] = "true";
