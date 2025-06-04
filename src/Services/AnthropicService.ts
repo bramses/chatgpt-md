@@ -78,14 +78,22 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     return this.apiAuthService.getApiKey(settings, AI_SERVICE_ANTHROPIC);
   }
 
+  // Implement abstract methods from BaseAiService
+  protected getSystemMessageRole(): string {
+    return ROLE_SYSTEM; // Anthropic uses system field, not message role
+  }
+
+  protected supportsSystemField(): boolean {
+    return true; // Anthropic supports system field in payload
+  }
+
   createPayload(config: AnthropicConfig, messages: Message[]): AnthropicStreamPayload {
     // Remove the provider prefix if it exists in the model name
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
-    // Process system commands if they exist
+    // Process system commands - for Anthropic, we handle them in the system field
     let systemPrompt = "";
     if (config.system_commands && config.system_commands.length > 0) {
-      // Join system commands into a single string for Anthropic's system prompt
       systemPrompt = config.system_commands.join("\n\n");
       console.log(`[ChatGPT MD] Added system commands to Anthropic system prompt`);
     }
@@ -176,39 +184,8 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     headingPrefix: string,
     setAtCursor?: boolean | undefined
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
-    try {
-      // Use the common preparation method
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
-
-      // Insert assistant header
-      const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
-
-      // Make streaming request using ApiService with centralized endpoint
-      const response = await this.apiService.makeStreamingRequest(
-        this.getApiEndpoint(config),
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Process the streaming response using ApiResponseParser
-      const result = await this.apiResponseParser.processStreamResponse(
-        response,
-        this.serviceType,
-        editor,
-        cursorPositions,
-        setAtCursor,
-        this.apiService
-      );
-
-      // Use the helper method to process the result
-      return this.processStreamingResult(result);
-    } catch (err) {
-      // The error is already handled by the ApiService, which uses ErrorService
-      // Just return the error message for the chat
-      const errorMessage = `Error: ${err}`;
-      return { fullString: errorMessage, mode: "streaming" };
-    }
+    // Use the default implementation from BaseAiService
+    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor);
   }
 
   protected async callNonStreamingAPI(
@@ -216,41 +193,12 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     messages: Message[],
     config: AnthropicConfig
   ): Promise<any> {
-    try {
-      console.log(`[ChatGPT MD] "no stream"`, config);
-
-      config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
-
-      const response = await this.apiService.makeNonStreamingRequest(
-        this.getApiEndpoint(config),
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Return simple object with response and model
-      return { fullString: response, model: payload.model };
-    } catch (err) {
-      const isTitleInference =
-        messages.length === 1 && messages[0].content?.toString().includes("Infer title from the summary");
-
-      return this.handleApiCallError(err, config, isTitleInference);
-    }
+    // Use the default implementation from BaseAiService
+    return this.defaultCallNonStreamingAPI(apiKey, messages, config);
   }
 
   protected showNoTitleInferredNotification(): void {
     this.notificationService.showWarning("Could not infer title. The file name was not changed.");
-  }
-
-  /**
-   * Override addPluginSystemMessage to use "system" field for Anthropic
-   * This ensures the LLM understands the Obsidian context with the correct role
-   */
-  protected addPluginSystemMessage(messages: Message[]): Message[] {
-    // For Anthropic, we'll handle the system message separately in createPayload
-    // Just return the original messages
-    return messages;
   }
 
   /**
@@ -262,23 +210,8 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     config: Record<string, any>,
     skipPluginSystemMessage: boolean = false
   ) {
-    // Validate API key
-    this.apiAuthService.validateApiKey(apiKey, this.serviceType);
-
-    // Add plugin system message to help LLM understand context (unless skipped)
-    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages);
-
-    // Create payload with system message
-    const anthropicConfig = config as AnthropicConfig;
-    const payload = this.createPayload(anthropicConfig, finalMessages);
-
-    // If we're not skipping the plugin system message and it's not already in the payload
-    if (!skipPluginSystemMessage && !payload.system) {
-      payload.system = PLUGIN_SYSTEM_MESSAGE;
-    }
-
-    // Create headers with Anthropic-specific headers
-    const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.serviceType);
+    // Use base implementation for common logic
+    const { payload, headers } = super.prepareApiCall(apiKey, messages, config, skipPluginSystemMessage);
 
     // Add Anthropic-specific header for direct browser access
     headers["anthropic-dangerous-direct-browser-access"] = "true";

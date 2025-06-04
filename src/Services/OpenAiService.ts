@@ -95,22 +95,21 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     return this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
   }
 
+  // Implement abstract methods from BaseAiService
+  protected getSystemMessageRole(): string {
+    return ROLE_DEVELOPER; // OpenAI prefers developer role for system messages
+  }
+
+  protected supportsSystemField(): boolean {
+    return false; // OpenAI uses messages array, not system field
+  }
+
   createPayload(config: OpenAIConfig, messages: Message[]): OpenAIStreamPayload {
     // Remove the provider prefix if it exists in the model name
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
-    // Process system commands if they exist
-    let processedMessages = messages;
-    if (config.system_commands && config.system_commands.length > 0) {
-      // Add system commands to the beginning of the messages
-      const systemMessages = config.system_commands.map((command) => ({
-        role: ROLE_DEVELOPER,
-        content: command,
-      }));
-
-      processedMessages = [...systemMessages, ...messages];
-      console.log(`[ChatGPT MD] Added ${systemMessages.length} developer commands to messages`);
-    }
+    // Process system commands using the centralized method
+    const processedMessages = this.processSystemCommands(messages, config.system_commands);
 
     // Create base payload
     const payload: OpenAIStreamPayload = {
@@ -120,8 +119,11 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
       stream: config.stream,
     };
 
-    // Only include these parameters if the model name doesn't contain "search"
-    if (!modelName.includes("search")) {
+    // Only include these parameters if the model supports them
+    // o1, o4, and search models don't support custom temperature and other parameters
+    const isRestrictedModel = modelName.includes("search") || modelName.includes("o1") || modelName.includes("o4");
+
+    if (!isRestrictedModel) {
       payload.temperature = config.temperature;
       payload.top_p = config.top_p;
       payload.presence_penalty = config.presence_penalty;
@@ -161,39 +163,8 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     headingPrefix: string,
     setAtCursor?: boolean | undefined
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
-    try {
-      // Use the common preparation method
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
-
-      // Insert assistant header
-      const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
-
-      // Make streaming request using ApiService with centralized endpoint
-      const response = await this.apiService.makeStreamingRequest(
-        this.getApiEndpoint(config),
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Process the streaming response using ApiResponseParser
-      const result = await this.apiResponseParser.processStreamResponse(
-        response,
-        this.serviceType,
-        editor,
-        cursorPositions,
-        setAtCursor,
-        this.apiService
-      );
-
-      // Use the helper method to process the result
-      return this.processStreamingResult(result);
-    } catch (err) {
-      // The error is already handled by the ApiService, which uses ErrorService
-      // Just return the error message for the chat
-      const errorMessage = `Error: ${err}`;
-      return { fullString: errorMessage, mode: "streaming" };
-    }
+    // Use the default implementation from BaseAiService
+    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor);
   }
 
   protected async callNonStreamingAPI(
@@ -201,45 +172,12 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     messages: Message[],
     config: OpenAIConfig
   ): Promise<any> {
-    try {
-      console.log(`[ChatGPT MD] "no stream"`, config);
-
-      config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
-
-      const response = await this.apiService.makeNonStreamingRequest(
-        this.getApiEndpoint(config),
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Return simple object with response and model
-      return { fullString: response, model: payload.model };
-    } catch (err) {
-      const isTitleInference =
-        messages.length === 1 && messages[0].content?.toString().includes("Infer title from the summary");
-
-      return this.handleApiCallError(err, config, isTitleInference);
-    }
+    // Use the default implementation from BaseAiService
+    return this.defaultCallNonStreamingAPI(apiKey, messages, config);
   }
 
   protected showNoTitleInferredNotification(): void {
     this.notificationService.showWarning("Could not infer title. The file name was not changed.");
-  }
-
-  /**
-   * Override addPluginSystemMessage to use "developer" role for OpenAI
-   * This ensures the LLM understands the Obsidian context with the correct role
-   */
-  protected addPluginSystemMessage(messages: Message[]): Message[] {
-    const pluginSystemMessage: Message = {
-      role: ROLE_DEVELOPER,
-      content: PLUGIN_SYSTEM_MESSAGE,
-    };
-
-    // Add the plugin system message at the beginning
-    return [pluginSystemMessage, ...messages];
   }
 }
 
