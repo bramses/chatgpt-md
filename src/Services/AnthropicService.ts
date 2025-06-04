@@ -23,8 +23,6 @@ export const DEFAULT_ANTHROPIC_CONFIG: AnthropicConfig = {
 
 export const fetchAvailableAnthropicModels = async (url: string, apiKey: string) => {
   try {
-    const apiAuthService = new ApiAuthService();
-
     if (!isValidApiKey(apiKey)) {
       console.error("Anthropic API key is missing. Please add your Anthropic API key in the settings.");
       return [];

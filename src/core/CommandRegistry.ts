@@ -452,7 +452,6 @@ export class CommandRegistry {
     }
 
     try {
-      const apiAuthService = new ApiAuthService();
       const promises: Promise<string[]>[] = [];
 
       // Add Ollama promise (always fetched)
