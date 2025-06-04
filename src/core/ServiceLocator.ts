@@ -15,7 +15,14 @@ import { OpenAiService } from "src/Services/OpenAiService";
 import { OllamaService } from "src/Services/OllamaService";
 import { OpenRouterService } from "src/Services/OpenRouterService";
 import { LmStudioService } from "src/Services/LmStudioService";
-import { AI_SERVICE_LMSTUDIO, AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
+import { AnthropicService } from "src/Services/AnthropicService";
+import {
+  AI_SERVICE_ANTHROPIC,
+  AI_SERVICE_LMSTUDIO,
+  AI_SERVICE_OLLAMA,
+  AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENROUTER,
+} from "src/Constants";
 import { SettingsService } from "src/Services/SettingsService";
 
 /**
@@ -110,6 +117,14 @@ export class ServiceLocator {
         );
       case AI_SERVICE_LMSTUDIO:
         return new LmStudioService(
+          this.errorService,
+          this.notificationService,
+          this.apiService,
+          this.apiAuthService,
+          this.apiResponseParser
+        );
+      case AI_SERVICE_ANTHROPIC:
+        return new AnthropicService(
           this.errorService,
           this.notificationService,
           this.apiService,

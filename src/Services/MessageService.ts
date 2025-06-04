@@ -1,4 +1,4 @@
-import { Editor, App, MarkdownView } from "obsidian";
+import { App, Editor, MarkdownView } from "obsidian";
 import { Message } from "src/Models/Message";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { FileService } from "./FileService";
