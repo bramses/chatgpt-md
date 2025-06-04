@@ -1,6 +1,6 @@
 import { Editor } from "obsidian";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_LMSTUDIO } from "src/Constants";
+import { AI_SERVICE_LMSTUDIO, ROLE_SYSTEM } from "src/Constants";
 import { BaseAiService, IAiApiService, OpenAiModel } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ApiService } from "./ApiService";
@@ -86,26 +86,24 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
   }
 
   getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
-    // LM Studio doesn't require an API key, return empty string
-    return "";
+    return this.apiAuthService.getApiKey(settings, AI_SERVICE_LMSTUDIO);
+  }
+
+  // Implement abstract methods from BaseAiService
+  protected getSystemMessageRole(): string {
+    return ROLE_SYSTEM; // LmStudio uses standard system role
+  }
+
+  protected supportsSystemField(): boolean {
+    return false; // LmStudio uses messages array, not system field
   }
 
   createPayload(config: LmStudioConfig, messages: Message[]): LmStudioStreamPayload {
     // Remove the provider prefix if it exists in the model name
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
-    // Process system commands if they exist
-    let processedMessages = messages;
-    if (config.system_commands && config.system_commands.length > 0) {
-      // Add system commands to the beginning of the messages
-      const systemMessages = config.system_commands.map((command) => ({
-        role: "system",
-        content: command,
-      }));
-
-      processedMessages = [...systemMessages, ...messages];
-      console.log(`[ChatGPT MD] Added ${systemMessages.length} system commands to messages`);
-    }
+    // Process system commands using the centralized method
+    const processedMessages = this.processSystemCommands(messages, config.system_commands);
 
     // Create base payload
     const payload: LmStudioStreamPayload = {
@@ -152,39 +150,8 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
     headingPrefix: string,
     setAtCursor?: boolean | undefined
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
-    try {
-      // Use the common preparation method
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
-
-      // Insert assistant header
-      const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
-
-      // Make streaming request using ApiService with centralized endpoint
-      const response = await this.apiService.makeStreamingRequest(
-        this.getApiEndpoint(config),
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Process the streaming response using ApiResponseParser
-      const result = await this.apiResponseParser.processStreamResponse(
-        response,
-        this.serviceType,
-        editor,
-        cursorPositions,
-        setAtCursor,
-        this.apiService
-      );
-
-      // Use the helper method to process the result
-      return this.processStreamingResult(result);
-    } catch (err) {
-      // The error is already handled by the ApiService, which uses ErrorService
-      // Just return the error message for the chat
-      const errorMessage = `Error: ${err}`;
-      return { fullString: errorMessage, mode: "streaming" };
-    }
+    // Use the default implementation from BaseAiService
+    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor);
   }
 
   protected async callNonStreamingAPI(
@@ -192,27 +159,8 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
     messages: Message[],
     config: LmStudioConfig
   ): Promise<any> {
-    try {
-      console.log(`[ChatGPT MD] "no stream"`, config);
-
-      config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
-
-      const response = await this.apiService.makeNonStreamingRequest(
-        this.getApiEndpoint(config),
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Return simple object with response and model
-      return { fullString: response, model: payload.model };
-    } catch (err) {
-      const isTitleInference =
-        messages.length === 1 && messages[0].content?.toString().includes("Infer title from the summary");
-
-      return this.handleApiCallError(err, config, isTitleInference);
-    }
+    // Use the default implementation from BaseAiService
+    return this.defaultCallNonStreamingAPI(apiKey, messages, config);
   }
 
   protected showNoTitleInferredNotification(): void {
