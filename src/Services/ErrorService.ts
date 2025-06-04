@@ -1,13 +1,5 @@
 import { NotificationService } from "./NotificationService";
-import {
-  AI_SERVICE_OLLAMA,
-  CHAT_ERROR_MESSAGE_401,
-  CHAT_ERROR_MESSAGE_404,
-  CHAT_ERROR_MESSAGE_NO_CONNECTION,
-  CHAT_ERROR_RESPONSE,
-  ERROR_NO_CONNECTION,
-  NEWLINE,
-} from "src/Constants";
+import { AI_SERVICE_OLLAMA, ERROR_NO_CONNECTION } from "src/Constants";
 
 /**
  * Error types that can be handled by the ErrorService
@@ -55,9 +47,7 @@ export class ErrorService {
     }
   ): string {
     const prefix = `[ChatGPT MD] ${serviceName}`;
-    let errorType = ErrorType.UNKNOWN_ERROR;
     let errorMessage = "";
-    let chatMessage = "";
 
     // Extract context information if available
     const model = options.context?.model || "";
@@ -67,32 +57,20 @@ export class ErrorService {
     // Determine error type and messages
     if (error instanceof Object) {
       if (error.name === "AbortError") {
-        errorType = ErrorType.STREAM_ABORTED;
         errorMessage = `${prefix}: Stream aborted`;
-        chatMessage = "Stream aborted";
       } else if (error.message === ERROR_NO_CONNECTION) {
-        errorType = ErrorType.NETWORK_ERROR;
         errorMessage = `${prefix}: Network connection error`;
-        chatMessage = CHAT_ERROR_MESSAGE_NO_CONNECTION;
       } else if (error.status === 401 || error.error?.status === 401) {
-        errorType = ErrorType.AUTHENTICATION_ERROR;
         errorMessage = `${prefix}: Authentication failed (401)`;
-        chatMessage = CHAT_ERROR_MESSAGE_401;
       } else if (error.status === 404 || error.error?.status === 404) {
-        errorType = ErrorType.NOT_FOUND_ERROR;
         errorMessage = `${prefix}: Resource not found (404)${contextInfo ? ` - ${contextInfo}` : ""}`;
-        chatMessage = `${CHAT_ERROR_MESSAGE_404}${contextInfo ? `${NEWLINE}${contextInfo}` : ""}`;
       } else if (error.error) {
-        errorType = ErrorType.API_ERROR;
         errorMessage = `${prefix}: ${error.error.message}${contextInfo ? ` - ${contextInfo}` : ""}`;
-        chatMessage = `${CHAT_ERROR_RESPONSE}${NEWLINE}${error.error.message}${contextInfo ? `${NEWLINE}${contextInfo}` : ""}`;
       } else {
         errorMessage = `${prefix}: ${JSON.stringify(error)}${contextInfo ? ` - ${contextInfo}` : ""}`;
-        chatMessage = `${CHAT_ERROR_RESPONSE}${NEWLINE}${JSON.stringify(error)}${contextInfo ? `${NEWLINE}${contextInfo}` : ""}`;
       }
     } else {
       errorMessage = `${prefix}: ${error}${contextInfo ? ` - ${contextInfo}` : ""}`;
-      chatMessage = `${CHAT_ERROR_RESPONSE}${NEWLINE}${error}${contextInfo ? `${NEWLINE}${contextInfo}` : ""}`;
     }
 
     // Log to console if requested

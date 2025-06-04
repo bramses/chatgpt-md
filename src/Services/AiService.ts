@@ -13,7 +13,6 @@ import {
   API_ENDPOINTS,
   NEWLINE,
   PLUGIN_SYSTEM_MESSAGE,
-  ROLE_SYSTEM,
   ROLE_USER,
 } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";

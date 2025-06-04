@@ -151,7 +151,7 @@ export class ApiService {
 
     try {
       errorData = await response.json();
-    } catch (e) {
+    } catch (_) {
       errorData = { status: response.status, statusText: response.statusText };
     }
 

@@ -183,7 +183,7 @@ export class ApiResponseParser {
       }
 
       return currentText;
-    } catch (e) {
+    } catch (_) {
       // Skip lines that cause errors
       return currentText;
     }
@@ -224,7 +224,7 @@ export class ApiResponseParser {
       }
 
       return currentText;
-    } catch (e) {
+    } catch (_) {
       // Skip lines that aren't valid JSON or don't contain content
       return currentText;
     }
@@ -260,7 +260,7 @@ export class ApiResponseParser {
       }
 
       return currentText;
-    } catch (e) {
+    } catch (_) {
       // Skip lines that aren't valid JSON or don't contain content
       return currentText;
     }
@@ -313,7 +313,7 @@ export class ApiResponseParser {
           }
         }
       }
-    } catch (error) {
+    } catch (_) {
       // console.error("Error processing stream:", error);
     }
 
