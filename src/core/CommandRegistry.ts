@@ -7,9 +7,11 @@ import { DEFAULT_OPENAI_CONFIG, fetchAvailableOpenAiModels } from "src/Services/
 import { DEFAULT_OLLAMA_CONFIG, fetchAvailableOllamaModels } from "src/Services/OllamaService";
 import { DEFAULT_OPENROUTER_CONFIG, fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
 import { DEFAULT_LMSTUDIO_CONFIG, fetchAvailableLmStudioModels } from "src/Services/LmStudioService";
+import { DEFAULT_ANTHROPIC_CONFIG, fetchAvailableAnthropicModels } from "src/Services/AnthropicService";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
+  AI_SERVICE_ANTHROPIC,
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
@@ -139,6 +141,8 @@ export class CommandRegistry {
                 settingsWithApiKey.model = "anthropic/claude-3-opus:beta";
               } else if (frontmatter.aiService === AI_SERVICE_LMSTUDIO) {
                 settingsWithApiKey.model = "local-model";
+              } else if (frontmatter.aiService === AI_SERVICE_ANTHROPIC) {
+                settingsWithApiKey.model = "claude-3-sonnet-20240229";
               }
             }
 
@@ -196,6 +200,7 @@ export class CommandRegistry {
                 frontmatter.openrouterUrl || settings.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
               [AI_SERVICE_OLLAMA]: frontmatter.ollamaUrl || settings.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
               [AI_SERVICE_LMSTUDIO]: frontmatter.lmstudioUrl || settings.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
+              [AI_SERVICE_ANTHROPIC]: frontmatter.anthropicUrl || settings.anthropicUrl || DEFAULT_ANTHROPIC_CONFIG.url,
             };
 
             const freshModels = await this.fetchAvailableModels(currentUrls, openAiKey, openRouterKey);
@@ -402,6 +407,7 @@ export class CommandRegistry {
       openrouter: frontmatter.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
       ollama: frontmatter.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
       lmstudio: frontmatter.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
+      anthropic: frontmatter.anthropicUrl || DEFAULT_ANTHROPIC_CONFIG.url,
     };
   }
 
@@ -420,6 +426,7 @@ export class CommandRegistry {
         [AI_SERVICE_OPENROUTER]: settings.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
         [AI_SERVICE_OLLAMA]: settings.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
         [AI_SERVICE_LMSTUDIO]: settings.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
+        [AI_SERVICE_ANTHROPIC]: settings.anthropicUrl || DEFAULT_ANTHROPIC_CONFIG.url,
       };
 
       this.availableModels = await this.fetchAvailableModels(defaultUrls, openAiKey, openRouterKey);
@@ -466,6 +473,18 @@ export class CommandRegistry {
         promises.push(
           withTimeout(
             fetchAvailableOpenRouterModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey),
+            FETCH_MODELS_TIMEOUT_MS,
+            []
+          )
+        );
+      }
+
+      // Conditionally add Anthropic promise
+      const anthropicApiKey = this.apiAuthService.getApiKey(this.settingsService.getSettings(), AI_SERVICE_ANTHROPIC);
+      if (isValidApiKey(anthropicApiKey)) {
+        promises.push(
+          withTimeout(
+            fetchAvailableAnthropicModels(urls[AI_SERVICE_ANTHROPIC], anthropicApiKey),
             FETCH_MODELS_TIMEOUT_MS,
             []
           )
