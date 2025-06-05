@@ -28,18 +28,38 @@ export const fetchAvailableAnthropicModels = async (url: string, apiKey: string)
       return [];
     }
 
-    // Since Anthropic doesn't have a models endpoint like OpenAI,
-    // we'll return a static list of available models with anthropic@ prefix
-    return [
-      "anthropic@claude-opus-4-0",
-      "anthropic@claude-sonnet-4-0",
-      "anthropic@claude-3-7-sonnet-latest",
-      "anthropic@claude-3-5-sonnet-latest",
-      "anthropic@claude-3-5-haiku-latest",
-      "anthropic@claude-3-opus-latest",
-    ];
+    // Call the Anthropic models API endpoint
+    const modelsUrl = `${url.replace(/\/$/, "")}/v1/models`;
+
+    const response = await fetch(modelsUrl, {
+      method: "GET",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Extract model IDs from the response and add anthropic@ prefix
+    if (data.data && Array.isArray(data.data)) {
+      return data.data
+        .filter((model: any) => model.type === "model" && model.id)
+        .map((model: any) => `anthropic@${model.id}`)
+        .sort(); // Sort alphabetically for better UX
+    }
+
+    console.warn("Unexpected response format from Anthropic models API");
+    return [];
   } catch (error) {
-    console.error("Error fetching models:", error);
+    console.error("Error fetching Anthropic models:", error);
+    // Return empty array on error - the UI should handle this gracefully
     return [];
   }
 };
