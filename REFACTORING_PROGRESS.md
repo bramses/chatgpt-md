@@ -21,6 +21,7 @@
   - `src/adapters/ObsidianEditor.ts` - Implements IEditor
   - `src/adapters/ObsidianFileSystem.ts` - Implements IFileSystem
   - `src/adapters/ObsidianNotificationService.ts` - Implements INotificationService
+  - `src/adapters/ObsidianView.ts` - Implements IView
 
 ### 1.3 Dependency Injection
 
@@ -69,12 +70,65 @@ npm test:unit
 npm test -- tests/unit/Utilities/TextHelpers.test.ts
 ```
 
-## Next Steps (Phase 2: Command Refactoring)
+## Phase 2: Command Refactoring 🚧 IN PROGRESS
 
-1. Extract commands into separate classes implementing ICommand interface
-2. Implement command bus pattern
-3. Create use case layer
-4. Migrate existing commands one by one
+### 2.1 Command Pattern Implementation
+
+- ✅ Updated `src/commands/interfaces/ICommand.ts` with proper abstraction interfaces
+- ✅ Created `src/commands/AddDividerCommand.ts` - First refactored command
+  - Clean separation of concerns
+  - Dependency injection ready
+  - Fully testable
+- ✅ Created comprehensive tests: `tests/unit/commands/AddDividerCommand.test.ts`
+  - 9 tests, all passing
+  - Demonstrates improved testability
+- ✅ Created `src/commands/StopStreamingCommand.ts` - Second refactored command
+  - Simple command without editor dependencies
+  - Clean dependency injection pattern
+  - Full test coverage
+- ✅ Created comprehensive tests: `tests/unit/commands/StopStreamingCommand.test.ts`
+  - 6 tests, all passing
+  - Tests command execution and error handling
+- ✅ Created `src/commands/ClearChatCommand.ts` - Third refactored command
+  - Editor-based command with frontmatter preservation
+  - Robust error handling and edge case management
+  - Full test coverage for complex scenarios
+- ✅ Created comprehensive tests: `tests/unit/commands/ClearChatCommand.test.ts`
+  - 13 tests, all passing
+  - Tests frontmatter preservation, edge cases, and error handling
+- ✅ Created `src/commands/AddCommentBlockCommand.ts` - Fourth refactored command
+  - Editor-based command for adding comment blocks
+  - Proper cursor positioning and content insertion
+  - Clean separation of concerns with no external dependencies
+- ✅ Created comprehensive tests: `tests/unit/commands/AddCommentBlockCommand.test.ts`
+  - 14 tests, all passing
+  - Tests cursor positioning, content insertion, and formatting
+
+### 2.2 Command Registry Refactoring
+
+- ✅ Created `src/core/NewCommandRegistry.ts`
+  - Uses dependency injection
+  - Simplified command registration
+  - Error handling with notifications
+  - Clear separation from Obsidian API
+- ✅ Updated Container to include command tokens
+
+### 2.3 Next Commands to Refactor
+
+- ✅ StopStreamingCommand (simple, no editor required)
+- ✅ ClearChatCommand
+- ✅ AddCommentBlockCommand
+- [ ] SelectModelCommand
+- [ ] InferTitleCommand
+- [ ] ChatCommand (most complex)
+
+## Current Test Status
+
+```
+Test Suites: 5 passed, 5 total
+Tests:       77 passed, 77 total (35 + 9 + 6 + 13 + 14)
+Snapshots:   0 total
+```
 
 ## Benefits Achieved So Far
 
@@ -82,6 +136,7 @@ npm test -- tests/unit/Utilities/TextHelpers.test.ts
 2. **Type Safety**: Abstraction interfaces provide clear contracts
 3. **Flexibility**: DI container allows easy swapping of implementations
 4. **Developer Experience**: Clear test infrastructure for contributors
+5. **Command Pattern**: Clean, testable command implementations
 
 ## Technical Decisions
 

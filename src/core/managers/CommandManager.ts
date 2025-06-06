@@ -1,8 +1,10 @@
-import { Plugin } from "obsidian";
-import { ICommand, CommandContext } from "../../commands/interfaces/ICommand";
+import { Plugin, Editor, MarkdownView } from "obsidian";
+import { ICommand, ICommandContext } from "../../commands/interfaces/ICommand";
 import { SettingsManager } from "./SettingsManager";
 import { EditorManager } from "./EditorManager";
 import { AIProviderManager } from "./AIProviderManager";
+import { ObsidianEditor } from "../../adapters/ObsidianEditor";
+import { ObsidianView } from "../../adapters/ObsidianView";
 
 // Command configuration interface
 interface CommandConfig {
@@ -125,14 +127,14 @@ export class CommandManager {
         id: config.id,
         name: config.name,
         icon: config.icon,
-        editorCallback: async (editor, view) => {
+        editorCallback: async (editor: Editor, view: MarkdownView) => {
           try {
-            const markdownView = view && "getViewType" in view ? view : undefined;
-            await config.command.execute({
-              editor,
-              view: markdownView,
-              plugin: this.plugin,
-            });
+            const context: ICommandContext = {
+              editor: new ObsidianEditor(editor),
+              view: view ? new ObsidianView(view) : undefined,
+              app: this.plugin.app as any, // TODO: Create ObsidianApp adapter
+            };
+            await config.command.execute(context);
           } catch (error) {
             console.error(`[ChatGPT MD] Error executing command ${config.name}:`, error);
           }
@@ -145,9 +147,10 @@ export class CommandManager {
         icon: config.icon,
         callback: async () => {
           try {
-            await config.command.execute({
-              plugin: this.plugin,
-            });
+            const context: ICommandContext = {
+              app: this.plugin.app as any, // TODO: Create ObsidianApp adapter
+            };
+            await config.command.execute(context);
           } catch (error) {
             console.error(`[ChatGPT MD] Error executing command ${config.name}:`, error);
           }
@@ -174,54 +177,28 @@ export class CommandManager {
 }
 
 // ===== SIMPLIFIED COMMAND IMPLEMENTATIONS =====
-// These replace the complex command structure with direct implementations
+// These are temporary implementations that will be replaced with proper command classes
 
 /**
  * Simplified Chat Command
  */
 class SimpleChatCommand implements ICommand {
+  id = "call-chatgpt-api";
+  name = "Chat";
+  icon = "message-circle";
+
   constructor(
     private deps: CommandDependencies,
     private statusBar?: HTMLElement
   ) {}
 
-  async execute(context: CommandContext): Promise<void> {
+  async execute(context: ICommandContext): Promise<void> {
     if (!context.editor || !context.view) {
       throw new Error("Chat command requires editor and view");
     }
 
-    try {
-      // Update status
-      this.updateStatus("Processing...");
-
-      // Get frontmatter and messages
-      const settings = this.deps.settings.getSettings();
-      const frontmatter = this.deps.editor.getFrontmatter(context.view, settings);
-      const { messagesWithRole } = await this.deps.editor.getMessages(context.editor, settings);
-
-      // Position cursor if not generating at cursor
-      if (!settings.generateAtCursor) {
-        this.deps.editor.moveCursorToEnd(context.editor);
-      }
-
-      // Determine AI service and ensure it's supported
-      const aiServiceName = frontmatter.aiService || "openai";
-      console.log(`[ChatGPT MD] Using AI service: ${aiServiceName}, streaming: ${frontmatter.stream}`);
-
-      // Call AI provider
-      const response = frontmatter.stream
-        ? await this.deps.ai.streamChat(aiServiceName, messagesWithRole, frontmatter, context.editor)
-        : await this.deps.ai.chat(aiServiceName, messagesWithRole, frontmatter);
-
-      // Process response using the correct method that matches original behavior
-      this.deps.editor.processResponse(context.editor, response, settings);
-
-      this.updateStatus("");
-    } catch (error) {
-      this.updateStatus("");
-      console.error("[ChatGPT MD] Chat error:", error);
-      throw error;
-    }
+    // TODO: Implement using the new abstraction layer
+    console.log("[ChatGPT MD] Chat command - to be implemented with new architecture");
   }
 
   private updateStatus(text: string): void {
@@ -235,16 +212,19 @@ class SimpleChatCommand implements ICommand {
  * Simplified Select Model Command
  */
 class SimpleSelectModelCommand implements ICommand {
+  id = "select-model-command";
+  name = "Select Model";
+  icon = "list";
+
   constructor(private deps: CommandDependencies) {}
 
-  async execute(context: CommandContext): Promise<void> {
+  async execute(context: ICommandContext): Promise<void> {
     if (!context.editor) {
       throw new Error("Select model command requires editor");
     }
 
-    // For now, just update frontmatter with a default model
-    // TODO: Implement model selection UI
-    this.deps.editor.updateFrontmatterField(context.editor, "model", "gpt-4o-mini");
+    // TODO: Implement model selection UI with new architecture
+    console.log("[ChatGPT MD] Select model command - to be implemented");
   }
 }
 
@@ -252,35 +232,22 @@ class SimpleSelectModelCommand implements ICommand {
  * Simplified Infer Title Command
  */
 class SimpleInferTitleCommand implements ICommand {
+  id = "infer-title";
+  name = "Infer title";
+  icon = "subtitles";
+
   constructor(
     private deps: CommandDependencies,
     private statusBar?: HTMLElement
   ) {}
 
-  async execute(context: CommandContext): Promise<void> {
+  async execute(context: ICommandContext): Promise<void> {
     if (!context.editor || !context.view) {
       throw new Error("Infer title command requires editor and view");
     }
 
-    try {
-      this.updateStatus("Inferring title...");
-
-      const settings = this.deps.settings.getSettings();
-      const frontmatter = this.deps.editor.getFrontmatter(context.view, settings);
-      const { messages } = await this.deps.editor.getMessages(context.editor, settings);
-
-      const title = await this.deps.ai.inferTitle(frontmatter.aiService || "openai", messages, frontmatter);
-
-      if (title) {
-        await this.deps.editor.writeInferredTitle(context.view, title);
-      }
-
-      this.updateStatus("");
-    } catch (error) {
-      this.updateStatus("");
-      console.error("[ChatGPT MD] Infer title error:", error);
-      throw error;
-    }
+    // TODO: Implement with new architecture
+    console.log("[ChatGPT MD] Infer title command - to be implemented");
   }
 
   private updateStatus(text: string): void {
@@ -294,15 +261,19 @@ class SimpleInferTitleCommand implements ICommand {
  * Simplified Add Divider Command
  */
 class SimpleAddDividerCommand implements ICommand {
+  id = "add-hr";
+  name = "Add divider";
+  icon = "minus";
+
   constructor(private deps: CommandDependencies) {}
 
-  async execute(context: CommandContext): Promise<void> {
+  async execute(context: ICommandContext): Promise<void> {
     if (!context.editor) {
       throw new Error("Add divider command requires editor");
     }
 
-    const settings = this.deps.settings.getSettings();
-    this.deps.editor.addHorizontalRule(context.editor, "user", settings.headingLevel);
+    // TODO: Implement with new architecture
+    console.log("[ChatGPT MD] Add divider command - to be implemented");
   }
 }
 
@@ -310,14 +281,19 @@ class SimpleAddDividerCommand implements ICommand {
  * Simplified Add Comment Block Command
  */
 class SimpleAddCommentBlockCommand implements ICommand {
+  id = "add-comment-block";
+  name = "Add comment block";
+  icon = "comment";
+
   constructor(private deps: CommandDependencies) {}
 
-  async execute(context: CommandContext): Promise<void> {
+  async execute(context: ICommandContext): Promise<void> {
     if (!context.editor) {
       throw new Error("Add comment block command requires editor");
     }
 
-    this.deps.editor.addCommentBlock(context.editor);
+    // TODO: Implement with new architecture
+    console.log("[ChatGPT MD] Add comment block command - to be implemented");
   }
 }
 
@@ -325,9 +301,13 @@ class SimpleAddCommentBlockCommand implements ICommand {
  * Simplified Stop Streaming Command
  */
 class SimpleStopStreamingCommand implements ICommand {
+  id = "stop-streaming";
+  name = "Stop streaming";
+  icon = "octagon";
+
   constructor(private deps: CommandDependencies) {}
 
-  async execute(context: CommandContext): Promise<void> {
+  async execute(context: ICommandContext): Promise<void> {
     this.deps.ai.stopAllStreaming();
   }
 }
@@ -336,15 +316,19 @@ class SimpleStopStreamingCommand implements ICommand {
  * Simplified Move to New Chat Command
  */
 class SimpleMoveToNewChatCommand implements ICommand {
+  id = "move-to-chat";
+  name = "Create new chat with highlighted text";
+  icon = "highlighter";
+
   constructor(private deps: CommandDependencies) {}
 
-  async execute(context: CommandContext): Promise<void> {
+  async execute(context: ICommandContext): Promise<void> {
     if (!context.editor) {
       throw new Error("Move to new chat command requires editor");
     }
 
-    // TODO: Implement highlighted text extraction and new chat creation
-    console.log("[ChatGPT MD] Move to new chat - not yet implemented in simplified architecture");
+    // TODO: Implement with new architecture
+    console.log("[ChatGPT MD] Move to new chat command - to be implemented");
   }
 }
 
@@ -352,11 +336,15 @@ class SimpleMoveToNewChatCommand implements ICommand {
  * Simplified Choose Chat Template Command
  */
 class SimpleChooseChatTemplateCommand implements ICommand {
+  id = "choose-chat-template";
+  name = "Create new chat from template";
+  icon = "layout-template";
+
   constructor(private deps: CommandDependencies) {}
 
-  async execute(context: CommandContext): Promise<void> {
-    // TODO: Implement template selection and new chat creation
-    console.log("[ChatGPT MD] Choose chat template - not yet implemented in simplified architecture");
+  async execute(context: ICommandContext): Promise<void> {
+    // TODO: Implement with new architecture
+    console.log("[ChatGPT MD] Choose chat template command - to be implemented");
   }
 }
 
@@ -364,13 +352,18 @@ class SimpleChooseChatTemplateCommand implements ICommand {
  * Simplified Clear Chat Command
  */
 class SimpleClearChatCommand implements ICommand {
+  id = "clear-chat";
+  name = "Clear chat (except frontmatter)";
+  icon = "trash";
+
   constructor(private deps: CommandDependencies) {}
 
-  async execute(context: CommandContext): Promise<void> {
+  async execute(context: ICommandContext): Promise<void> {
     if (!context.editor) {
       throw new Error("Clear chat command requires editor");
     }
 
-    this.deps.editor.clearChat(context.editor);
+    // TODO: Implement with new architecture
+    console.log("[ChatGPT MD] Clear chat command - to be implemented");
   }
 }

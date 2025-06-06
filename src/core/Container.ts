@@ -106,4 +106,9 @@ export const TOKENS = {
   // Infrastructure
   ObsidianApp: { name: "ObsidianApp" } as ServiceToken<import("obsidian").App>,
   ObsidianPlugin: { name: "ObsidianPlugin" } as ServiceToken<import("obsidian").Plugin>,
+
+  // Commands
+  AddDividerCommand: { name: "AddDividerCommand" } as ServiceToken<
+    import("../commands/AddDividerCommand").AddDividerCommand
+  >,
 };
