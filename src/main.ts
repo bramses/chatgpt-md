@@ -1,10 +1,10 @@
 import { Plugin } from "obsidian";
 import { ServiceLocator } from "./core/ServiceLocator";
-import { CommandRegistry } from "./core/CommandRegistry";
+import { IntegratedCommandRegistry } from "./core/IntegratedCommandRegistry";
 
 export default class ChatGPT_MD extends Plugin {
   private serviceLocator: ServiceLocator;
-  private commandRegistry: CommandRegistry;
+  private commandRegistry: IntegratedCommandRegistry;
 
   async onload() {
     // Initialize service locator with plugin instance
@@ -18,14 +18,11 @@ export default class ChatGPT_MD extends Plugin {
     // Add settings tab after migrations have completed
     await settingsService.addSettingTab();
 
-    // Initialize command registry with services
-    this.commandRegistry = new CommandRegistry(this, this.serviceLocator, settingsService);
+    // Initialize integrated command registry with refactored commands
+    this.commandRegistry = new IntegratedCommandRegistry(this, this.serviceLocator, settingsService);
     this.commandRegistry.registerCommands();
 
-    // Initialize available models after registry is created, but don't block startup
-    // Run model initialization in the background
-    this.commandRegistry.initializeAvailableModels().catch((error) => {
-      console.error("[ChatGPT MD] Error initializing models in background:", error);
-    });
+    console.log("[ChatGPT MD] Plugin loaded with integrated command registry");
+    console.log(`[ChatGPT MD] Refactored commands: ${this.commandRegistry.getRefactoredCommands().length}`);
   }
 }

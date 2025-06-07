@@ -130,6 +130,48 @@ Tests:       77 passed, 77 total (35 + 9 + 6 + 13 + 14)
 Snapshots:   0 total
 ```
 
+## Phase 3: Use Case Layer ✅ COMPLETED (Core Implementation)
+
+### 3.1 Use Case Creation
+
+- ✅ Created `src/usecases/ChatUseCase.ts` - Main chat business logic
+
+  - Extracted complex AI chat interaction logic from commands
+  - Handles message processing, API calls, response handling
+  - Auto title inference with configurable conditions
+  - Comprehensive error handling and status management
+  - Clean separation of business logic from UI concerns
+
+- ✅ Created `src/usecases/TitleInferenceUseCase.ts` - Title inference logic
+
+  - Manages automatic title generation from chat content
+  - Model selection and API configuration
+  - Validation and error handling for title inference
+  - Flexible default model selection per AI service
+
+- ✅ Created `src/usecases/ModelSelectionUseCase.ts` - Model management
+  - Handles model fetching and caching across all AI services
+  - Background refresh with modal updating
+  - 5-minute cache with proper invalidation
+  - Error resilience and fallback to cached models
+
+### 3.2 Architecture Benefits Achieved
+
+- **Business Logic Separation**: Complex chat operations now in testable use cases
+- **Dependency Injection**: Clean interfaces for all external dependencies
+- **Error Handling**: Centralized error management with user-friendly notifications
+- **Async Operations**: Proper handling of AI API calls and model fetching
+- **Caching**: Intelligent model caching for better performance
+- **Configurability**: Flexible settings and model selection
+
+### 3.3 Testing Foundation
+
+- ✅ Created `tests/unit/usecases/ChatUseCase.test.ts` - Core business logic tests
+  - 12+ comprehensive test scenarios passing
+  - Tests for successful execution, error handling, title inference
+  - Mock dependencies with proper TypeScript support
+  - Platform-specific behavior validation
+
 ## Benefits Achieved So Far
 
 1. **Testability**: Can now write unit tests for business logic without Obsidian dependencies
