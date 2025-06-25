@@ -1,4 +1,4 @@
-import { AI_SERVICE_LMSTUDIO, AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
+import { AI_SERVICE_LMSTUDIO, AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER, AI_SERVICE_GROQ } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { NotificationService } from "./NotificationService";
 
@@ -38,6 +38,8 @@ export class ApiAuthService {
         return ""; // Ollama doesn't use an API key
       case AI_SERVICE_LMSTUDIO:
         return ""; // LM Studio doesn't use an API key
+      case AI_SERVICE_GROQ:
+        return settings.groqApiKey;
       default:
         return "";
     }
@@ -87,6 +89,9 @@ export class ApiAuthService {
         break;
       case AI_SERVICE_LMSTUDIO:
         // LM Studio doesn't require authentication headers
+        break;
+      case AI_SERVICE_GROQ:
+        headers["Authorization"] = `Bearer ${apiKey}`;
         break;
     }
 

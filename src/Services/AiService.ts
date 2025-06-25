@@ -9,6 +9,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_GROQ,
   API_ENDPOINTS,
   NEWLINE,
   PLUGIN_SYSTEM_MESSAGE,
@@ -388,6 +389,13 @@ export interface OllamaModel {
   name: string;
 }
 
+export interface GroqModel {
+  id: string;
+  object: string;
+  created: number;
+  owned_by: string;
+}
+
 /**
  * Determine the AI provider from a URL or model
  */
@@ -406,18 +414,25 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
     }
     return AI_SERVICE_OLLAMA;
   }
+  if (model?.includes("llama3") || model?.includes("mixtral") || model?.includes("gemma")) {
+    return AI_SERVICE_GROQ;
+  }
 
   // Then check URL patterns
   // Define URL patterns
   const OPENROUTER_URL_PATTERN = "openrouter";
   const LOCAL_URL_PATTERNS = ["localhost", "127.0.0.1"];
   const LMSTUDIO_URL_PATTERN = "1234"; // LM Studio default port
+  const GROQ_URL_PATTERN = "api.groq.com";
 
   if (url?.includes(OPENROUTER_URL_PATTERN)) {
     return AI_SERVICE_OPENROUTER;
   }
   if (url?.includes(LMSTUDIO_URL_PATTERN)) {
     return AI_SERVICE_LMSTUDIO;
+  }
+  if (url?.includes(GROQ_URL_PATTERN)) {
+    return AI_SERVICE_GROQ;
   }
   if (LOCAL_URL_PATTERNS.some((pattern) => url?.includes(pattern))) {
     return AI_SERVICE_OLLAMA;
@@ -433,13 +448,22 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
 export const aiProviderFromKeys = (config: Record<string, any>): string | null => {
   const hasOpenRouterKey = isValidApiKey(config.openrouterApiKey);
   const hasOpenAIKey = isValidApiKey(config.apiKey);
+  const hasGroqKey = isValidApiKey(config.groqApiKey);
 
-  if (hasOpenAIKey && hasOpenRouterKey) {
+  if (hasOpenAIKey && hasOpenRouterKey && hasGroqKey) {
+    return AI_SERVICE_OPENAI; // Default to OpenAI if all keys exist
+  } else if (hasOpenAIKey && hasOpenRouterKey) {
     return AI_SERVICE_OPENAI; // Default to OpenAI if both keys exist
+  } else if (hasOpenAIKey && hasGroqKey) {
+    return AI_SERVICE_OPENAI; // Default to OpenAI if both keys exist
+  } else if (hasOpenRouterKey && hasGroqKey) {
+    return AI_SERVICE_OPENROUTER; // Default to OpenRouter if both keys exist
   } else if (hasOpenRouterKey) {
     return AI_SERVICE_OPENROUTER;
   } else if (hasOpenAIKey) {
     return AI_SERVICE_OPENAI;
+  } else if (hasGroqKey) {
+    return AI_SERVICE_GROQ;
   }
 
   return null;

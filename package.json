@@ -1,7 +1,7 @@
 {
-  "name": "chatgpt-md",
-  "version": "2.4.3",
-  "description": "A seamless integration of openAIs GPT LLMs and Ollama into Obsidian.",
+  "name": "assist-groq-niky",
+  "version": "3.2.5",
+  "description": "A seamless integration of openAIs GPT LLMs and Ollama into Obsidian. Integrando a opção de utilizar a Key do Groq ao inves da Openai",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
@@ -10,7 +10,7 @@
     "update-version": "node update-version.mjs"
   },
   "keywords": [],
-  "author": "",
+  "author": "Paulo Boaventura",
   "license": "MIT",
   "devDependencies": {
     "@codemirror/state": "^6.5.2",
@@ -25,5 +25,12 @@
     "prettier": "^3.5.3",
     "tslib": "2.8.1",
     "typescript": "5.8.3"
-  }
+  },
+  "dependencies": {
+    "axios": "^1.10.0",
+    "body-parser": "^2.2.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0"
+  },
+  "repository": "https://github.com/PauloBoaventura/chatgpt-md-groq"
 }

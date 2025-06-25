@@ -3,6 +3,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_GROQ,
   ROLE_ASSISTANT,
 } from "src/Constants";
 import { Editor } from "obsidian";
@@ -82,6 +83,8 @@ export class ApiResponseParser {
         }
         // Fallback to stringifying the data
         return JSON.stringify(data);
+      case AI_SERVICE_GROQ:
+        return data.choices[0].message.content;
       default:
         console.warn(`Unknown service type: ${serviceType}`);
         return data?.choices?.[0]?.message?.content || data?.response || JSON.stringify(data);
@@ -110,6 +113,7 @@ export class ApiResponseParser {
       case AI_SERVICE_OPENAI:
       case AI_SERVICE_OPENROUTER:
       case AI_SERVICE_LMSTUDIO:
+      case AI_SERVICE_GROQ:
         return this.processOpenAIFormat(line, currentText, editor, initialCursor, setAtCursor);
       case AI_SERVICE_OLLAMA:
         return this.processOllamaFormat(line, currentText, editor, initialCursor, setAtCursor);

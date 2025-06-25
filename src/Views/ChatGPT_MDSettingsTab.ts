@@ -5,6 +5,7 @@ import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
+import { DEFAULT_GROQ_CONFIG } from "src/Services/GroqService";
 
 interface SettingDefinition {
   id: keyof ChatGPT_MDSettings;
@@ -35,6 +36,23 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
 
     // Define settings schema
     const settingsSchema: SettingDefinition[] = [
+      // LOG OPTIONS
+      {
+        id: "enableDetailedLog",
+        name: "Ativar log detalhado",
+        description: "Registra todas as ações do plugin em um arquivo de log para depuração.",
+        type: "toggle",
+        group: "Log"
+      },
+      {
+        id: "detailedLogPath",
+        name: "Pasta para arquivos de log",
+        description: "Pasta dentro do vault onde os arquivos de log serão salvos. Deixe vazio para usar 'ChatGPT_MD/logs'. Os logs são salvos como arquivos .md com data no nome.",
+        type: "text",
+        placeholder: "ChatGPT_MD/logs",
+        group: "Log"
+      },
+
       // API Keys
       {
         id: "apiKey",
@@ -50,6 +68,14 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         description: "API Key for OpenRouter.ai",
         type: "text",
         placeholder: "your openRouter API Key",
+        group: "API Keys",
+      },
+      {
+        id: "groqApiKey",
+        name: "Groq API Key",
+        description: "API Key for Groq",
+        type: "text",
+        placeholder: "your groq API Key",
         group: "API Keys",
       },
 
@@ -84,6 +110,14 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         description: `URL for LM Studio API\nDefault URL: ${DEFAULT_LMSTUDIO_CONFIG.url}`,
         type: "text",
         placeholder: DEFAULT_LMSTUDIO_CONFIG.url,
+        group: "Service URLs",
+      },
+      {
+        id: "groqUrl",
+        name: "Groq API URL",
+        description: `URL for Groq API\nDefault URL: https://api.groq.com/openai/v1`,
+        type: "text",
+        placeholder: "https://api.groq.com/openai/v1",
         group: "Service URLs",
       },
 
@@ -158,6 +192,7 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         description: "Language to use for title inference.",
         type: "dropdown",
         options: {
+          "Português Brasileiro": "Português Brasileiro",
           English: "English",
           Japanese: "Japanese",
           Spanish: "Spanish",

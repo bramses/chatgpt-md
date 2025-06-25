@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Notice, Platform, Plugin } from "obsidian";
+import { Editor, MarkdownView, Notice, Platform, Plugin, MarkdownFileInfo } from "obsidian";
 import { ServiceLocator } from "./ServiceLocator";
 import { SettingsService } from "../Services/SettingsService";
 import { IAiApiService } from "src/Services/AiService";
@@ -7,6 +7,7 @@ import { DEFAULT_OPENAI_CONFIG, fetchAvailableOpenAiModels } from "src/Services/
 import { DEFAULT_OLLAMA_CONFIG, fetchAvailableOllamaModels } from "src/Services/OllamaService";
 import { DEFAULT_OPENROUTER_CONFIG, fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
 import { DEFAULT_LMSTUDIO_CONFIG, fetchAvailableLmStudioModels } from "src/Services/LmStudioService";
+import { DEFAULT_GROQ_CONFIG, fetchAvailableGroqModels } from "src/Services/GroqService";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
@@ -14,6 +15,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_GROQ,
   CALL_CHATGPT_API_COMMAND_ID,
   CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
   CLEAR_CHAT_COMMAND_ID,
@@ -29,6 +31,7 @@ import {
 } from "src/Constants";
 import { getHeadingPrefix, isTitleTimestampFormat } from "src/Utilities/TextHelpers";
 import { ApiAuthService, isValidApiKey } from "../Services/ApiAuthService";
+import { LogHelperDetailed } from "src/Utilities/LogHelperDetailed";
 
 /**
  * Registers and manages commands for the plugin
@@ -73,7 +76,14 @@ export class CommandRegistry {
       id: CALL_CHATGPT_API_COMMAND_ID,
       name: "Chat",
       icon: "message-circle",
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
+      editorCallback: async (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
+        // Handle both MarkdownView and MarkdownFileInfo
+        const view = "file" in ctx ? this.plugin.app.workspace.getActiveViewOfType(MarkdownView) : ctx;
+        if (!view) {
+          console.error("[ChatGPT MD] No active MarkdownView found");
+          return;
+        }
+
         const editorService = this.serviceLocator.getEditorService();
         const settings = this.settingsService.getSettings();
         const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
@@ -90,6 +100,11 @@ export class CommandRegistry {
           // move cursor to end of file if generateAtCursor is false
           if (!settings.generateAtCursor) {
             editorService.moveCursorToEnd(editor);
+          }
+
+          if (frontmatter.aiService === 'groq' && typeof (this.aiService as any).chatWithFallback === 'function') {
+            await this.handleGroqChat(messagesWithRoleAndMessage, frontmatter, settings, editor);
+            return;
           }
 
           if (Platform.isMobile) {
@@ -139,6 +154,8 @@ export class CommandRegistry {
                 settingsWithApiKey.model = "anthropic/claude-3-opus:beta";
               } else if (frontmatter.aiService === AI_SERVICE_LMSTUDIO) {
                 settingsWithApiKey.model = "local-model";
+              } else if (frontmatter.aiService === AI_SERVICE_GROQ) {
+                settingsWithApiKey.model = "llama3-70b-8192";
               }
             }
 
@@ -169,7 +186,14 @@ export class CommandRegistry {
       id: "select-model-command",
       name: "Select Model",
       icon: "list",
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
+      editorCallback: async (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
+        // Handle both MarkdownView and MarkdownFileInfo
+        const view = "file" in ctx ? this.plugin.app.workspace.getActiveViewOfType(MarkdownView) : ctx;
+        if (!view) {
+          console.error("[ChatGPT MD] No active MarkdownView found");
+          return;
+        }
+
         const editorService = this.serviceLocator.getEditorService();
         const settings = this.settingsService.getSettings();
 
@@ -188,6 +212,7 @@ export class CommandRegistry {
             const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
             const openAiKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
             const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
+            const groqKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_GROQ);
 
             // Use the same URL structure as initializeAvailableModels
             const currentUrls = {
@@ -196,9 +221,10 @@ export class CommandRegistry {
                 frontmatter.openrouterUrl || settings.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
               [AI_SERVICE_OLLAMA]: frontmatter.ollamaUrl || settings.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
               [AI_SERVICE_LMSTUDIO]: frontmatter.lmstudioUrl || settings.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
+              [AI_SERVICE_GROQ]: frontmatter.groqUrl || settings.groqUrl || DEFAULT_GROQ_CONFIG.url,
             };
 
-            const freshModels = await this.fetchAvailableModels(currentUrls, openAiKey, openRouterKey);
+            const freshModels = await this.fetchAvailableModels(currentUrls, openAiKey, openRouterKey, groqKey);
 
             // --- Step 3: Compare and potentially update modal ---
             // Basic comparison: Check if lengths differ or if sets of models differ
@@ -237,7 +263,7 @@ export class CommandRegistry {
       id: ADD_HR_COMMAND_ID,
       name: "Add divider",
       icon: "minus",
-      editorCallback: async (editor: Editor, _view: MarkdownView) => {
+      editorCallback: async (editor: Editor, _ctx: MarkdownView | MarkdownFileInfo) => {
         const editorService = this.serviceLocator.getEditorService();
         const settings = this.settingsService.getSettings();
         editorService.addHorizontalRule(editor, ROLE_USER, settings.headingLevel);
@@ -253,7 +279,7 @@ export class CommandRegistry {
       id: ADD_COMMENT_BLOCK_COMMAND_ID,
       name: "Add comment block",
       icon: "comment",
-      editorCallback: (editor: Editor, _view: MarkdownView) => {
+      editorCallback: (editor: Editor, _ctx: MarkdownView | MarkdownFileInfo) => {
         // add a comment block at cursor
         const cursor = editor.getCursor();
         const line = cursor.line;
@@ -301,7 +327,14 @@ export class CommandRegistry {
       id: INFER_TITLE_COMMAND_ID,
       name: "Infer title",
       icon: "subtitles",
-      editorCallback: async (editor: Editor, view: MarkdownView) => {
+      editorCallback: async (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
+        // Handle both MarkdownView and MarkdownFileInfo
+        const view = "file" in ctx ? this.plugin.app.workspace.getActiveViewOfType(MarkdownView) : ctx;
+        if (!view) {
+          console.error("[ChatGPT MD] No active MarkdownView found");
+          return;
+        }
+
         const editorService = this.serviceLocator.getEditorService();
         const settings = this.settingsService.getSettings();
 
@@ -341,7 +374,7 @@ export class CommandRegistry {
       id: MOVE_TO_CHAT_COMMAND_ID,
       name: "Create new chat with highlighted text",
       icon: "highlighter",
-      editorCallback: async (editor: Editor, _view: MarkdownView) => {
+      editorCallback: async (editor: Editor, _ctx: MarkdownView | MarkdownFileInfo) => {
         const editorService = this.serviceLocator.getEditorService();
         const settings = this.settingsService.getSettings();
 
@@ -389,7 +422,7 @@ export class CommandRegistry {
       id: CLEAR_CHAT_COMMAND_ID,
       name: "Clear chat (except frontmatter)",
       icon: "trash",
-      editorCallback: async (editor: Editor, _view: MarkdownView) => {
+      editorCallback: async (editor: Editor, _ctx: MarkdownView | MarkdownFileInfo) => {
         const editorService = this.serviceLocator.getEditorService();
         editorService.clearChat(editor);
       },
@@ -402,6 +435,7 @@ export class CommandRegistry {
       openrouter: frontmatter.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
       ollama: frontmatter.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
       lmstudio: frontmatter.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
+      groq: frontmatter.groqUrl || "https://api.groq.com/openai/v1",
     };
   }
 
@@ -414,15 +448,17 @@ export class CommandRegistry {
       const settings = this.settingsService.getSettings();
       const openAiKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
       const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
+      const groqKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_GROQ);
       // Use default URLs for initialization, assuming frontmatter isn't available yet
       const defaultUrls = {
         [AI_SERVICE_OPENAI]: settings.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
         [AI_SERVICE_OPENROUTER]: settings.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
         [AI_SERVICE_OLLAMA]: settings.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
         [AI_SERVICE_LMSTUDIO]: settings.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
+        [AI_SERVICE_GROQ]: settings.groqUrl || DEFAULT_GROQ_CONFIG.url,
       };
 
-      this.availableModels = await this.fetchAvailableModels(defaultUrls, openAiKey, openRouterKey);
+      this.availableModels = await this.fetchAvailableModels(defaultUrls, openAiKey, openRouterKey, groqKey);
       console.log(`[ChatGPT MD] Found ${this.availableModels.length} available models.`);
     } catch (error) {
       console.error("[ChatGPT MD] Error initializing available models:", error);
@@ -438,7 +474,8 @@ export class CommandRegistry {
   public async fetchAvailableModels(
     urls: { [key: string]: string },
     apiKey: string,
-    openrouterApiKey: string
+    openrouterApiKey: string,
+    groqApiKey: string
   ): Promise<string[]> {
     function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
       return Promise.race([promise, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
@@ -472,6 +509,13 @@ export class CommandRegistry {
         );
       }
 
+      // Conditionally add Groq promise
+      if (isValidApiKey(groqApiKey)) {
+        promises.push(
+          withTimeout(fetchAvailableGroqModels(urls[AI_SERVICE_GROQ], groqApiKey), FETCH_MODELS_TIMEOUT_MS, [])
+        );
+      }
+
       // Fetch all models in parallel and flatten the results
       const results = await Promise.all(promises);
       return results.flat();
@@ -483,6 +527,43 @@ export class CommandRegistry {
       return []; // Return empty array on error to avoid breaking the modal
     }
   }
+
+  private async handleGroqChat(
+    messagesWithRoleAndMessage: any[],
+    frontmatter: any,
+    settings: any,
+    editor: any
+  ) {
+    const groqService = this.aiService as any;
+    try {
+      // Serializa as mensagens para um prompt único (ou adapte para múltiplas mensagens se necessário)
+      const prompt = messagesWithRoleAndMessage.map((m: any) => `${m.role}: ${m.content}`).join('\n');
+      const resposta = await groqService.chatWithFallback(
+        prompt,
+        settings,
+        this.plugin,
+        frontmatter.model // modelo principal
+      );
+      // Insere a resposta no editor
+      if (editor && typeof editor.replaceSelection === 'function') {
+        editor.replaceSelection(`\nGroq: ${resposta}\n`);
+      }
+      // Log de sucesso
+      console.log('[Groq] Resposta inserida no editor:', resposta);
+      return resposta;
+    } catch (error: any) {
+      LogHelperDetailed.logError(this.plugin, error, "Erro em handleGroqChat", {
+        operation: 'groq_command_failed',
+        metadata: { frontmatter }
+      });
+      console.error('[Groq] Erro ao chamar chatWithFallback:', error);
+      if (editor && typeof editor.replaceSelection === 'function') {
+        editor.replaceSelection(`\n[Erro Groq]: ${error.message || error}\n`);
+      }
+      throw error;
+    }
+  }
+
   /**
    * Update the status bar with the given text
    */

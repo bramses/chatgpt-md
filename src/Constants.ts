@@ -2,6 +2,7 @@ export const AI_SERVICE_OLLAMA = "ollama";
 export const AI_SERVICE_OPENAI = "openai";
 export const AI_SERVICE_OPENROUTER = "openrouter";
 export const AI_SERVICE_LMSTUDIO = "lmstudio";
+export const AI_SERVICE_GROQ = "groq";
 
 // API endpoints for each service
 export const API_ENDPOINTS = {
@@ -9,6 +10,7 @@ export const API_ENDPOINTS = {
   [AI_SERVICE_OPENROUTER]: "/api/v1/chat/completions",
   [AI_SERVICE_OLLAMA]: "/api/chat",
   [AI_SERVICE_LMSTUDIO]: "/v1/chat/completions",
+  [AI_SERVICE_GROQ]: "/v1/chat/completions",
 };
 
 export const ADD_COMMENT_BLOCK_COMMAND_ID = "add-comment-block";
@@ -42,7 +44,7 @@ export const COMMENT_BLOCK_END = `=end-chatgpt-md-comment`;
 
 export const DEFAULT_HEADING_LEVEL = 3;
 export const MAX_HEADING_LEVEL = 6;
-export const DEFAULT_INFER_TITLE_LANGUAGE = "English";
+export const DEFAULT_INFER_TITLE_LANGUAGE = "Português Brasileiro";
 export const MIN_AUTO_INFER_MESSAGES = 4;
 export const DEFAULT_DATE_FORMAT = "YYYYMMDDhhmmss";
 
@@ -65,6 +67,7 @@ model: gpt-4.1-mini
 presence_penalty: 0
 stream: true
 temperature: 1
+aiService: openai
 ---`;
 
 export const FETCH_MODELS_TIMEOUT_MS = 6000;

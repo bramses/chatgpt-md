@@ -15,7 +15,8 @@ import { OpenAiService } from "src/Services/OpenAiService";
 import { OllamaService } from "src/Services/OllamaService";
 import { OpenRouterService } from "src/Services/OpenRouterService";
 import { LmStudioService } from "src/Services/LmStudioService";
-import { AI_SERVICE_LMSTUDIO, AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
+import { GroqService } from "src/Services/GroqService";
+import { AI_SERVICE_LMSTUDIO, AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER, AI_SERVICE_GROQ } from "src/Constants";
 import { SettingsService } from "src/Services/SettingsService";
 
 /**
@@ -38,6 +39,7 @@ export class ServiceLocator {
   private apiAuthService: ApiAuthService;
   private apiResponseParser: ApiResponseParser;
   private settingsService: SettingsService;
+  private aiServices: Map<string, IAiApiService> = new Map();
 
   constructor(app: App, plugin: Plugin) {
     this.app = app;
@@ -83,42 +85,63 @@ export class ServiceLocator {
    * Get an AI API service based on the service type
    */
   getAiApiService(serviceType: string): IAiApiService {
+    if (this.aiServices.has(serviceType)) {
+      return this.aiServices.get(serviceType) as IAiApiService;
+    }
+
+    let service: IAiApiService;
     switch (serviceType) {
       case AI_SERVICE_OPENAI:
-        return new OpenAiService(
+        service = new OpenAiService(
           this.errorService,
           this.notificationService,
           this.apiService,
           this.apiAuthService,
           this.apiResponseParser
         );
+        break;
       case AI_SERVICE_OLLAMA:
-        return new OllamaService(
+        service = new OllamaService(
           this.errorService,
           this.notificationService,
           this.apiService,
           this.apiAuthService,
           this.apiResponseParser
         );
+        break;
       case AI_SERVICE_OPENROUTER:
-        return new OpenRouterService(
+        service = new OpenRouterService(
           this.errorService,
           this.notificationService,
           this.apiService,
           this.apiAuthService,
           this.apiResponseParser
         );
+        break;
       case AI_SERVICE_LMSTUDIO:
-        return new LmStudioService(
+        service = new LmStudioService(
           this.errorService,
           this.notificationService,
           this.apiService,
           this.apiAuthService,
           this.apiResponseParser
         );
+        break;
+      case AI_SERVICE_GROQ:
+        service = new GroqService(
+          this.errorService,
+          this.notificationService,
+          this.apiService,
+          this.apiAuthService,
+          this.apiResponseParser
+        );
+        break;
       default:
         throw new Error(`Unknown AI service type: ${serviceType}`);
     }
+
+    this.aiServices.set(serviceType, service);
+    return service;
   }
 
   // Getters for all services
