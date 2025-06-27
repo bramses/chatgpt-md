@@ -11,7 +11,6 @@ import {
   ROLE_IDENTIFIER,
   ROLE_USER,
   WIKI_LINKS_REGEX,
-  YAML_FRONTMATTER_REGEX,
 } from "src/Constants";
 import { getHeadingPrefix } from "../Utilities/TextHelpers";
 
@@ -66,10 +65,38 @@ export class MessageService {
   }
 
   /**
-   * Remove YAML frontmatter from text
+   * Remove YAML frontmatter from text using a more robust approach
    */
   removeYAMLFrontMatter(note: string | undefined): string | undefined {
-    return note ? note.replace(YAML_FRONTMATTER_REGEX, "").trim() : note;
+    if (!note) return note;
+
+    // Check if the note starts with frontmatter
+    if (!note.trim().startsWith("---")) {
+      return note;
+    }
+
+    // Find the end of frontmatter
+    const lines = note.split("\n");
+    let endIndex = -1;
+
+    // Skip first line (opening ---)
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].trim() === "---") {
+        endIndex = i;
+        break;
+      }
+    }
+
+    if (endIndex === -1) {
+      // No closing ---, return original note
+      return note;
+    }
+
+    // Return content after frontmatter
+    return lines
+      .slice(endIndex + 1)
+      .join("\n")
+      .trim();
   }
 
   /**
@@ -163,7 +190,8 @@ export class MessageService {
                 `${NEWLINE}${HORIZONTAL_LINE_MD}${NEWLINE}#+ ${ROLE_IDENTIFIER}(?:${ROLE_USER}|${ROLE_ASSISTANT}).*$`,
                 "gm"
               );
-              content = content?.replace(regex, "").replace(YAML_FRONTMATTER_REGEX, "");
+              content = content?.replace(regex, "");
+              content = this.removeYAMLFrontMatter(content) || null;
 
               message = message.replace(
                 new RegExp(this.escapeRegExp(link.link), "g"),

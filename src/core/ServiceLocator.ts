@@ -4,6 +4,7 @@ import { EditorContentService } from "src/Services/EditorContentService";
 import { MessageService } from "src/Services/MessageService";
 import { TemplateService } from "src/Services/TemplateService";
 import { FrontmatterService } from "src/Services/FrontmatterService";
+import { FrontmatterManager } from "src/Services/FrontmatterManager";
 import { EditorService } from "src/Services/EditorService";
 import { NotificationService } from "src/Services/NotificationService";
 import { ErrorService } from "src/Services/ErrorService";
@@ -30,6 +31,7 @@ export class ServiceLocator {
   private editorContentService: EditorContentService;
   private messageService: MessageService;
   private templateService: TemplateService;
+  private frontmatterManager: FrontmatterManager;
   private frontmatterService: FrontmatterService;
   private editorService: EditorService;
   private notificationService: NotificationService;
@@ -60,9 +62,10 @@ export class ServiceLocator {
 
     // Initialize specialized services
     this.fileService = new FileService(this.app);
-    this.editorContentService = new EditorContentService();
+    this.frontmatterManager = new FrontmatterManager(this.app);
+    this.editorContentService = new EditorContentService(this.app);
     this.messageService = new MessageService(this.fileService, this.notificationService);
-    this.frontmatterService = new FrontmatterService(this.app);
+    this.frontmatterService = new FrontmatterService(this.app, this.frontmatterManager);
     this.templateService = new TemplateService(this.app, this.fileService, this.editorContentService);
 
     // Initialize the EditorService with all specialized services
@@ -136,6 +139,10 @@ export class ServiceLocator {
 
   getTemplateService(): TemplateService {
     return this.templateService;
+  }
+
+  getFrontmatterManager(): FrontmatterManager {
+    return this.frontmatterManager;
   }
 
   getFrontmatterService(): FrontmatterService {

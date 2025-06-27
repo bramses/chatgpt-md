@@ -27,12 +27,17 @@ export class AiModelSuggestModal extends SuggestModal<string> {
     el.createEl("div", { text: model });
   }
 
-  onChooseSuggestion(modelName: string, evt: MouseEvent | KeyboardEvent) {
+  async onChooseSuggestion(modelName: string, evt: MouseEvent | KeyboardEvent) {
     if (this.modelNames.indexOf(modelName) === -1 || this.modelNames.length === 0) {
       return;
     }
 
     new Notice(`Selected model: ${modelName}`);
-    this.editorService.setModel(this.editor, modelName);
+    try {
+      await this.editorService.setModel(this.editor, modelName);
+    } catch (error) {
+      console.error("[ChatGPT MD] Error setting model in frontmatter:", error);
+      new Notice(`Error setting model: ${error.message}`);
+    }
   }
 }

@@ -76,7 +76,7 @@ export class CommandRegistry {
       editorCallback: async (editor: Editor, view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
         const settings = this.settingsService.getSettings();
-        const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
+        const frontmatter = await editorService.getFrontmatter(view, settings, this.plugin.app);
 
         this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
 
@@ -185,7 +185,7 @@ export class CommandRegistry {
         // --- Step 2: Fetch fresh models asynchronously ---
         (async () => {
           try {
-            const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
+            const frontmatter = await editorService.getFrontmatter(view, settings, this.plugin.app);
             const openAiKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
             const openRouterKey = this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
 
@@ -306,7 +306,7 @@ export class CommandRegistry {
         const settings = this.settingsService.getSettings();
 
         // get frontmatter
-        const frontmatter = editorService.getFrontmatter(view, settings, this.plugin.app);
+        const frontmatter = await editorService.getFrontmatter(view, settings, this.plugin.app);
         this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
 
         // Ensure model is set
@@ -391,7 +391,7 @@ export class CommandRegistry {
       icon: "trash",
       editorCallback: async (editor: Editor, _view: MarkdownView) => {
         const editorService = this.serviceLocator.getEditorService();
-        editorService.clearChat(editor);
+        await editorService.clearChat(editor);
       },
     });
   }

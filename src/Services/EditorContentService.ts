@@ -1,18 +1,19 @@
-import { Editor } from "obsidian";
+import { Editor, App, MarkdownView } from "obsidian";
 import { getHeaderRole, getHeadingPrefix } from "src/Utilities/TextHelpers";
-import {
-  HORIZONTAL_LINE_CLASS,
-  NEWLINE,
-  ROLE_ASSISTANT,
-  ROLE_IDENTIFIER,
-  ROLE_USER,
-  YAML_FRONTMATTER_REGEX,
-} from "src/Constants";
+import { FrontmatterManager } from "src/Services/FrontmatterManager";
+import { HORIZONTAL_LINE_CLASS, NEWLINE, ROLE_ASSISTANT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 
 /**
  * Service responsible for editor content manipulation
  */
 export class EditorContentService {
+  private frontmatterManager?: FrontmatterManager;
+
+  constructor(private app?: App) {
+    if (app) {
+      this.frontmatterManager = new FrontmatterManager(app);
+    }
+  }
   /**
    * Add a horizontal rule with a role header
    */
@@ -37,23 +38,46 @@ export class EditorContentService {
   }
 
   /**
-   * Clear the chat content, preserving frontmatter
+   * Clear the chat content, preserving frontmatter using FrontmatterManager
    */
-  clearChat(editor: Editor): void {
-    const content = editor.getValue();
-    const frontmatterMatches = content.match(YAML_FRONTMATTER_REGEX);
+  async clearChat(editor: Editor): Promise<void> {
+    let frontmatterContent = "";
 
-    if (frontmatterMatches?.length) {
-      const [frontmatter] = frontmatterMatches;
+    // Try to use FrontmatterManager to preserve frontmatter
+    if (this.app && this.frontmatterManager) {
+      const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (activeView?.file) {
+        try {
+          const frontmatter = await this.frontmatterManager.readFrontmatter(activeView.file);
+          if (frontmatter && Object.keys(frontmatter).length > 0) {
+            // Reconstruct frontmatter from the data
+            const frontmatterEntries = Object.entries(frontmatter)
+              .filter(([key]) => key !== "position") // Exclude Obsidian's internal position data
+              .map(([key, value]) => {
+                if (typeof value === "string") {
+                  return `${key}: "${value}"`;
+                }
+                return `${key}: ${value}`;
+              });
 
-      // Clear editor and restore frontmatter
-      editor.setValue(frontmatter);
+            if (frontmatterEntries.length > 0) {
+              frontmatterContent = `---\n${frontmatterEntries.join("\n")}\n---\n\n`;
+            }
+          }
+        } catch (error) {
+          console.error("[EditorContentService] Error reading frontmatter:", error);
+        }
+      }
+    }
 
-      // Position cursor at the end of the document
+    // Clear editor and restore frontmatter
+    editor.setValue(frontmatterContent);
+
+    // Position cursor at the end of the document
+    if (frontmatterContent) {
       editor.setCursor({ line: editor.lastLine() + 1, ch: 0 });
     } else {
-      // Clear editor
-      editor.setValue("");
+      editor.setCursor({ line: 0, ch: 0 });
     }
   }
 
