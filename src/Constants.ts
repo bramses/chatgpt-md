@@ -33,7 +33,6 @@ export const CHAT_FOLDER_TYPE = "chatFolder";
 export const CHAT_TEMPLATE_FOLDER_TYPE = "chatTemplateFolder";
 
 export const NEWLINE = "\n\n";
-export const YAML_FRONTMATTER_REGEX = /---[\s\S]*?---/g;
 export const WIKI_LINKS_REGEX = /\[\[([^\][]+)\]\]/g;
 export const MARKDOWN_LINKS_REGEX = /\[([^\]]+)\]\(([^()]+)\)/g;
 

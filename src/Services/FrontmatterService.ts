@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView } from "obsidian";
+import { App, Editor, MarkdownView, TFile } from "obsidian";
 import { parseSettingsFrontmatter } from "src/Utilities/TextHelpers";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
@@ -6,30 +6,33 @@ import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
 import { aiProviderFromKeys, aiProviderFromUrl } from "src/Services/AiService";
-import {
-  AI_SERVICE_LMSTUDIO,
-  AI_SERVICE_OLLAMA,
-  AI_SERVICE_OPENAI,
-  AI_SERVICE_OPENROUTER,
-  YAML_FRONTMATTER_REGEX,
-} from "src/Constants";
+import { FrontmatterManager } from "src/Services/FrontmatterManager";
+import { AI_SERVICE_LMSTUDIO, AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
 
 /**
  * Service responsible for frontmatter parsing and generation
  */
 export class FrontmatterService {
-  constructor(private app: App) {}
+  constructor(
+    private app: App,
+    private frontmatterManager: FrontmatterManager
+  ) {}
 
   /**
-   * Get frontmatter from a markdown view
+   * Get frontmatter from a markdown view using FrontmatterManager
    */
-  getFrontmatter(view: MarkdownView, settings: ChatGPT_MDSettings): any {
-    // Extract frontmatter from the file
-    const fileContent = view.editor.getValue();
-    const frontmatterMatch = fileContent.match(YAML_FRONTMATTER_REGEX);
+  async getFrontmatter(view: MarkdownView, settings: ChatGPT_MDSettings): Promise<any> {
+    let frontmatter: Record<string, any> = {};
 
-    // Parse frontmatter configurations
-    const frontmatter = frontmatterMatch ? parseSettingsFrontmatter(frontmatterMatch[0]) : {};
+    // Use FrontmatterManager to get frontmatter
+    if (view.file) {
+      const fileFrontmatter = await this.frontmatterManager.readFrontmatter(view.file);
+      if (fileFrontmatter) {
+        frontmatter = { ...fileFrontmatter };
+      }
+    }
+
+    // Parse default frontmatter from settings
     const defaultFrontmatter = settings.defaultChatFrontmatter
       ? parseSettingsFrontmatter(settings.defaultChatFrontmatter)
       : {};
@@ -64,40 +67,28 @@ export class FrontmatterService {
   }
 
   /**
-   * Update a field in the frontmatter of a file
+   * Update a field in the frontmatter of a file using FrontmatterManager
    * @param editor The editor instance
    * @param key The key to update
    * @param value The new value
-   * @returns The updated content
    */
-  updateFrontmatterField(editor: Editor, key: string, value: any): void {
-    const content = editor.getValue();
-    const frontmatterMatches = content.match(YAML_FRONTMATTER_REGEX);
-    let newContent;
-
-    if (frontmatterMatches) {
-      // Extract existing frontmatter
-      const frontmatter = frontmatterMatches[0];
-      let extractedFrontmatter = frontmatter.replace(/---/g, "");
-
-      // Check if the key already exists in frontmatter
-      const keyRegex = new RegExp(`^${key}:\\s*(.*)$`, "m");
-      if (keyRegex.test(extractedFrontmatter)) {
-        // Key exists, update it
-        extractedFrontmatter = extractedFrontmatter.replace(keyRegex, `${key}: ${value}`);
-      } else {
-        // Key doesn't exist, add it
-        extractedFrontmatter += `\n${key}: ${value}`;
-      }
-
-      // Replace the old frontmatter with the new one
-      newContent = content.replace(YAML_FRONTMATTER_REGEX, `---${extractedFrontmatter}---`);
-    } else {
-      // No frontmatter exists, create new one
-      newContent = `---\n${key}: ${value}\n---\n${content}`;
+  async updateFrontmatterField(editor: Editor, key: string, value: any): Promise<void> {
+    // Get the active file
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!activeView || !activeView.file) {
+      console.error("[ChatGPT MD] No active file found for frontmatter update");
+      return;
     }
 
-    editor.setValue(newContent);
+    const file: TFile = activeView.file;
+
+    try {
+      // Use FrontmatterManager to update the field
+      await this.frontmatterManager.updateFrontmatterField(file, key, value);
+    } catch (error) {
+      console.error("[ChatGPT MD] Error updating frontmatter:", error);
+      throw error;
+    }
   }
 
   /**
