@@ -5,6 +5,7 @@ import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
+import { DEFAULT_ANTHROPIC_CONFIG } from "src/Services/AnthropicService";
 
 interface SettingDefinition {
   id: keyof ChatGPT_MDSettings;
@@ -52,6 +53,14 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         placeholder: "your openRouter API Key",
         group: "API Keys",
       },
+      {
+        id: "anthropicApiKey",
+        name: "Anthropic API Key",
+        description: "API Key for Anthropic (Claude)",
+        type: "text",
+        placeholder: "your Anthropic API Key",
+        group: "API Keys",
+      },
 
       // Service URLs
       {
@@ -84,6 +93,14 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         description: `URL for LM Studio API\nDefault URL: ${DEFAULT_LMSTUDIO_CONFIG.url}`,
         type: "text",
         placeholder: DEFAULT_LMSTUDIO_CONFIG.url,
+        group: "Service URLs",
+      },
+      {
+        id: "anthropicUrl",
+        name: "Anthropic API URL",
+        description: `URL for Anthropic API\nDefault URL: ${DEFAULT_ANTHROPIC_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_ANTHROPIC_CONFIG.url,
         group: "Service URLs",
       },
 

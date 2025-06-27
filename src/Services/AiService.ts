@@ -5,6 +5,7 @@ import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { EditorService } from "./EditorService";
 import {
+  AI_SERVICE_ANTHROPIC,
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
@@ -12,7 +13,6 @@ import {
   API_ENDPOINTS,
   NEWLINE,
   PLUGIN_SYSTEM_MESSAGE,
-  ROLE_SYSTEM,
   ROLE_USER,
 } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
@@ -74,6 +74,12 @@ export abstract class BaseAiService implements IAiApiService {
 
   // Abstract property that subclasses must implement to specify their service type
   protected abstract serviceType: string;
+
+  // Abstract property to specify the preferred role for system messages
+  protected abstract getSystemMessageRole(): string;
+
+  // Abstract property to specify if the service supports system field in payload
+  protected abstract supportsSystemField(): boolean;
 
   constructor(errorService?: ErrorService, notificationService?: NotificationService) {
     this.notificationService = notificationService ?? new NotificationService();
@@ -317,15 +323,43 @@ export abstract class BaseAiService implements IAiApiService {
   /**
    * Add plugin system message to messages array
    * This ensures the LLM understands the Obsidian context
+   * Each service can specify its preferred role for system messages
    */
   protected addPluginSystemMessage(messages: Message[]): Message[] {
+    // If service supports system field (like Anthropic), don't add to messages
+    if (this.supportsSystemField()) {
+      return messages;
+    }
+
     const pluginSystemMessage: Message = {
-      role: ROLE_SYSTEM,
+      role: this.getSystemMessageRole(),
       content: PLUGIN_SYSTEM_MESSAGE,
     };
 
     // Add the plugin system message at the beginning
     return [pluginSystemMessage, ...messages];
+  }
+
+  /**
+   * Process system commands for services that don't support system field
+   */
+  protected processSystemCommands(messages: Message[], systemCommands: string[] | null | undefined): Message[] {
+    if (!systemCommands || systemCommands.length === 0) {
+      return messages;
+    }
+
+    // If service supports system field, don't add to messages (handled in payload)
+    if (this.supportsSystemField()) {
+      return messages;
+    }
+
+    // Add system commands to the beginning of the messages
+    const systemMessages = systemCommands.map((command) => ({
+      role: this.getSystemMessageRole(),
+      content: command,
+    }));
+
+    return [...systemMessages, ...messages];
   }
 
   /**
@@ -346,6 +380,11 @@ export abstract class BaseAiService implements IAiApiService {
     // Create payload and headers
     const payload = this.createPayload(config, finalMessages);
     const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.serviceType);
+
+    // Add plugin system message to payload if service supports system field and not skipped
+    if (this.supportsSystemField() && !skipPluginSystemMessage && !payload.system) {
+      payload.system = PLUGIN_SYSTEM_MESSAGE;
+    }
 
     return { payload, headers };
   }
@@ -375,6 +414,83 @@ export abstract class BaseAiService implements IAiApiService {
       context: { model: config.model, url: config.url },
     });
   }
+
+  /**
+   * Default streaming API implementation that can be used by most services
+   */
+  protected async defaultCallStreamingAPI(
+    apiKey: string | undefined,
+    messages: Message[],
+    config: Record<string, any>,
+    editor: Editor,
+    headingPrefix: string,
+    setAtCursor?: boolean
+  ): Promise<StreamingResponse> {
+    try {
+      // Use the common preparation method
+      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
+
+      // Insert assistant header
+      const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
+
+      // Make streaming request using ApiService with centralized endpoint
+      const response = await this.apiService.makeStreamingRequest(
+        this.getApiEndpoint(config),
+        payload,
+        headers,
+        this.serviceType
+      );
+
+      // Process the streaming response using ApiResponseParser
+      const result = await this.apiResponseParser.processStreamResponse(
+        response,
+        this.serviceType,
+        editor,
+        cursorPositions,
+        setAtCursor,
+        this.apiService
+      );
+
+      // Use the helper method to process the result
+      return this.processStreamingResult(result);
+    } catch (err) {
+      // The error is already handled by the ApiService, which uses ErrorService
+      // Just return the error message for the chat
+      const errorMessage = `Error: ${err}`;
+      return { fullString: errorMessage, mode: "streaming" };
+    }
+  }
+
+  /**
+   * Default non-streaming API implementation that can be used by most services
+   */
+  protected async defaultCallNonStreamingAPI(
+    apiKey: string | undefined,
+    messages: Message[],
+    config: Record<string, any>
+  ): Promise<any> {
+    try {
+      console.log(`[ChatGPT MD] "no stream"`, config);
+
+      config.stream = false;
+      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
+
+      const response = await this.apiService.makeNonStreamingRequest(
+        this.getApiEndpoint(config),
+        payload,
+        headers,
+        this.serviceType
+      );
+
+      // Return simple object with response and model
+      return { fullString: response, model: payload.model };
+    } catch (err) {
+      const isTitleInference =
+        messages.length === 1 && messages[0].content?.toString().includes("Infer title from the summary");
+
+      return this.handleApiCallError(err, config, isTitleInference);
+    }
+  }
 }
 
 export interface OpenAiModel {
@@ -392,35 +508,66 @@ export interface OllamaModel {
  * Determine the AI provider from a URL or model
  */
 export const aiProviderFromUrl = (url?: string, model?: string): string | undefined => {
-  // Check model first
+  // Check model first for service prefixes
+  if (model?.startsWith("openai@")) {
+    return AI_SERVICE_OPENAI;
+  }
   if (model?.includes(AI_SERVICE_OPENROUTER)) {
     return AI_SERVICE_OPENROUTER;
   }
   if (model?.startsWith("lmstudio@")) {
     return AI_SERVICE_LMSTUDIO;
   }
+  if (model?.startsWith("anthropic@")) {
+    return AI_SERVICE_ANTHROPIC;
+  }
+  if (model?.startsWith("ollama@")) {
+    return AI_SERVICE_OLLAMA;
+  }
+  if (model?.startsWith("local@")) {
+    // Backward compatibility: local@ prefix points to Ollama
+    return AI_SERVICE_OLLAMA;
+  }
+  if (model?.includes("claude")) {
+    return AI_SERVICE_ANTHROPIC;
+  }
   if (model?.includes("local")) {
-    // Check URL to distinguish between Ollama and LM Studio
+    // Check URL to distinguish between Ollama and LM Studio for legacy "local" models
     if (url?.includes("1234")) {
       return AI_SERVICE_LMSTUDIO;
     }
     return AI_SERVICE_OLLAMA;
   }
 
+  // Check for common OpenAI model patterns (backward compatibility)
+  if (model?.includes("gpt") || model?.includes("o1") || model?.includes("o3") || model?.includes("o4")) {
+    return AI_SERVICE_OPENAI;
+  }
+
   // Then check URL patterns
   // Define URL patterns
   const OPENROUTER_URL_PATTERN = "openrouter";
+  const ANTHROPIC_URL_PATTERN = "anthropic";
   const LOCAL_URL_PATTERNS = ["localhost", "127.0.0.1"];
   const LMSTUDIO_URL_PATTERN = "1234"; // LM Studio default port
 
   if (url?.includes(OPENROUTER_URL_PATTERN)) {
     return AI_SERVICE_OPENROUTER;
   }
+  if (url?.includes(ANTHROPIC_URL_PATTERN)) {
+    return AI_SERVICE_ANTHROPIC;
+  }
   if (url?.includes(LMSTUDIO_URL_PATTERN)) {
     return AI_SERVICE_LMSTUDIO;
   }
   if (LOCAL_URL_PATTERNS.some((pattern) => url?.includes(pattern))) {
     return AI_SERVICE_OLLAMA;
+  }
+
+  // Default to OpenAI for models without explicit service identification
+  // This maintains backward compatibility for existing configurations
+  if (model && !url) {
+    return AI_SERVICE_OPENAI;
   }
 
   // Return undefined if no provider can be determined
@@ -433,13 +580,15 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
 export const aiProviderFromKeys = (config: Record<string, any>): string | null => {
   const hasOpenRouterKey = isValidApiKey(config.openrouterApiKey);
   const hasOpenAIKey = isValidApiKey(config.apiKey);
+  const hasAnthropicKey = isValidApiKey(config.anthropicApiKey);
 
-  if (hasOpenAIKey && hasOpenRouterKey) {
-    return AI_SERVICE_OPENAI; // Default to OpenAI if both keys exist
+  // Priority order: OpenAI > Anthropic > OpenRouter
+  if (hasOpenAIKey) {
+    return AI_SERVICE_OPENAI;
+  } else if (hasAnthropicKey) {
+    return AI_SERVICE_ANTHROPIC;
   } else if (hasOpenRouterKey) {
     return AI_SERVICE_OPENROUTER;
-  } else if (hasOpenAIKey) {
-    return AI_SERVICE_OPENAI;
   }
 
   return null;

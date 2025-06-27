@@ -1,4 +1,10 @@
-import { AI_SERVICE_LMSTUDIO, AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
+import {
+  AI_SERVICE_ANTHROPIC,
+  AI_SERVICE_LMSTUDIO,
+  AI_SERVICE_OLLAMA,
+  AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENROUTER,
+} from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { NotificationService } from "./NotificationService";
 
@@ -34,6 +40,8 @@ export class ApiAuthService {
         return settings.apiKey;
       case AI_SERVICE_OPENROUTER:
         return settings.openrouterApiKey;
+      case AI_SERVICE_ANTHROPIC:
+        return settings.anthropicApiKey;
       case AI_SERVICE_OLLAMA:
         return ""; // Ollama doesn't use an API key
       case AI_SERVICE_LMSTUDIO:
@@ -81,6 +89,10 @@ export class ApiAuthService {
         headers["Authorization"] = `Bearer ${apiKey}`;
         headers["HTTP-Referer"] = "https://github.com/bramses/chatgpt-md";
         headers["X-Title"] = "Obsidian ChatGPT MD Plugin";
+        break;
+      case AI_SERVICE_ANTHROPIC:
+        headers["x-api-key"] = apiKey;
+        headers["anthropic-version"] = "2023-06-01";
         break;
       case AI_SERVICE_OLLAMA:
         // Ollama doesn't require authentication headers

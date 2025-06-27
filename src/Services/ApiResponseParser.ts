@@ -1,4 +1,5 @@
 import {
+  AI_SERVICE_ANTHROPIC,
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
@@ -71,6 +72,16 @@ export class ApiResponseParser {
         return data.choices[0].message.content;
       case AI_SERVICE_LMSTUDIO:
         return data.choices[0].message.content;
+      case AI_SERVICE_ANTHROPIC:
+        // Anthropic's response format has a content array
+        if (data.content && Array.isArray(data.content)) {
+          // Extract text content from the content array
+          return data.content
+            .filter((item: any) => item.type === "text")
+            .map((item: any) => item.text)
+            .join("");
+        }
+        return data.content || JSON.stringify(data);
       case AI_SERVICE_OLLAMA:
         // Check for Ollama's chat API format which has a message object with content
         if (data.message && data.message.content) {
@@ -111,11 +122,70 @@ export class ApiResponseParser {
       case AI_SERVICE_OPENROUTER:
       case AI_SERVICE_LMSTUDIO:
         return this.processOpenAIFormat(line, currentText, editor, initialCursor, setAtCursor);
+      case AI_SERVICE_ANTHROPIC:
+        return this.processAnthropicFormat(line, currentText, editor, initialCursor, setAtCursor);
       case AI_SERVICE_OLLAMA:
         return this.processOllamaFormat(line, currentText, editor, initialCursor, setAtCursor);
       default:
         console.warn(`Unknown service type for streaming: ${serviceType}`);
         return currentText;
+    }
+  }
+
+  /**
+   * Process Anthropic format streaming response
+   */
+  private processAnthropicFormat(
+    line: string,
+    currentText: string,
+    editor: Editor,
+    initialCursor: { line: number; ch: number },
+    setAtCursor?: boolean
+  ): string {
+    if (line.trim() === "") return currentText;
+
+    try {
+      // Anthropic's streaming format starts with "event: " followed by the event type
+      if (line.startsWith("event: ")) {
+        return currentText; // Skip event lines
+      }
+
+      // Data lines start with "data: "
+      if (line.startsWith("data: ")) {
+        const payloadString = line.substring("data: ".length).trimStart();
+
+        // Check for the [DONE] marker
+        if (payloadString === "[DONE]") {
+          return currentText;
+        }
+
+        try {
+          const json = JSON.parse(payloadString);
+
+          // Handle content delta
+          if (json.type === "content_block_delta") {
+            if (json.delta && json.delta.text) {
+              // Use table buffering logic to handle content
+              return this.processContentWithTableBuffering(json.delta.text, currentText, editor, setAtCursor);
+            }
+          }
+          // Handle content block start (contains the initial text)
+          else if (json.type === "content_block_start") {
+            if (json.content_block && json.content_block.type === "text" && json.content_block.text) {
+              // Use table buffering logic to handle content
+              return this.processContentWithTableBuffering(json.content_block.text, currentText, editor, setAtCursor);
+            }
+          }
+        } catch (e) {
+          // Skip lines that aren't valid JSON
+          console.error("Error parsing Anthropic JSON:", e);
+        }
+      }
+
+      return currentText;
+    } catch (_) {
+      // Skip lines that cause errors
+      return currentText;
     }
   }
 
@@ -154,7 +224,7 @@ export class ApiResponseParser {
       }
 
       return currentText;
-    } catch (e) {
+    } catch (_) {
       // Skip lines that aren't valid JSON or don't contain content
       return currentText;
     }
@@ -190,7 +260,7 @@ export class ApiResponseParser {
       }
 
       return currentText;
-    } catch (e) {
+    } catch (_) {
       // Skip lines that aren't valid JSON or don't contain content
       return currentText;
     }
@@ -243,7 +313,7 @@ export class ApiResponseParser {
           }
         }
       }
-    } catch (error) {
+    } catch (_) {
       // console.error("Error processing stream:", error);
     }
 
