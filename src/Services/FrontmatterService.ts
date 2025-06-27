@@ -15,7 +15,6 @@ import {
   AI_SERVICE_OPENROUTER,
 } from "src/Constants";
 import { FrontmatterManager } from "src/Services/FrontmatterManager";
-import { AI_SERVICE_LMSTUDIO, AI_SERVICE_OLLAMA, AI_SERVICE_OPENAI, AI_SERVICE_OPENROUTER } from "src/Constants";
 
 /**
  * Service responsible for frontmatter parsing and generation

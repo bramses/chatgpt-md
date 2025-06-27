@@ -5,7 +5,6 @@ import { EditorContentService } from "./EditorContentService";
 import { MessageService } from "./MessageService";
 import { TemplateService } from "./TemplateService";
 import { FrontmatterService } from "./FrontmatterService";
-import { FrontmatterManager } from "./FrontmatterManager";
 import { NotificationService } from "./NotificationService";
 import { Message } from "src/Models/Message";
 

@@ -1,4 +1,4 @@
-import { Editor, App, MarkdownView } from "obsidian";
+import { App, Editor, MarkdownView } from "obsidian";
 import { getHeaderRole, getHeadingPrefix } from "src/Utilities/TextHelpers";
 import { FrontmatterManager } from "src/Services/FrontmatterManager";
 import { HORIZONTAL_LINE_CLASS, NEWLINE, ROLE_ASSISTANT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
