@@ -6,6 +6,7 @@ import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
 import { DEFAULT_ANTHROPIC_CONFIG } from "src/Services/AnthropicService";
+import { DEFAULT_GEMINI_CONFIG } from "src/Services/GeminiService";
 
 interface SettingDefinition {
   id: keyof ChatGPT_MDSettings;
@@ -61,6 +62,14 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         placeholder: "your Anthropic API Key",
         group: "API Keys",
       },
+      {
+        id: "geminiApiKey",
+        name: "Gemini API Key",
+        description: "API Key for Google Gemini (Google AI Studio)",
+        type: "text",
+        placeholder: "your Gemini API Key",
+        group: "API Keys",
+      },
 
       // Service URLs
       {
@@ -101,6 +110,14 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         description: `URL for Anthropic API\nDefault URL: ${DEFAULT_ANTHROPIC_CONFIG.url}`,
         type: "text",
         placeholder: DEFAULT_ANTHROPIC_CONFIG.url,
+        group: "Service URLs",
+      },
+      {
+        id: "geminiUrl",
+        name: "Gemini API URL",
+        description: `URL for Gemini API\nDefault URL: ${DEFAULT_GEMINI_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_GEMINI_CONFIG.url,
         group: "Service URLs",
       },
 

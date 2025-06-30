@@ -17,8 +17,10 @@ import { OllamaService } from "src/Services/OllamaService";
 import { OpenRouterService } from "src/Services/OpenRouterService";
 import { LmStudioService } from "src/Services/LmStudioService";
 import { AnthropicService } from "src/Services/AnthropicService";
+import { GeminiService } from "src/Services/GeminiService";
 import {
   AI_SERVICE_ANTHROPIC,
+  AI_SERVICE_GEMINI,
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
@@ -128,6 +130,14 @@ export class ServiceLocator {
         );
       case AI_SERVICE_ANTHROPIC:
         return new AnthropicService(
+          this.errorService,
+          this.notificationService,
+          this.apiService,
+          this.apiAuthService,
+          this.apiResponseParser
+        );
+      case AI_SERVICE_GEMINI:
+        return new GeminiService(
           this.errorService,
           this.notificationService,
           this.apiService,

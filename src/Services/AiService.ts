@@ -6,6 +6,7 @@ import { ApiResponseParser } from "./ApiResponseParser";
 import { EditorService } from "./EditorService";
 import {
   AI_SERVICE_ANTHROPIC,
+  AI_SERVICE_GEMINI,
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
@@ -521,6 +522,9 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
   if (model?.startsWith("anthropic@")) {
     return AI_SERVICE_ANTHROPIC;
   }
+  if (model?.startsWith("gemini@")) {
+    return AI_SERVICE_GEMINI;
+  }
   if (model?.startsWith("ollama@")) {
     return AI_SERVICE_OLLAMA;
   }
@@ -530,6 +534,9 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
   }
   if (model?.includes("claude")) {
     return AI_SERVICE_ANTHROPIC;
+  }
+  if (model?.includes("gemini")) {
+    return AI_SERVICE_GEMINI;
   }
   if (model?.includes("local")) {
     // Check URL to distinguish between Ollama and LM Studio for legacy "local" models
@@ -548,6 +555,7 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
   // Define URL patterns
   const OPENROUTER_URL_PATTERN = "openrouter";
   const ANTHROPIC_URL_PATTERN = "anthropic";
+  const GEMINI_URL_PATTERN = "generativelanguage.googleapis.com";
   const LOCAL_URL_PATTERNS = ["localhost", "127.0.0.1"];
   const LMSTUDIO_URL_PATTERN = "1234"; // LM Studio default port
 
@@ -556,6 +564,9 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
   }
   if (url?.includes(ANTHROPIC_URL_PATTERN)) {
     return AI_SERVICE_ANTHROPIC;
+  }
+  if (url?.includes(GEMINI_URL_PATTERN)) {
+    return AI_SERVICE_GEMINI;
   }
   if (url?.includes(LMSTUDIO_URL_PATTERN)) {
     return AI_SERVICE_LMSTUDIO;
@@ -581,12 +592,15 @@ export const aiProviderFromKeys = (config: Record<string, any>): string | null =
   const hasOpenRouterKey = isValidApiKey(config.openrouterApiKey);
   const hasOpenAIKey = isValidApiKey(config.apiKey);
   const hasAnthropicKey = isValidApiKey(config.anthropicApiKey);
+  const hasGeminiKey = isValidApiKey(config.geminiApiKey);
 
-  // Priority order: OpenAI > Anthropic > OpenRouter
+  // Priority order: OpenAI > Anthropic > Gemini > OpenRouter
   if (hasOpenAIKey) {
     return AI_SERVICE_OPENAI;
   } else if (hasAnthropicKey) {
     return AI_SERVICE_ANTHROPIC;
+  } else if (hasGeminiKey) {
+    return AI_SERVICE_GEMINI;
   } else if (hasOpenRouterKey) {
     return AI_SERVICE_OPENROUTER;
   }

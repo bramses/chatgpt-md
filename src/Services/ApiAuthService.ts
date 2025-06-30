@@ -1,5 +1,6 @@
 import {
   AI_SERVICE_ANTHROPIC,
+  AI_SERVICE_GEMINI,
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
@@ -42,6 +43,8 @@ export class ApiAuthService {
         return settings.openrouterApiKey;
       case AI_SERVICE_ANTHROPIC:
         return settings.anthropicApiKey;
+      case AI_SERVICE_GEMINI:
+        return settings.geminiApiKey;
       case AI_SERVICE_OLLAMA:
         return ""; // Ollama doesn't use an API key
       case AI_SERVICE_LMSTUDIO:
@@ -93,6 +96,9 @@ export class ApiAuthService {
       case AI_SERVICE_ANTHROPIC:
         headers["x-api-key"] = apiKey;
         headers["anthropic-version"] = "2023-06-01";
+        break;
+      case AI_SERVICE_GEMINI:
+        headers["x-goog-api-key"] = apiKey;
         break;
       case AI_SERVICE_OLLAMA:
         // Ollama doesn't require authentication headers

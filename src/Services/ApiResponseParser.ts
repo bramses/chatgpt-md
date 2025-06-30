@@ -1,5 +1,6 @@
 import {
   AI_SERVICE_ANTHROPIC,
+  AI_SERVICE_GEMINI,
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
@@ -82,6 +83,18 @@ export class ApiResponseParser {
             .join("");
         }
         return data.content || JSON.stringify(data);
+      case AI_SERVICE_GEMINI:
+        // Gemini's response format has candidates array with content parts
+        if (data.candidates && data.candidates.length > 0) {
+          const candidate = data.candidates[0];
+          if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+            return candidate.content.parts
+              .filter((part: any) => part.text)
+              .map((part: any) => part.text)
+              .join("");
+          }
+        }
+        return data.text || JSON.stringify(data);
       case AI_SERVICE_OLLAMA:
         // Check for Ollama's chat API format which has a message object with content
         if (data.message && data.message.content) {
@@ -124,6 +137,8 @@ export class ApiResponseParser {
         return this.processOpenAIFormat(line, currentText, editor, initialCursor, setAtCursor);
       case AI_SERVICE_ANTHROPIC:
         return this.processAnthropicFormat(line, currentText, editor, initialCursor, setAtCursor);
+      case AI_SERVICE_GEMINI:
+        return this.processGeminiFormat(line, currentText, editor, initialCursor, setAtCursor);
       case AI_SERVICE_OLLAMA:
         return this.processOllamaFormat(line, currentText, editor, initialCursor, setAtCursor);
       default:
@@ -267,6 +282,55 @@ export class ApiResponseParser {
   }
 
   /**
+   * Process Gemini format streaming response
+   */
+  private processGeminiFormat(
+    line: string,
+    currentText: string,
+    editor: Editor,
+    initialCursor: { line: number; ch: number },
+    setAtCursor?: boolean
+  ): string {
+    if (line.trim() === "") return currentText;
+
+    try {
+      // With alt=sse, Gemini uses SSE format like OpenAI
+      // Extract JSON payload from SSE data line
+      const payloadString = line.substring("data:".length).trimStart();
+
+      // Check for the [DONE] marker
+      if (payloadString === "[DONE]") {
+        return currentText;
+      }
+
+      const json = JSON.parse(payloadString);
+
+      // Handle Gemini's streaming response format
+      if (json.candidates && json.candidates.length > 0) {
+        const candidate = json.candidates[0];
+        if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
+          // Extract text content from the parts array
+          const content = candidate.content.parts
+            .filter((part: any) => part.text)
+            .map((part: any) => part.text)
+            .join("");
+
+          if (content) {
+            // Use table buffering logic to handle content
+            return this.processContentWithTableBuffering(content, currentText, editor, setAtCursor);
+          }
+        }
+      }
+
+      return currentText;
+    } catch (e) {
+      // Log parsing errors for debugging
+      console.error("Error parsing Gemini JSON:", e, "Line:", line);
+      return currentText;
+    }
+  }
+
+  /**
    * Process a complete streaming response
    * @param response The response object
    * @param serviceType The AI service type
@@ -308,7 +372,7 @@ export class ApiResponseParser {
           if (line.startsWith("data:")) {
             text = this.processStreamLine(line, text, editor, cursorPositions.newCursor, serviceType, setAtCursor);
           } else if (line.trim() !== "") {
-            // For Ollama and other non-OpenAI formats
+            // For Gemini, Ollama and other non-SSE formats that send raw JSON
             text = this.processStreamLine(line, text, editor, cursorPositions.newCursor, serviceType, setAtCursor);
           }
         }

@@ -9,6 +9,7 @@ import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
 import { DEFAULT_ANTHROPIC_CONFIG } from "src/Services/AnthropicService";
+import { DEFAULT_GEMINI_CONFIG } from "src/Services/GeminiService";
 
 /**
  * API key settings
@@ -20,6 +21,8 @@ export interface ApiKeySettings {
   openrouterApiKey: string;
   /** API Key for Anthropic */
   anthropicApiKey: string;
+  /** API Key for Gemini */
+  geminiApiKey: string;
 }
 
 /**
@@ -80,6 +83,8 @@ export interface ServiceUrlSettings {
   lmstudioUrl: string;
   /** URL for Anthropic API */
   anthropicUrl: string;
+  /** URL for Gemini API */
+  geminiUrl: string;
 }
 
 /**
@@ -101,6 +106,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   apiKey: "",
   openrouterApiKey: "",
   anthropicApiKey: "",
+  geminiApiKey: "",
 
   // Service URLs
   openaiUrl: DEFAULT_OPENAI_CONFIG.url,
@@ -108,6 +114,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   ollamaUrl: DEFAULT_OLLAMA_CONFIG.url,
   lmstudioUrl: DEFAULT_LMSTUDIO_CONFIG.url,
   anthropicUrl: DEFAULT_ANTHROPIC_CONFIG.url,
+  geminiUrl: DEFAULT_GEMINI_CONFIG.url,
 
   // Folders
   chatFolder: "ChatGPT_MD/chats",
