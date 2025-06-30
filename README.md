@@ -4,14 +4,49 @@
 
 ![Chatting with links about vacation plans](images/chat-with-link.gif)
 
-## What's New in v2.4.0 🚀
-- **🌐 GPT-4o Web Search Integration**: Experience the power of `gpt-4o-search-preview` - now your conversations can directly access and cite information from the web, bringing real-time knowledge into your notes
-- **Enhanced Model Support**: Added compatibility with OpenAI's latest models:
-  - **Reasoning Models**: Full support for o1, o3, and o4-mini models designed for complex reasoning tasks
-  - **Next-Gen GPT Models**: Access to gpt-4.1 (Flagship GPT model for complex tasks) and gpt-4.5 (Largest and most capable GPT model)
-- **Better Default Settings**: Upgraded from gpt-4o-mini to the more capable but still cost-effective gpt-4.1-mini
-- **Smart Parameter Handling**: Automatically omits breaking parameters when using search models
-- **Improved Model Filtering**: Better filtering of non-chat models from model selection lists
+## What's New in v2.6.0 🚀
+### 🚀 Added Google Gemini Support
+
+### ✨ New Features
+
+- **Google Gemini Integration**: Full support for Google's Gemini API through Google AI Studio
+- **Real-time Streaming**: Experience Gemini's responses in real-time with proper streaming support
+- **Model Selection**: Access all available Gemini models (`gemini@gemini-1.5-pro`, `gemini@gemini-1.5-flash`, `gemini@gemini-pro`, etc.)
+- **Auto Title Inference**: Automatic conversation title generation using Gemini models
+- **Settings Integration**: Easy setup with dedicated API key and URL configuration fields
+
+### 🔧 Configuration
+
+- Add your Google AI Studio API key in plugin settings
+- Supports custom API URLs for enterprise deployments
+- Use `gemini@model-name` format in frontmatter or let the plugin auto-detect
+
+### 📝 Usage Example
+
+```yaml
+---
+model: gemini@gemini-1.5-pro
+aiService: gemini
+temperature: 0.7
+max_tokens: 1024
+system_commands: ["You are a helpful assistant."]
+---
+```
+
+### 🛠️ Developer Resources
+
+- **Service Architecture Documentation**: Added comprehensive guide for implementing new AI services
+- **Consistent Patterns**: Follows established plugin architecture for seamless integration
+
+### 🔄 Compatibility
+
+- Works alongside existing OpenAI, Anthropic, Ollama, and other AI services
+- Automatic service detection based on model names and URLs
+- Full feature parity with existing services (streaming, title inference, error handling)
+
+---
+
+**Getting Started**: Add your Google AI Studio API key in Settings → ChatGPT MD → API Keys → Gemini API Key
 
 ## A simple and quick Start 🏁
 Get started in just a few simple steps:
