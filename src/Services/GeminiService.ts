@@ -1,6 +1,6 @@
 import { Editor } from "obsidian";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_GEMINI, ROLE_ASSISTANT, ROLE_SYSTEM, ROLE_USER } from "src/Constants";
+import { AI_SERVICE_GEMINI, ROLE_ASSISTANT, ROLE_SYSTEM } from "src/Constants";
 import { BaseAiService, IAiApiService } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ApiService } from "./ApiService";
@@ -189,14 +189,27 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     setAtCursor?: boolean | undefined
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
     try {
-      // Use the common preparation method
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
+      // Prepare API call
+      const { messages: finalMessages, headers } = this.apiClient.prepareApiCall(
+        apiKey,
+        messages,
+        config,
+        this.serviceType,
+        this.supportsSystemField(),
+        this.getSystemMessageRole()
+      );
+
+      // Create payload
+      const payload = this.createPayload(config, finalMessages);
+
+      // Add Gemini-specific header
+      headers["x-goog-api-key"] = apiKey!;
 
       // Insert assistant header
       const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, config.model);
 
-      // Make streaming request using ApiService with Gemini-specific endpoint
-      const response = await this.apiService.makeStreamingRequest(
+      // Make streaming request using ApiClient with Gemini-specific endpoint
+      const response = await this.apiClient.makeStreamingRequest(
         this.getApiUrl(config),
         payload,
         headers,
@@ -210,14 +223,21 @@ export class GeminiService extends BaseAiService implements IAiApiService {
         editor,
         cursorPositions,
         setAtCursor,
-        this.apiService
+        this.apiClient as any
       );
 
-      // Use the helper method to process the result
-      return this.processStreamingResult(result);
+      // Process the result using StreamingHandler's private method logic
+      if (result.wasAborted && result.text === "") {
+        return { fullString: "", mode: "streaming", wasAborted: true };
+      }
+
+      return {
+        fullString: result.text,
+        mode: "streaming",
+        wasAborted: result.wasAborted,
+      };
     } catch (err) {
-      // The error is already handled by the ApiService, which uses ErrorService
-      // Just return the error message for the chat
+      // Return error message for the chat
       const errorMessage = `Error: ${err}`;
       return { fullString: errorMessage, mode: "streaming" };
     }
@@ -232,9 +252,24 @@ export class GeminiService extends BaseAiService implements IAiApiService {
       console.log(`[ChatGPT MD] "no stream"`, config);
 
       config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
+      
+      // Prepare API call
+      const { messages: finalMessages, headers } = this.apiClient.prepareApiCall(
+        apiKey,
+        messages,
+        config,
+        this.serviceType,
+        this.supportsSystemField(),
+        this.getSystemMessageRole()
+      );
 
-      const response = await this.apiService.makeNonStreamingRequest(
+      // Create payload
+      const payload = this.createPayload(config, finalMessages);
+
+      // Add Gemini-specific header
+      headers["x-goog-api-key"] = apiKey!;
+
+      const response = await this.apiClient.makeNonStreamingRequest(
         this.getApiUrl(config), // Use custom URL generation for Gemini
         payload,
         headers,
@@ -247,7 +282,7 @@ export class GeminiService extends BaseAiService implements IAiApiService {
       const isTitleInference =
         messages.length === 1 && messages[0].content?.toString().includes("Infer title from the summary");
 
-      return this.handleApiCallError(err, config, isTitleInference);
+      return this.apiClient.handleApiError(err, this.serviceType, config, isTitleInference);
     }
   }
 
@@ -255,57 +290,6 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     this.notificationService.showWarning("Could not infer title. The file name was not changed.");
   }
 
-  /**
-   * Override callNonStreamingAPIForTitleInference to use custom Gemini URL generation
-   */
-  protected async callNonStreamingAPIForTitleInference(
-    apiKey: string | undefined,
-    messages: Message[],
-    config: Record<string, any>
-  ): Promise<any> {
-    try {
-      config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, true); // Skip plugin system message
-
-      const response = await this.apiService.makeNonStreamingRequest(
-        this.getApiUrl(config), // Use custom URL generation for Gemini
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Return simple object with response and model
-      return response;
-    } catch (err) {
-      throw err; // Re-throw for title inference error handling
-    }
-  }
-
-  /**
-   * Override prepareApiCall to handle Gemini-specific API structure
-   */
-  protected prepareApiCall(
-    apiKey: string | undefined,
-    messages: Message[],
-    config: Record<string, any>,
-    skipPluginSystemMessage: boolean = false
-  ) {
-    // Validate API key
-    this.apiAuthService.validateApiKey(apiKey, this.serviceType);
-
-    // Add plugin system message to help LLM understand context (unless skipped)
-    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages);
-
-    // Create payload and headers
-    const geminiConfig = config as GeminiConfig;
-    const payload = this.createPayload(geminiConfig, finalMessages);
-    const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.serviceType);
-
-    // Gemini uses x-goog-api-key header
-    headers["x-goog-api-key"] = apiKey!;
-
-    return { payload, headers };
-  }
 
   /**
    * Override getApiUrl to handle Gemini's model-specific endpoint structure

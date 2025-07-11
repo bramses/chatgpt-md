@@ -188,8 +188,54 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     headingPrefix: string,
     setAtCursor?: boolean | undefined
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor);
+    try {
+      // Prepare API call
+      const { messages: finalMessages, headers } = this.apiClient.prepareApiCall(
+        apiKey,
+        messages,
+        config,
+        this.serviceType,
+        this.supportsSystemField(),
+        this.getSystemMessageRole()
+      );
+
+      // Create payload
+      const payload = this.createPayload(config, finalMessages);
+
+      // Handle system message combination for Anthropic
+      const systemParts: string[] = [];
+
+      // Always add plugin system message first (handled by ApiClient when supportsSystemField is true)
+      systemParts.push(PLUGIN_SYSTEM_MESSAGE);
+
+      // Add user system commands if they exist
+      if (config.system_commands && config.system_commands.length > 0) {
+        systemParts.push(config.system_commands.join("\n\n"));
+      }
+
+      // Combine all system messages
+      payload.system = systemParts.join("\n\n");
+
+      // Add Anthropic-specific header for direct browser access
+      headers["anthropic-dangerous-direct-browser-access"] = "true";
+
+      // Use StreamingHandler to handle the streaming call
+      return this.streamingHandler.handleStreamingCall(
+        apiKey,
+        messages,
+        config,
+        editor,
+        headingPrefix,
+        this.serviceType,
+        payload,
+        headers,
+        setAtCursor
+      );
+    } catch (err) {
+      // Return error message for the chat
+      const errorMessage = `Error: ${err}`;
+      return { fullString: errorMessage, mode: "streaming" };
+    }
   }
 
   protected async callNonStreamingAPI(
@@ -197,59 +243,62 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     messages: Message[],
     config: AnthropicConfig
   ): Promise<any> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config);
+    try {
+      console.log(`[ChatGPT MD] "no stream"`, config);
+
+      config.stream = false;
+      
+      // Prepare API call
+      const { messages: finalMessages, headers } = this.apiClient.prepareApiCall(
+        apiKey,
+        messages,
+        config,
+        this.serviceType,
+        this.supportsSystemField(),
+        this.getSystemMessageRole()
+      );
+
+      // Create payload
+      const payload = this.createPayload(config, finalMessages);
+
+      // Handle system message combination for Anthropic
+      const systemParts: string[] = [];
+
+      // Always add plugin system message first (handled by ApiClient when supportsSystemField is true)
+      systemParts.push(PLUGIN_SYSTEM_MESSAGE);
+
+      // Add user system commands if they exist
+      if (config.system_commands && config.system_commands.length > 0) {
+        systemParts.push(config.system_commands.join("\n\n"));
+      }
+
+      // Combine all system messages
+      payload.system = systemParts.join("\n\n");
+
+      // Add Anthropic-specific header for direct browser access
+      headers["anthropic-dangerous-direct-browser-access"] = "true";
+
+      const response = await this.apiClient.makeNonStreamingRequest(
+        this.apiClient.getApiEndpoint(config, this.serviceType),
+        payload,
+        headers,
+        this.serviceType
+      );
+
+      // Return simple object with response and model
+      return { fullString: response, model: payload.model };
+    } catch (err) {
+      const isTitleInference =
+        messages.length === 1 && messages[0].content?.toString().includes("Infer title from the summary");
+
+      return this.apiClient.handleApiError(err, this.serviceType, config, isTitleInference);
+    }
   }
 
   protected showNoTitleInferredNotification(): void {
     this.notificationService.showWarning("Could not infer title. The file name was not changed.");
   }
 
-  /**
-   * Override prepareApiCall to add Anthropic-specific headers and handle system message combination
-   */
-  protected prepareApiCall(
-    apiKey: string | undefined,
-    messages: Message[],
-    config: Record<string, any>,
-    skipPluginSystemMessage: boolean = false
-  ) {
-    // Validate API key
-    this.apiAuthService.validateApiKey(apiKey, this.serviceType);
-
-    // Add plugin system message to help LLM understand context (unless skipped)
-    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages);
-
-    // Create payload and headers
-    const anthropicConfig = config as AnthropicConfig;
-    const payload = this.createPayload(anthropicConfig, finalMessages);
-    const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.serviceType);
-
-    // Handle system message combination for Anthropic
-    if (!skipPluginSystemMessage) {
-      const systemParts: string[] = [];
-
-      // Always add plugin system message first
-      systemParts.push(PLUGIN_SYSTEM_MESSAGE);
-
-      // Add user system commands if they exist
-      if (anthropicConfig.system_commands && anthropicConfig.system_commands.length > 0) {
-        systemParts.push(anthropicConfig.system_commands.join("\n\n"));
-      }
-
-      // Combine all system messages
-      payload.system = systemParts.join("\n\n");
-      console.log(`[ChatGPT MD] Combined plugin system message with user system commands for Anthropic`);
-    } else if (anthropicConfig.system_commands && anthropicConfig.system_commands.length > 0) {
-      // If plugin system message is skipped (like for title inference), only use user system commands
-      payload.system = anthropicConfig.system_commands.join("\n\n");
-    }
-
-    // Add Anthropic-specific header for direct browser access
-    headers["anthropic-dangerous-direct-browser-access"] = "true";
-
-    return { payload, headers };
-  }
 }
 
 export interface AnthropicMessage {

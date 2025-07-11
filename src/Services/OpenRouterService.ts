@@ -136,7 +136,12 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
     // Process system commands using the centralized method
-    const processedMessages = this.processSystemCommands(messages, config.system_commands);
+    const processedMessages = this.apiClient.processSystemCommands(
+      messages,
+      config.system_commands,
+      this.supportsSystemField(),
+      this.getSystemMessageRole()
+    );
 
     return {
       model: modelName,
