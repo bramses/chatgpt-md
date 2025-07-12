@@ -1,6 +1,6 @@
 import { Editor } from "obsidian";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_GEMINI, ROLE_ASSISTANT, ROLE_SYSTEM, ROLE_USER } from "src/Constants";
+import { AI_SERVICE_GEMINI, ROLE_ASSISTANT, ROLE_SYSTEM } from "src/Constants";
 import { BaseAiService, IAiApiService } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ApiService } from "./ApiService";
@@ -11,12 +11,12 @@ import { NotificationService } from "./NotificationService";
 
 export const DEFAULT_GEMINI_CONFIG: GeminiConfig = {
   aiService: AI_SERVICE_GEMINI,
-  max_tokens: 1024,
-  model: "gemini@gemini-1.5-flash",
+  max_tokens: 400,
+  model: "gemini@gemini-2.5-flash",
   stream: true,
   system_commands: null,
   tags: [],
-  temperature: 1,
+  temperature: 0.7,
   title: "Untitled",
   top_p: 0.95,
   url: "https://generativelanguage.googleapis.com",

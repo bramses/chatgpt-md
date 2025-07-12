@@ -26,7 +26,7 @@ export interface OllamaConfig {
 
 export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
   aiService: AI_SERVICE_OLLAMA,
-  model: "ollama@llama2",
+  model: "",
   url: "http://localhost:11434",
   stream: true,
   title: "Untitled",

@@ -60,16 +60,6 @@ export const ROLE_DEVELOPER = "developer";
 export const ROLE_SYSTEM = "system";
 export const ROLE_USER = "user";
 
-export const DEFAULT_CHAT_FRONT_MATTER = `---
-system_commands: ['I am a helpful assistant.']
-frequency_penalty: 0
-max_tokens: 300
-model: gpt-4.1-mini
-presence_penalty: 0
-stream: true
-temperature: 1
----`;
-
 export const FETCH_MODELS_TIMEOUT_MS = 6000;
 
 // Plugin-specific system message to help LLM understand the context

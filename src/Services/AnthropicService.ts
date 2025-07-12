@@ -11,12 +11,12 @@ import { NotificationService } from "./NotificationService";
 
 export const DEFAULT_ANTHROPIC_CONFIG: AnthropicConfig = {
   aiService: AI_SERVICE_ANTHROPIC,
-  max_tokens: 1024,
-  model: "anthropic@claude-3-5-sonnet-latest",
+  max_tokens: 400,
+  model: "anthropic@claude-sonnet-4-20250514",
   stream: true,
   system_commands: null,
   tags: [],
-  temperature: 1,
+  temperature: 0.7,
   title: "Untitled",
   url: "https://api.anthropic.com",
 };
