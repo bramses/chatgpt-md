@@ -121,7 +121,6 @@ export interface OpenRouterFrontmatterSettings {
  * Provider-specific frontmatter settings for Ollama
  */
 export interface OllamaFrontmatterSettings {
-  ollamaDefaultModel: string;
   ollamaDefaultTemperature?: number;
   ollamaDefaultTopP?: number;
 }
@@ -130,7 +129,6 @@ export interface OllamaFrontmatterSettings {
  * Provider-specific frontmatter settings for LM Studio
  */
 export interface LmStudioFrontmatterSettings {
-  lmstudioDefaultModel: string;
   lmstudioDefaultTemperature: number;
   lmstudioDefaultTopP: number;
   lmstudioDefaultPresencePenalty: number;
@@ -242,13 +240,11 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   openrouterDefaultPresencePenalty: DEFAULT_OPENROUTER_CONFIG.presence_penalty,
   openrouterDefaultFrequencyPenalty: DEFAULT_OPENROUTER_CONFIG.frequency_penalty,
 
-  // Ollama Defaults (Ollama config doesn't have temperature/top_p)
-  ollamaDefaultModel: DEFAULT_OLLAMA_CONFIG.model,
+  // Ollama Defaults (no default model - user must configure)
   ollamaDefaultTemperature: 0.7,
   ollamaDefaultTopP: 1,
 
-  // LM Studio Defaults
-  lmstudioDefaultModel: DEFAULT_LMSTUDIO_CONFIG.model,
+  // LM Studio Defaults (no default model - user must configure)
   lmstudioDefaultTemperature: DEFAULT_LMSTUDIO_CONFIG.temperature,
   lmstudioDefaultTopP: DEFAULT_LMSTUDIO_CONFIG.top_p,
   lmstudioDefaultPresencePenalty: DEFAULT_LMSTUDIO_CONFIG.presence_penalty,

@@ -268,14 +268,6 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "Ollama Defaults",
       },
       {
-        id: "ollamaDefaultModel",
-        name: "Default Ollama Model",
-        description: "Default model for Ollama chats",
-        type: "text",
-        placeholder: "ollama@llama2",
-        group: "Ollama Defaults",
-      },
-      {
         id: "ollamaDefaultTemperature",
         name: "Default Ollama Temperature",
         description: "Default temperature for Ollama chats (0.0 to 2.0)",
@@ -291,14 +283,6 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         description: `URL for LM Studio API\nDefault URL: ${DEFAULT_LMSTUDIO_CONFIG.url}`,
         type: "text",
         placeholder: DEFAULT_LMSTUDIO_CONFIG.url,
-        group: "LM Studio Defaults",
-      },
-      {
-        id: "lmstudioDefaultModel",
-        name: "Default LM Studio Model",
-        description: "Default model for LM Studio chats",
-        type: "text",
-        placeholder: "lmstudio@local-model",
         group: "LM Studio Defaults",
       },
       {

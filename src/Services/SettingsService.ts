@@ -7,7 +7,6 @@ import { DEFAULT_OPENAI_CONFIG } from "./OpenAiService";
 import { DEFAULT_ANTHROPIC_CONFIG } from "./AnthropicService";
 import { DEFAULT_GEMINI_CONFIG } from "./GeminiService";
 import { DEFAULT_OPENROUTER_CONFIG } from "./OpenRouterService";
-import { DEFAULT_OLLAMA_CONFIG } from "./OllamaService";
 import { DEFAULT_LMSTUDIO_CONFIG } from "./LmStudioService";
 
 // Define interface for migration data
@@ -161,13 +160,11 @@ export class SettingsService {
       openrouterDefaultPresencePenalty: DEFAULT_OPENROUTER_CONFIG.presence_penalty,
       openrouterDefaultFrequencyPenalty: DEFAULT_OPENROUTER_CONFIG.frequency_penalty,
 
-      // Ollama defaults  
-      ollamaDefaultModel: DEFAULT_OLLAMA_CONFIG.model,
+      // Ollama defaults (no default model - user must configure)
       ollamaDefaultTemperature: 0.7, // Ollama config doesn't have temperature
       ollamaDefaultTopP: 1, // Ollama config doesn't have top_p
 
-      // LM Studio defaults
-      lmstudioDefaultModel: DEFAULT_LMSTUDIO_CONFIG.model,
+      // LM Studio defaults (no default model - user must configure)
       lmstudioDefaultTemperature: DEFAULT_LMSTUDIO_CONFIG.temperature,
       lmstudioDefaultTopP: DEFAULT_LMSTUDIO_CONFIG.top_p,
       lmstudioDefaultPresencePenalty: DEFAULT_LMSTUDIO_CONFIG.presence_penalty,

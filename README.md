@@ -59,6 +59,60 @@ Get started in just a few simple steps:
 
 Start chatting, don't worry too much about the more advanced features. They will come naturally :-) 
 
+## Local LLM Setup (Ollama & LM Studio) 🏠
+
+Want to keep your conversations private and avoid API costs? Use local LLMs with ChatGPT MD!
+
+### Ollama Setup
+
+1. **Install Ollama**: Download from [ollama.ai](https://ollama.ai) and install on your system
+2. **Download a model**: Run in terminal:
+   ```bash
+   ollama pull llama3.2    # or any model of your choice
+   ollama pull qwen2.5     # another popular option
+   ```
+3. **Configure ChatGPT MD**:
+   - Go to `Settings > ChatGPT MD > Ollama Defaults`
+   - The Ollama URL should already be set to `http://localhost:11434`
+   - **Important**: You must manually set the model name in your note's frontmatter
+4. **Create a chat note** with frontmatter:
+   ```yaml
+   ---
+   model: llama3.2        # Use the exact model name from 'ollama list'
+   aiService: ollama
+   temperature: 0.7
+   ---
+   ```
+
+### LM Studio Setup
+
+1. **Install LM Studio**: Download from [lmstudio.ai](https://lmstudio.ai)
+2. **Download and load a model** in LM Studio
+3. **Start the server**: In LM Studio, go to Local Server and start it
+4. **Configure ChatGPT MD**:
+   - Go to `Settings > ChatGPT MD > LM Studio Defaults`
+   - The LM Studio URL should be set to `http://localhost:1234`
+   - **Important**: You must manually set the model name in your note's frontmatter
+5. **Create a chat note** with frontmatter:
+   ```yaml
+   ---
+   model: your-model-name   # Use the exact model name from LM Studio
+   aiService: lmstudio
+   temperature: 0.7
+   ---
+   ```
+
+### Finding Your Model Names
+
+- **Ollama**: Run `ollama list` in terminal to see installed models
+- **LM Studio**: Check the model name in LM Studio's interface when the model is loaded
+
+### Important Notes for Local LLMs
+
+- **Manual Configuration Required**: Unlike cloud services, you must specify the model name in each note's frontmatter
+- **No Default Models**: The plugin doesn't set default models for local services since we don't know which models you have installed
+- **Auto Title Inference**: Will be skipped if no model is configured - you'll see a notification to set a model in settings
+
 ## Features
 * **Interactive conversations**: 
   * Engage directly with ChatGPT, OpenRouter.ai models, and Ollama from any Markdown note, edit questions or responses on-the-fly, and continue the chat seamlessly.

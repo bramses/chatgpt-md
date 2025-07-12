@@ -67,7 +67,7 @@ export class ApiAuthService {
     }
 
     if (!isValidApiKey(apiKey)) {
-      const errorMessage = `${serviceName} API key is missing or invalid. Please add your ${serviceName} API key in the settings.`;
+      const errorMessage = `${serviceName} API key is missing or invalid. Please add your ${serviceName} API key in the settings or set your default model in the settings if you use Ollama or LM Studio.`;
       this.notificationService.showError(errorMessage);
       throw new Error(errorMessage);
     }

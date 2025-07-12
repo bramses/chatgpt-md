@@ -166,7 +166,7 @@ export class FrontmatterService {
       case AI_SERVICE_OLLAMA:
         frontmatterObj = {
           ...frontmatterObj,
-          model: settings.ollamaDefaultModel,
+          // model: User must configure model manually
           url: settings.ollamaUrl,
           temperature: settings.ollamaDefaultTemperature,
           top_p: settings.ollamaDefaultTopP,
@@ -186,7 +186,7 @@ export class FrontmatterService {
       case AI_SERVICE_LMSTUDIO:
         frontmatterObj = {
           ...frontmatterObj,
-          model: settings.lmstudioDefaultModel,
+          // model: User must configure model manually
           url: settings.lmstudioUrl,
           temperature: settings.lmstudioDefaultTemperature,
           top_p: settings.lmstudioDefaultTopP,
