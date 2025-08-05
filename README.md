@@ -26,7 +26,6 @@
 ```yaml
 ---
 model: gemini@gemini-1.5-pro
-aiService: gemini
 temperature: 0.7
 max_tokens: 1024
 system_commands: ["You are a helpful assistant."]
@@ -78,8 +77,7 @@ Want to keep your conversations private and avoid API costs? Use local LLMs with
 4. **Create a chat note** with frontmatter:
    ```yaml
    ---
-   model: llama3.2        # Use the exact model name from 'ollama list'
-   aiService: ollama
+   model: ollama@llama3.2  # Use ollama@ prefix + model name from 'ollama list'
    temperature: 0.7
    ---
    ```
@@ -96,8 +94,7 @@ Want to keep your conversations private and avoid API costs? Use local LLMs with
 5. **Create a chat note** with frontmatter:
    ```yaml
    ---
-   model: your-model-name   # Use the exact model name from LM Studio
-   aiService: lmstudio
+   model: lmstudio@your-model-name  # Use lmstudio@ prefix + model name from LM Studio
    temperature: 0.7
    ---
    ```
@@ -180,10 +177,10 @@ model: gpt-4o
 system_commands: [act as a senior javascript developer]
 ---
 ```
-prefix it with `local@` for Ollama for local LLMs.
+prefix it with `ollama@` for Ollama models or `lmstudio@` for LM Studio models.
 ```
 ---
-model: local@gemma2:27b
+model: ollama@gemma2:27b
 temperature: 1
 ---
 ```
