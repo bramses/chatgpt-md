@@ -136,19 +136,21 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     config: OllamaConfig,
     editor: Editor,
     headingPrefix: string,
-    setAtCursor?: boolean | undefined
+    setAtCursor?: boolean | undefined,
+    settings?: ChatGPT_MDSettings
   ): Promise<StreamingResponse> {
     // Use the default implementation from BaseAiService
-    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor);
+    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings);
   }
 
   protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
-    config: OllamaConfig
+    config: OllamaConfig,
+    settings?: ChatGPT_MDSettings
   ): Promise<any> {
     // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config);
+    return this.defaultCallNonStreamingAPI(apiKey, messages, config, settings);
   }
 
   protected showNoTitleInferredNotification(): void {

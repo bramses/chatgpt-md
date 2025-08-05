@@ -186,11 +186,12 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     config: GeminiConfig,
     editor: Editor,
     headingPrefix: string,
-    setAtCursor?: boolean | undefined
+    setAtCursor?: boolean | undefined,
+    settings?: ChatGPT_MDSettings
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
     try {
       // Use the common preparation method
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
+      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings!);
 
       // Insert assistant header
       const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, config.model);
@@ -226,13 +227,14 @@ export class GeminiService extends BaseAiService implements IAiApiService {
   protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
-    config: GeminiConfig
+    config: GeminiConfig,
+    settings?: ChatGPT_MDSettings
   ): Promise<any> {
     try {
       console.log(`[ChatGPT MD] "no stream"`, config);
 
       config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
+      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings!);
 
       const response = await this.apiService.makeNonStreamingRequest(
         this.getApiUrl(config), // Use custom URL generation for Gemini
@@ -261,11 +263,12 @@ export class GeminiService extends BaseAiService implements IAiApiService {
   protected async callNonStreamingAPIForTitleInference(
     apiKey: string | undefined,
     messages: Message[],
-    config: Record<string, any>
+    config: Record<string, any>,
+    settings: ChatGPT_MDSettings
   ): Promise<any> {
     try {
       config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, true); // Skip plugin system message
+      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings, true); // Skip plugin system message
 
       const response = await this.apiService.makeNonStreamingRequest(
         this.getApiUrl(config), // Use custom URL generation for Gemini
@@ -288,13 +291,14 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     apiKey: string | undefined,
     messages: Message[],
     config: Record<string, any>,
+    settings: ChatGPT_MDSettings,
     skipPluginSystemMessage: boolean = false
   ) {
     // Validate API key
     this.apiAuthService.validateApiKey(apiKey, this.serviceType);
 
     // Add plugin system message to help LLM understand context (unless skipped)
-    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages);
+    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages, settings);
 
     // Create payload and headers
     const geminiConfig = config as GeminiConfig;

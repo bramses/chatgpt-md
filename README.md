@@ -4,48 +4,13 @@
 
 ![Chatting with links about vacation plans](images/chat-with-link.gif)
 
-## What's New in v2.6.0 🚀
-### 🚀 Added Google Gemini Support
+## What's New in v2.7.0 🚀
+### 🎯 Provider-Specific Default Models
 
-### ✨ New Features
-
-- **Google Gemini Integration**: Full support for Google's Gemini API through Google AI Studio
-- **Real-time Streaming**: Experience Gemini's responses in real-time with proper streaming support
-- **Model Selection**: Access all available Gemini models (`gemini@gemini-1.5-pro`, `gemini@gemini-1.5-flash`, `gemini@gemini-pro`, etc.)
-- **Auto Title Inference**: Automatic conversation title generation using Gemini models
-- **Settings Integration**: Easy setup with dedicated API key and URL configuration fields
-
-### 🔧 Configuration
-
-- Add your Google AI Studio API key in plugin settings
-- Supports custom API URLs for enterprise deployments
-- Use `gemini@model-name` format in frontmatter or let the plugin auto-detect
-
-### 📝 Usage Example
-
-```yaml
----
-model: gemini@gemini-1.5-pro
-temperature: 0.7
-max_tokens: 1024
-system_commands: ["You are a helpful assistant."]
----
-```
-
-### 🛠️ Developer Resources
-
-- **Service Architecture Documentation**: Added comprehensive guide for implementing new AI services
-- **Consistent Patterns**: Follows established plugin architecture for seamless integration
-
-### 🔄 Compatibility
-
-- Works alongside existing OpenAI, Anthropic, Ollama, and other AI services
-- Automatic service detection based on model names and URLs
-- Full feature parity with existing services (streaming, title inference, error handling)
-
----
-
-**Getting Started**: Add your Google AI Studio API key in Settings → ChatGPT MD → API Keys → Gemini API Key
+- **Service-Specific Defaults**: Each AI provider now has its own default model configuration in settings
+- **Enhanced Settings UI**: Redesigned settings panel with dedicated sections for each provider
+- **Better Model Prefixes**: Updated documentation with correct prefixes (`openai@gpt-4o`, `anthropic@claude-3-5-sonnet`, etc.)
+- **Automatic Migration**: Existing settings are preserved and upgraded automatically
 
 ## A simple and quick Start 🏁
 Get started in just a few simple steps:
@@ -73,11 +38,11 @@ Want to keep your conversations private and avoid API costs? Use local LLMs with
 3. **Configure ChatGPT MD**:
    - Go to `Settings > ChatGPT MD > Ollama Defaults`
    - The Ollama URL should already be set to `http://localhost:11434`
-   - **Important**: You must manually set the model name in your note's frontmatter
-4. **Create a chat note** with frontmatter:
+   - Set your default model in the settings (e.g., `ollama@llama3.2`)
+4. **Start chatting**: Use the `ChatGPT MD: Chat` command to start conversations with your configured default model, or override it in individual notes:
    ```yaml
    ---
-   model: ollama@llama3.2  # Use ollama@ prefix + model name from 'ollama list'
+   model: ollama@llama3.2  # Override default if needed
    temperature: 0.7
    ---
    ```
@@ -90,11 +55,11 @@ Want to keep your conversations private and avoid API costs? Use local LLMs with
 4. **Configure ChatGPT MD**:
    - Go to `Settings > ChatGPT MD > LM Studio Defaults`
    - The LM Studio URL should be set to `http://localhost:1234`
-   - **Important**: You must manually set the model name in your note's frontmatter
-5. **Create a chat note** with frontmatter:
+   - Set your default model in the settings (e.g., `lmstudio@your-model-name`)
+5. **Start chatting**: Use the `ChatGPT MD: Chat` command to start conversations with your configured default model, or override it in individual notes:
    ```yaml
    ---
-   model: lmstudio@your-model-name  # Use lmstudio@ prefix + model name from LM Studio
+   model: lmstudio@your-model-name  # Override default if needed
    temperature: 0.7
    ---
    ```
@@ -106,9 +71,9 @@ Want to keep your conversations private and avoid API costs? Use local LLMs with
 
 ### Important Notes for Local LLMs
 
-- **Manual Configuration Required**: Unlike cloud services, you must specify the model name in each note's frontmatter
-- **No Default Models**: The plugin doesn't set default models for local services since we don't know which models you have installed
-- **Auto Title Inference**: Will be skipped if no model is configured - you'll see a notification to set a model in settings
+- **Default Model Configuration**: Set your preferred local model as the default in settings - it works just like cloud services
+- **Per-Note Overrides**: You can override the default model in individual notes using frontmatter, same as with other providers
+- **Model Discovery**: Use `ollama list` (Ollama) or check LM Studio interface to find your available model names for configuration
 
 ## Features
 * **Interactive conversations**: 
@@ -146,7 +111,7 @@ You can change the global settings or use the local parameters in any note via f
 (start typing `---` in the first line of your note to add properties)
 ```
 ---
-system_commands: ['I am a helpful assistant.']
+system_commands: ['You are a helpful assistant.']
 temperature: 0.3
 top_p: 1
 max_tokens: 300

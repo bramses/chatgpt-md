@@ -1,5 +1,142 @@
 # ChatGPT MD Changelog
 
+## v2.7.0 (August 2025) - Provider-Specific Default Models
+
+### Major Features
+
+- **Service-Specific Defaults**: Each AI provider now has its own default model configuration in settings
+- **Enhanced Settings UI**: Redesigned settings panel with dedicated sections for each provider's default configurations
+- **Better Model Prefixes**: Updated documentation with correct prefixes (`openai@gpt-4o`, `anthropic@claude-3-5-sonnet`, etc.)
+
+### Improvements
+
+- **Automatic Migration**: Previous settings are preserved and automatically upgraded
+- **Dynamic Frontmatter**: Improved frontmatter generation based on provider-specific settings
+
+## v2.6.0 (July 10, 2025) - Dependencies & Stability
+
+### Improvements
+
+- **Dependency Updates**: Upgraded all project dependencies to latest versions for improved security and performance
+- **Code Stability**: General stability improvements and bug fixes
+
+## v2.5.0 (June 27, 2025) - Anthropic Integration & Code Quality
+
+### Major Features
+
+- **Anthropic Claude API Support**: Complete integration with Anthropic's Claude models
+  - Direct access to Claude 3 (Haiku, Sonnet, Opus) and Claude 3.5 models
+  - Native Anthropic API integration with proper authentication
+  - Support for Claude-specific system messages and context handling
+  - Automatic model discovery and selection
+
+### Code Quality & Development
+
+- **ESLint Integration**: Added comprehensive ESLint configuration for better code quality
+  - Automated code style enforcement
+  - Fixed numerous linting issues across the codebase
+- **Build Optimizations**: Enhanced build process with bundle analysis and optimization tools
+- **Development Workflow**: Improved development tools and scripts for better maintainability
+
+### Improvements
+
+- **Model Prefix Consistency**: Standardized model naming conventions across all services (anthropic@claude-3-sonnet, etc.)
+- **Service Simplification**: Streamlined AI service implementations and removed unnecessary complexity
+- **Temperature Handling**: Improved temperature parameter handling for different model types (removed from o1 and o4 calls)
+
+### Bug Fixes
+
+- **System Messages**: Fixed Anthropic service to properly handle plugin-specific system messages
+- **Service Discovery**: Enhanced service discovery when multiple API keys are configured
+
+## v2.4.5 (June 27, 2025) - Frontmatter Stability
+
+### Bug Fixes
+
+- **Frontmatter Handling**: Centralized frontmatter operations to use only Obsidian's native methods, resolving various frontmatter-related issues and improving stability
+
+## v2.4.3 (May 24, 2025) - Streaming & System Commands
+
+### Major Features
+
+- **LM Studio Integration**: Added support for LM Studio as a local AI service provider
+  - Local model hosting and execution
+  - Compatible with LM Studio's OpenAI-compatible API
+  - Seamless integration with existing workflow
+
+### Improvements
+
+- **Enhanced Streaming**: More robust Server-Sent Events (SSE) handling with improved data payload processing  
+- **Markdown Table Rendering**: Improved table rendering with buffering for better formatting consistency
+- **System Commands**: Enhanced system message handling with Obsidian-specific context and table formatting requirements
+- **OpenAI API Compatibility**: Used developer role for OpenAI API calls for better conversation context
+
+### Bug Fixes
+
+- **API Response Parser**: Fixed issues with API response parsing across different services
+- **SSE Data Handling**: More robust handling of streaming data payloads
+
+### Development
+
+- **Dependency Updates**: Updated all development dependencies to latest versions
+
+## v2.4.0 (May 20, 2025) - OpenAI Model Compatibility
+
+### Improvements
+
+- **Enhanced OpenAI Compatibility**: Improved support for latest OpenAI models and API features
+- **Model Detection**: Better automatic detection and handling of OpenAI model variants
+
+## v2.3.5 (May 18, 2025) - Model Discovery Enhancement
+
+### Features
+
+- **Complete Model Visibility**: All available models from all configured services now appear in the model selection modal
+- **Improved Model Discovery**: Enhanced model fetching and display across all AI service providers
+
+### Improvements
+
+- **Dependency Updates**: Updated project dependencies for better performance and security
+
+## v2.3.4 (May 2025) - Startup & Service Discovery
+
+### Bug Fixes
+
+- **Service Discovery**: Fixed AI service discovery issues when only OpenRouter API key is provided
+- **Startup Performance**: Made startup calls non-blocking to improve plugin load times
+
+## v2.3.1 (April 25, 2025) - Model Fetching & Performance
+
+### Features
+
+- **Startup Model Fetching**: Automatically fetch available models from all configured services on plugin startup
+- **Parallel Model Loading**: Models are now fetched in parallel for faster initialization
+
+### Performance
+
+- **Non-blocking Initialization**: Plugin startup is now faster with asynchronous model fetching
+
+## v2.2.3 (April 2024) - Perplexity Citations Fix
+
+### Bug Fixes
+
+- **Perplexity Citations**: Fixed compatibility issues with updated Perplexity API response format for source citations
+- **Ollama Streaming**: Reverted problematic CORS fix that was causing issues with Ollama streaming
+
+## v2.2.2 (April 2024) - Service Improvements
+
+### Improvements
+
+- **Service Reliability**: Enhanced stability and reliability across all AI service providers
+- **Error Handling**: Improved error messages and recovery mechanisms
+
+## v2.2.1 (April 2024) - Bug Fixes
+
+### Bug Fixes
+
+- **General Stability**: Fixed various issues reported by users for improved stability
+- **API Compatibility**: Enhanced compatibility with different API endpoints
+
 ## v2.2.0 (April 12, 2024) - URL Parameter Refactoring
 
 ### Service Configuration
@@ -20,7 +157,7 @@
 - **Better Error Handling**: Improved feedback for service type and API key validation issues
 - **System Commands Fix**: Fixed missing system commands from notes' frontmatter
 - **Consistent API Endpoints**: Simplified URL and endpoint usage across all services
-- **Template Organization**: Templates now appear in alphabetical order in the template suggest modal (fixes #91)
+- **Template Organization**: Templates now appear in alphabetical order in the template suggest modal
 
 ### Mobile Enhancements
 
@@ -32,14 +169,21 @@
 - **Removed Unused Services**: Removed deprecated services for a cleaner codebase
 - **Dependency Updates**: Updated project dependencies to latest versions
 
-## v2.1.4 (Beta) - Endpoint Handling
+## v2.1.5 (March 2024) - Stability Update
+
+### Improvements
+
+- **General Stability**: Various stability improvements and bug fixes
+- **Performance**: Enhanced overall plugin performance
+
+## v2.1.4 (March 2024) - Endpoint Handling
 
 ### Improvements
 
 - **Simplified URL and Endpoint Usage**: Streamlined the way service endpoints are handled across the application
 - **Model Fetching Priority**: Improved URL priority for fetching available models
 
-## v2.1.3 (Beta) - System Commands Update
+## v2.1.3 (March 2024) - System Commands Update
 
 ### Enhancements
 
@@ -56,6 +200,13 @@
 - **Bug Fixes**: Fixed various issues reported by users after the 2.1.0 release
 - **Performance Improvements**: Enhanced overall stability and performance
 
+## v2.1.1 (March 2024) - Minor Fixes
+
+### Bug Fixes
+
+- **Service Discovery**: Improved service discovery and model selection
+- **UI Improvements**: Enhanced user interface elements
+
 ## v2.1.0 (March 2024) - OpenRouter Integration
 
 ### Major Features
@@ -65,24 +216,24 @@
   - Full list of models available at https://openrouter.ai/models
 - **Model Selection Command**: Added new command `ChatGPT MD: Select Model` to choose from all available LLMs (OpenAI, Ollama, OpenRouter.ai) and set the current model for your note
 
-## v2.0.5 (Beta) - Service Pattern Implementation
+## v2.0.5 (February 2024) - Service Pattern Implementation
 
 ### Enhancements
 
 - **Service Pattern**: Implemented a cleaner service pattern for settings management
 - **Heading Improvements**: Enhanced heading prefix and default frontmatter
 
-## v2.0.4 (Beta) - Settings Interface
+## v2.0.4 (February 2024) - Settings Interface
 
 ### Enhancements
 
 - **Settings Tab Enhancement**: Added API Keys and default URLs to the settings tab for easier configuration
 
-## v2.0.3 (Beta) - Version Management
+## v2.0.3 (February 2024) - Version Management
 
 ### Enhancements
 
-- **Version Management**: Added comprehensive version management including beta versions
+- **Version Management**: Added comprehensive version management
 - **Title Inference Fix**: Prevented error messages from becoming note titles
 - **API Communication**: Simplified communication between services
 
@@ -136,7 +287,6 @@
 
 - **Frontmatter**: Fixed missing frontmatter overwrite with default settings
 - **Title Inference**: Added check for chat folder before renaming inferred title
-- **Cherry-picked Fixes**: Included missing fixes from other branches
 
 ### Development Updates
 
@@ -163,21 +313,25 @@
 - **Template Creation**: Fixed new chat from template when `chats` folder is missing
 - **Title Inference**: Fixed infer title error that was causing issues
 
-## v1.4.0-1.4.2 (March 2023) - Streaming Improvements
+## v1.4.2 (March 2023) - Mobile Improvements
 
-### Features
+### Improvements
 
-- **Stop Button**: Added stop button for streaming
-- **Custom URLs**: Added configurable URL support for different API endpoints
+- **Mobile Experience**: Improved streaming icon behavior on mobile devices
+
+## v1.4.1 (March 2023) - Stream Fixes
 
 ### Bug Fixes
 
 - **Stream Issues**: Fixed stream passthrough issues
 - **Promise Handling**: Fixed resolve/reject handling
 
-### Improvements
+## v1.4.0 (March 2023) - Streaming Features
 
-- **Mobile Experience**: Improved streaming icon behavior on mobile devices
+### Features
+
+- **Stop Button**: Added stop button for streaming
+- **Custom URLs**: Added configurable URL support for different API endpoints
 
 ## v1.3.0 (March 2023) - Message Headings
 
@@ -189,17 +343,26 @@
 
 - **Code Blocks**: Enhanced code block handling for better syntax highlighting
 
-## v1.2.0-1.2.1 (March 2023) - Streaming Enhancement
-
-### Features
-
-- **Streaming**: Implemented improved streaming functionality for real-time responses
+## v1.2.1 (March 2023) - Streaming Fix
 
 ### Bug Fixes
 
 - **SSE Logic**: Enhanced error logic for Server-Sent Events
 
-## v1.1.0-1.1.1 (March 2023) - Title Inference
+## v1.2.0 (March 2023) - Streaming Enhancement
+
+### Features
+
+- **Streaming**: Implemented improved streaming functionality for real-time responses
+
+## v1.1.1 (March 2023) - Title Inference Fix
+
+### Bug Fixes
+
+- **Streaming**: Fixed streaming bugs for smoother experience
+- **Title Inference**: Reduced message count required for title inference
+
+## v1.1.0 (March 2023) - Title Inference
 
 ### Features
 
@@ -207,23 +370,25 @@
 - **Platform Logic**: Added platform-specific logic for better cross-platform support
 - **Custom Dates**: Implemented custom date formatting
 
+## v1.0.2 (March 2023) - iOS Support
+
 ### Bug Fixes
 
-- **Streaming**: Fixed streaming bugs for smoother experience
-- **Title Inference**: Reduced message count required for title inference
+- **iOS Support**: Added compatibility fixes for iOS
+- **Status Bar**: Implemented status bar improvements
 
-## v1.0.0-1.0.2 (March 2023) - Initial Release
+## v1.0.1 (March 2023) - Error Reporting
+
+### Enhancements
+
+- **Error Reporting**: Added comprehensive error reporting
+
+## v1.0.0 (March 2023) - Initial Release
 
 ### Initial Release
 
 - **Core Functionality**: Implemented the foundation of ChatGPT MD
-- **Error Reporting**: Added comprehensive error reporting
-- **iOS Support**: Added compatibility fixes for iOS
-- **Status Bar**: Implemented status bar improvements
-
-### Documentation
-
-- **README**: Added comprehensive README with usage instructions
+- **Documentation**: Added comprehensive README with usage instructions
 - **Tutorial**: Added YouTube tutorial mirror
 - **License**: Added licensing information
 

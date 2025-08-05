@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Current Version: 2.7.0
+- Major focus: Provider-specific default models and enhanced configuration system
+- Key feature: Each AI service now has dedicated default settings in the plugin configuration
+
 ## Development Commands
 
 ```bash
@@ -45,8 +49,9 @@ All AI services implement `IAiApiService` interface. Each service handles:
 - **AI Services** (`src/Services/*Service.ts`): OpenAI, Anthropic, Gemini, Ollama, OpenRouter, LmStudio
 - **EditorService**: Manages editor interactions and content manipulation
 - **MessageService**: Handles chat message processing and validation
-- **FrontmatterService**: Manages YAML frontmatter configuration per note
+- **FrontmatterService**: Manages YAML frontmatter configuration per note with provider-specific defaults
 - **TemplateService**: Handles chat templates and note creation
+- **SettingsService**: Manages global and provider-specific configuration settings
 
 ### Adding New AI Services
 Follow the comprehensive guide in `docs/CREATE_SERVICE.md`. The pattern involves:
@@ -60,8 +65,9 @@ Follow the comprehensive guide in `docs/CREATE_SERVICE.md`. The pattern involves
 
 ### Configuration System
 - **Global Settings**: Stored via Obsidian's settings API in `SettingsService`
+- **Provider-Specific Defaults**: Each AI service now has its own default model configuration (v2.7.0+)
 - **Per-Note Config**: YAML frontmatter overrides global settings
-- **Service Detection**: Automatic based on model names (e.g., `local@gemma2:27b`, `gemini@gemini-1.5-pro`) or URLs
+- **Service Detection**: Automatic based on model names (e.g., `ollama@gemma2:27b`, `gemini@gemini-1.5-pro`, `anthropic@claude-3-5-sonnet`) or URLs
 - **Smart Provider Selection**: Automatically selects best available service based on API keys
 
 ### Key Files for Development

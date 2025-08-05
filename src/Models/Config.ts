@@ -3,6 +3,7 @@ import {
   DEFAULT_DATE_FORMAT,
   DEFAULT_HEADING_LEVEL,
   DEFAULT_INFER_TITLE_LANGUAGE,
+  PLUGIN_SYSTEM_MESSAGE,
 } from "../Constants";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
@@ -15,7 +16,7 @@ import { DEFAULT_GEMINI_CONFIG } from "src/Services/GeminiService";
  */
 const generateDefaultChatFrontMatter = (): string => {
   return `---
-system_commands: ['I am a helpful assistant.']
+system_commands: ['You are a helpful assistant.']
 frequency_penalty: ${DEFAULT_OPENAI_CONFIG.frequency_penalty}
 max_tokens: ${DEFAULT_OPENAI_CONFIG.max_tokens}
 model: ${DEFAULT_OPENAI_CONFIG.model}
@@ -59,6 +60,8 @@ export interface ChatBehaviorSettings {
   generateAtCursor: boolean;
   /** Whether to automatically infer title after 4 messages have been exchanged */
   autoInferTitle: boolean;
+  /** System message that provides context about the Obsidian/ChatGPT MD plugin environment */
+  pluginSystemMessage: string;
 }
 
 /**
@@ -204,6 +207,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   stream: true,
   generateAtCursor: false,
   autoInferTitle: false,
+  pluginSystemMessage: PLUGIN_SYSTEM_MESSAGE,
 
   // Formatting
   dateFormat: DEFAULT_DATE_FORMAT,

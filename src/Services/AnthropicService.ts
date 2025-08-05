@@ -1,6 +1,6 @@
 import { Editor } from "obsidian";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_ANTHROPIC, PLUGIN_SYSTEM_MESSAGE, ROLE_ASSISTANT, ROLE_SYSTEM } from "src/Constants";
+import { AI_SERVICE_ANTHROPIC, ROLE_ASSISTANT, ROLE_SYSTEM } from "src/Constants";
 import { BaseAiService, IAiApiService } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ApiService } from "./ApiService";
@@ -186,19 +186,21 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     config: AnthropicConfig,
     editor: Editor,
     headingPrefix: string,
-    setAtCursor?: boolean | undefined
+    setAtCursor?: boolean | undefined,
+    settings?: ChatGPT_MDSettings
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
     // Use the default implementation from BaseAiService
-    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor);
+    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings);
   }
 
   protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
-    config: AnthropicConfig
+    config: AnthropicConfig,
+    settings?: ChatGPT_MDSettings
   ): Promise<any> {
     // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config);
+    return this.defaultCallNonStreamingAPI(apiKey, messages, config, settings);
   }
 
   protected showNoTitleInferredNotification(): void {
@@ -212,13 +214,14 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     apiKey: string | undefined,
     messages: Message[],
     config: Record<string, any>,
+    settings: ChatGPT_MDSettings,
     skipPluginSystemMessage: boolean = false
   ) {
     // Validate API key
     this.apiAuthService.validateApiKey(apiKey, this.serviceType);
 
     // Add plugin system message to help LLM understand context (unless skipped)
-    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages);
+    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages, settings);
 
     // Create payload and headers
     const anthropicConfig = config as AnthropicConfig;
@@ -230,7 +233,7 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
       const systemParts: string[] = [];
 
       // Always add plugin system message first
-      systemParts.push(PLUGIN_SYSTEM_MESSAGE);
+      systemParts.push(settings.pluginSystemMessage);
 
       // Add user system commands if they exist
       if (anthropicConfig.system_commands && anthropicConfig.system_commands.length > 0) {

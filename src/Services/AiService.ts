@@ -13,7 +13,6 @@ import {
   AI_SERVICE_OPENROUTER,
   API_ENDPOINTS,
   NEWLINE,
-  PLUGIN_SYSTEM_MESSAGE,
   ROLE_USER,
 } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
@@ -126,8 +125,8 @@ export abstract class BaseAiService implements IAiApiService {
     }
 
     return options.stream && editor
-      ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor)
-      : this.callNonStreamingAPI(apiKey, messages, config);
+      ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings)
+      : this.callNonStreamingAPI(apiKey, messages, config, settings);
   }
 
   /**
@@ -198,7 +197,8 @@ export abstract class BaseAiService implements IAiApiService {
     config: Record<string, any>,
     editor: Editor,
     headingPrefix: string,
-    setAtCursor?: boolean
+    setAtCursor?: boolean,
+    settings?: ChatGPT_MDSettings
   ): Promise<StreamingResponse>;
 
   /**
@@ -207,7 +207,8 @@ export abstract class BaseAiService implements IAiApiService {
   protected abstract callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
-    config: Record<string, any>
+    config: Record<string, any>,
+    settings?: ChatGPT_MDSettings
   ): Promise<any>;
 
   /**
@@ -250,7 +251,7 @@ export abstract class BaseAiService implements IAiApiService {
       try {
         // Use a separate try/catch block for the API call to handle errors without returning them to the chat
         // For title inference, we call the API directly without the plugin system message
-        return await this.callNonStreamingAPIForTitleInference(apiKey, [{ role: ROLE_USER, content: prompt }], config);
+        return await this.callNonStreamingAPIForTitleInference(apiKey, [{ role: ROLE_USER, content: prompt }], config, settings);
       } catch (apiError) {
         // Log the error but don't return it to the chat
         console.error(`[ChatGPT MD] Error calling API for title inference:`, apiError);
@@ -269,11 +270,12 @@ export abstract class BaseAiService implements IAiApiService {
   protected async callNonStreamingAPIForTitleInference(
     apiKey: string | undefined,
     messages: Message[],
-    config: Record<string, any>
+    config: Record<string, any>,
+    settings: ChatGPT_MDSettings
   ): Promise<any> {
     try {
       config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, true); // Skip plugin system message
+      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings, true); // Skip plugin system message
 
       const response = await this.apiService.makeNonStreamingRequest(
         this.getApiEndpoint(config),
@@ -326,7 +328,7 @@ export abstract class BaseAiService implements IAiApiService {
    * This ensures the LLM understands the Obsidian context
    * Each service can specify its preferred role for system messages
    */
-  protected addPluginSystemMessage(messages: Message[]): Message[] {
+  protected addPluginSystemMessage(messages: Message[], settings: ChatGPT_MDSettings): Message[] {
     // If service supports system field (like Anthropic), don't add to messages
     if (this.supportsSystemField()) {
       return messages;
@@ -334,7 +336,7 @@ export abstract class BaseAiService implements IAiApiService {
 
     const pluginSystemMessage: Message = {
       role: this.getSystemMessageRole(),
-      content: PLUGIN_SYSTEM_MESSAGE,
+      content: settings.pluginSystemMessage,
     };
 
     // Add the plugin system message at the beginning
@@ -370,13 +372,14 @@ export abstract class BaseAiService implements IAiApiService {
     apiKey: string | undefined,
     messages: Message[],
     config: Record<string, any>,
+    settings: ChatGPT_MDSettings,
     skipPluginSystemMessage: boolean = false
   ) {
     // Validate API key
     this.apiAuthService.validateApiKey(apiKey, this.serviceType);
 
     // Add plugin system message to help LLM understand context (unless skipped)
-    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages);
+    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages, settings);
 
     // Create payload and headers
     const payload = this.createPayload(config, finalMessages);
@@ -384,7 +387,7 @@ export abstract class BaseAiService implements IAiApiService {
 
     // Add plugin system message to payload if service supports system field and not skipped
     if (this.supportsSystemField() && !skipPluginSystemMessage && !payload.system) {
-      payload.system = PLUGIN_SYSTEM_MESSAGE;
+      payload.system = settings.pluginSystemMessage;
     }
 
     return { payload, headers };
@@ -425,11 +428,12 @@ export abstract class BaseAiService implements IAiApiService {
     config: Record<string, any>,
     editor: Editor,
     headingPrefix: string,
-    setAtCursor?: boolean
+    setAtCursor?: boolean,
+    settings?: ChatGPT_MDSettings
   ): Promise<StreamingResponse> {
     try {
       // Use the common preparation method
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
+      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings!);
 
       // Insert assistant header
       const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
@@ -468,13 +472,14 @@ export abstract class BaseAiService implements IAiApiService {
   protected async defaultCallNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
-    config: Record<string, any>
+    config: Record<string, any>,
+    settings?: ChatGPT_MDSettings
   ): Promise<any> {
     try {
       console.log(`[ChatGPT MD] "no stream"`, config);
 
       config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config);
+      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings!);
 
       const response = await this.apiService.makeNonStreamingRequest(
         this.getApiEndpoint(config),
