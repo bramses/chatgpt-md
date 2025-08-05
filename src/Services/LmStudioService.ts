@@ -12,13 +12,13 @@ import { NotificationService } from "./NotificationService";
 export const DEFAULT_LMSTUDIO_CONFIG: LmStudioConfig = {
   aiService: AI_SERVICE_LMSTUDIO,
   frequency_penalty: 0,
-  max_tokens: 300,
-  model: "local-model",
+  max_tokens: 400,
+  model: "",
   presence_penalty: 0,
   stream: true,
   system_commands: null,
   tags: [],
-  temperature: 1,
+  temperature: 0.7,
   title: "Untitled",
   top_p: 1,
   url: "http://localhost:1234",
@@ -148,19 +148,21 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
     config: LmStudioConfig,
     editor: Editor,
     headingPrefix: string,
-    setAtCursor?: boolean | undefined
+    setAtCursor?: boolean | undefined,
+    settings?: ChatGPT_MDSettings
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
     // Use the default implementation from BaseAiService
-    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor);
+    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings);
   }
 
   protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
-    config: LmStudioConfig
+    config: LmStudioConfig,
+    settings?: ChatGPT_MDSettings
   ): Promise<any> {
     // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config);
+    return this.defaultCallNonStreamingAPI(apiKey, messages, config, settings);
   }
 
   protected showNoTitleInferredNotification(): void {

@@ -1,15 +1,30 @@
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import {
-  DEFAULT_CHAT_FRONT_MATTER,
   DEFAULT_DATE_FORMAT,
   DEFAULT_HEADING_LEVEL,
   DEFAULT_INFER_TITLE_LANGUAGE,
+  PLUGIN_SYSTEM_MESSAGE,
 } from "../Constants";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
 import { DEFAULT_ANTHROPIC_CONFIG } from "src/Services/AnthropicService";
 import { DEFAULT_GEMINI_CONFIG } from "src/Services/GeminiService";
+
+/**
+ * Generate default chat front matter using service provider defaults
+ */
+const generateDefaultChatFrontMatter = (): string => {
+  return `---
+system_commands: ['You are a helpful assistant.']
+frequency_penalty: ${DEFAULT_OPENAI_CONFIG.frequency_penalty}
+max_tokens: ${DEFAULT_OPENAI_CONFIG.max_tokens}
+model: ${DEFAULT_OPENAI_CONFIG.model}
+presence_penalty: ${DEFAULT_OPENAI_CONFIG.presence_penalty}
+stream: true
+temperature: ${DEFAULT_OPENAI_CONFIG.temperature}
+---`;
+};
 
 /**
  * API key settings
@@ -45,6 +60,8 @@ export interface ChatBehaviorSettings {
   generateAtCursor: boolean;
   /** Whether to automatically infer title after 4 messages have been exchanged */
   autoInferTitle: boolean;
+  /** System message that provides context about the Obsidian/ChatGPT MD plugin environment */
+  pluginSystemMessage: string;
 }
 
 /**
@@ -59,14 +76,74 @@ export interface FormattingSettings {
   inferTitleLanguage: string;
 }
 
+
+/**
+ * Provider-specific frontmatter settings for OpenAI
+ */
+export interface OpenAIFrontmatterSettings {
+  openaiDefaultModel: string;
+  openaiDefaultTemperature: number;
+  openaiDefaultTopP: number;
+  openaiDefaultMaxTokens: number;
+  openaiDefaultPresencePenalty: number;
+  openaiDefaultFrequencyPenalty: number;
+}
+
+/**
+ * Provider-specific frontmatter settings for Anthropic
+ */
+export interface AnthropicFrontmatterSettings {
+  anthropicDefaultModel: string;
+  anthropicDefaultTemperature: number;
+  anthropicDefaultMaxTokens: number;
+}
+
+/**
+ * Provider-specific frontmatter settings for Gemini
+ */
+export interface GeminiFrontmatterSettings {
+  geminiDefaultModel: string;
+  geminiDefaultTemperature: number;
+  geminiDefaultTopP: number;
+  geminiDefaultMaxTokens: number;
+}
+
+/**
+ * Provider-specific frontmatter settings for OpenRouter
+ */
+export interface OpenRouterFrontmatterSettings {
+  openrouterDefaultModel: string;
+  openrouterDefaultTemperature: number;
+  openrouterDefaultTopP: number;
+  openrouterDefaultMaxTokens: number;
+  openrouterDefaultPresencePenalty: number;
+  openrouterDefaultFrequencyPenalty: number;
+}
+
+/**
+ * Provider-specific frontmatter settings for Ollama
+ */
+export interface OllamaFrontmatterSettings {
+  ollamaDefaultTemperature?: number;
+  ollamaDefaultTopP?: number;
+}
+
+/**
+ * Provider-specific frontmatter settings for LM Studio
+ */
+export interface LmStudioFrontmatterSettings {
+  lmstudioDefaultTemperature: number;
+  lmstudioDefaultTopP: number;
+  lmstudioDefaultPresencePenalty: number;
+  lmstudioDefaultFrequencyPenalty: number;
+}
+
 /**
  * Chat template settings
  */
 export interface TemplateSettings {
   /** Default frontmatter for new chat files */
   defaultChatFrontmatter: string;
-  /** System commands to include in the chat */
-  system_commands?: string[] | null;
 }
 
 /**
@@ -96,7 +173,13 @@ export interface ChatGPT_MDSettings
     ChatBehaviorSettings,
     FormattingSettings,
     TemplateSettings,
-    ServiceUrlSettings {}
+    ServiceUrlSettings,
+    OpenAIFrontmatterSettings,
+    AnthropicFrontmatterSettings,
+    GeminiFrontmatterSettings,
+    OpenRouterFrontmatterSettings,
+    OllamaFrontmatterSettings,
+    LmStudioFrontmatterSettings {}
 
 /**
  * Default settings
@@ -124,6 +207,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   stream: true,
   generateAtCursor: false,
   autoInferTitle: false,
+  pluginSystemMessage: PLUGIN_SYSTEM_MESSAGE,
 
   // Formatting
   dateFormat: DEFAULT_DATE_FORMAT,
@@ -131,5 +215,42 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   inferTitleLanguage: DEFAULT_INFER_TITLE_LANGUAGE,
 
   // Templates
-  defaultChatFrontmatter: DEFAULT_CHAT_FRONT_MATTER,
+  defaultChatFrontmatter: generateDefaultChatFrontMatter(),
+
+  // OpenAI Defaults
+  openaiDefaultModel: DEFAULT_OPENAI_CONFIG.model,
+  openaiDefaultTemperature: DEFAULT_OPENAI_CONFIG.temperature,
+  openaiDefaultTopP: DEFAULT_OPENAI_CONFIG.top_p,
+  openaiDefaultMaxTokens: DEFAULT_OPENAI_CONFIG.max_tokens,
+  openaiDefaultPresencePenalty: DEFAULT_OPENAI_CONFIG.presence_penalty,
+  openaiDefaultFrequencyPenalty: DEFAULT_OPENAI_CONFIG.frequency_penalty,
+
+  // Anthropic Defaults
+  anthropicDefaultModel: DEFAULT_ANTHROPIC_CONFIG.model,
+  anthropicDefaultTemperature: DEFAULT_ANTHROPIC_CONFIG.temperature,
+  anthropicDefaultMaxTokens: DEFAULT_ANTHROPIC_CONFIG.max_tokens,
+
+  // Gemini Defaults
+  geminiDefaultModel: DEFAULT_GEMINI_CONFIG.model,
+  geminiDefaultTemperature: DEFAULT_GEMINI_CONFIG.temperature,
+  geminiDefaultTopP: DEFAULT_GEMINI_CONFIG.top_p,
+  geminiDefaultMaxTokens: DEFAULT_GEMINI_CONFIG.max_tokens,
+
+  // OpenRouter Defaults
+  openrouterDefaultModel: DEFAULT_OPENROUTER_CONFIG.model,
+  openrouterDefaultTemperature: DEFAULT_OPENROUTER_CONFIG.temperature,
+  openrouterDefaultTopP: DEFAULT_OPENROUTER_CONFIG.top_p,
+  openrouterDefaultMaxTokens: DEFAULT_OPENROUTER_CONFIG.max_tokens,
+  openrouterDefaultPresencePenalty: DEFAULT_OPENROUTER_CONFIG.presence_penalty,
+  openrouterDefaultFrequencyPenalty: DEFAULT_OPENROUTER_CONFIG.frequency_penalty,
+
+  // Ollama Defaults (no default model - user must configure)
+  ollamaDefaultTemperature: 0.7,
+  ollamaDefaultTopP: 1,
+
+  // LM Studio Defaults (no default model - user must configure)
+  lmstudioDefaultTemperature: DEFAULT_LMSTUDIO_CONFIG.temperature,
+  lmstudioDefaultTopP: DEFAULT_LMSTUDIO_CONFIG.top_p,
+  lmstudioDefaultPresencePenalty: DEFAULT_LMSTUDIO_CONFIG.presence_penalty,
+  lmstudioDefaultFrequencyPenalty: DEFAULT_LMSTUDIO_CONFIG.frequency_penalty,
 };

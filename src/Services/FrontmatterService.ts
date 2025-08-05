@@ -140,76 +140,77 @@ export class FrontmatterService {
       return settings.defaultChatFrontmatter + "\n\n";
     }
 
-    // If no default frontmatter in settings, generate one from scratch
+    // If no default frontmatter in settings, generate one from scratch using new settings structure
     // Determine the AI service type
     const aiService = additionalSettings.aiService || AI_SERVICE_OPENAI;
 
-    // Get the default config for the service type
+    // Start with basic settings
     let frontmatterObj: Record<string, any> = {
       stream: settings.stream,
       ...additionalSettings,
     };
 
-    // Add service-specific properties
+    // Add service-specific properties based on settings defaults
     switch (aiService) {
       case AI_SERVICE_OPENAI:
         frontmatterObj = {
           ...frontmatterObj,
-          model: DEFAULT_OPENAI_CONFIG.model,
-          temperature: DEFAULT_OPENAI_CONFIG.temperature,
-          top_p: DEFAULT_OPENAI_CONFIG.top_p,
-          max_tokens: DEFAULT_OPENAI_CONFIG.max_tokens,
-          presence_penalty: DEFAULT_OPENAI_CONFIG.presence_penalty,
-          frequency_penalty: DEFAULT_OPENAI_CONFIG.frequency_penalty,
+          model: settings.openaiDefaultModel,
+          temperature: settings.openaiDefaultTemperature,
+          top_p: settings.openaiDefaultTopP,
+          max_tokens: settings.openaiDefaultMaxTokens,
+          presence_penalty: settings.openaiDefaultPresencePenalty,
+          frequency_penalty: settings.openaiDefaultFrequencyPenalty,
         };
         break;
       case AI_SERVICE_OLLAMA:
         frontmatterObj = {
           ...frontmatterObj,
-          model: DEFAULT_OLLAMA_CONFIG.model,
-          url: DEFAULT_OLLAMA_CONFIG.url,
+          // model: User must configure model manually
+          url: settings.ollamaUrl,
+          temperature: settings.ollamaDefaultTemperature,
+          top_p: settings.ollamaDefaultTopP,
         };
         break;
       case AI_SERVICE_OPENROUTER:
         frontmatterObj = {
           ...frontmatterObj,
-          model: DEFAULT_OPENROUTER_CONFIG.model,
-          temperature: DEFAULT_OPENROUTER_CONFIG.temperature,
-          top_p: DEFAULT_OPENROUTER_CONFIG.top_p,
-          max_tokens: DEFAULT_OPENROUTER_CONFIG.max_tokens,
-          presence_penalty: DEFAULT_OPENROUTER_CONFIG.presence_penalty,
-          frequency_penalty: DEFAULT_OPENROUTER_CONFIG.frequency_penalty,
+          model: settings.openrouterDefaultModel,
+          temperature: settings.openrouterDefaultTemperature,
+          top_p: settings.openrouterDefaultTopP,
+          max_tokens: settings.openrouterDefaultMaxTokens,
+          presence_penalty: settings.openrouterDefaultPresencePenalty,
+          frequency_penalty: settings.openrouterDefaultFrequencyPenalty,
         };
         break;
       case AI_SERVICE_LMSTUDIO:
         frontmatterObj = {
           ...frontmatterObj,
-          model: DEFAULT_LMSTUDIO_CONFIG.model,
-          url: DEFAULT_LMSTUDIO_CONFIG.url,
-          temperature: DEFAULT_LMSTUDIO_CONFIG.temperature,
-          top_p: DEFAULT_LMSTUDIO_CONFIG.top_p,
-          max_tokens: DEFAULT_LMSTUDIO_CONFIG.max_tokens,
-          presence_penalty: DEFAULT_LMSTUDIO_CONFIG.presence_penalty,
-          frequency_penalty: DEFAULT_LMSTUDIO_CONFIG.frequency_penalty,
+          // model: User must configure model manually
+          url: settings.lmstudioUrl,
+          temperature: settings.lmstudioDefaultTemperature,
+          top_p: settings.lmstudioDefaultTopP,
+          presence_penalty: settings.lmstudioDefaultPresencePenalty,
+          frequency_penalty: settings.lmstudioDefaultFrequencyPenalty,
         };
         break;
       case AI_SERVICE_ANTHROPIC:
         frontmatterObj = {
           ...frontmatterObj,
-          model: DEFAULT_ANTHROPIC_CONFIG.model,
-          url: DEFAULT_ANTHROPIC_CONFIG.url,
-          temperature: DEFAULT_ANTHROPIC_CONFIG.temperature,
-          max_tokens: DEFAULT_ANTHROPIC_CONFIG.max_tokens,
+          model: settings.anthropicDefaultModel,
+          url: settings.anthropicUrl,
+          temperature: settings.anthropicDefaultTemperature,
+          max_tokens: settings.anthropicDefaultMaxTokens,
         };
         break;
       case AI_SERVICE_GEMINI:
         frontmatterObj = {
           ...frontmatterObj,
-          model: DEFAULT_GEMINI_CONFIG.model,
-          url: DEFAULT_GEMINI_CONFIG.url,
-          temperature: DEFAULT_GEMINI_CONFIG.temperature,
-          top_p: DEFAULT_GEMINI_CONFIG.top_p,
-          max_tokens: DEFAULT_GEMINI_CONFIG.max_tokens,
+          model: settings.geminiDefaultModel,
+          url: settings.geminiUrl,
+          temperature: settings.geminiDefaultTemperature,
+          top_p: settings.geminiDefaultTopP,
+          max_tokens: settings.geminiDefaultMaxTokens,
         };
         break;
     }

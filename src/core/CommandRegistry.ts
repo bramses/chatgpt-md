@@ -134,19 +134,19 @@ export class CommandRegistry {
 
             // Ensure model is set for title inference
             if (!settingsWithApiKey.model) {
-              console.log("[ChatGPT MD] Model not set for auto title inference, using default model");
+              console.log("[ChatGPT MD] Model not set for auto title inference");
               if (frontmatter.aiService === AI_SERVICE_OPENAI) {
-                settingsWithApiKey.model = "gpt-4";
-              } else if (frontmatter.aiService === AI_SERVICE_OLLAMA) {
-                settingsWithApiKey.model = "llama2";
+                settingsWithApiKey.model = DEFAULT_OPENAI_CONFIG.model;
               } else if (frontmatter.aiService === AI_SERVICE_OPENROUTER) {
-                settingsWithApiKey.model = "anthropic/claude-3-opus:beta";
-              } else if (frontmatter.aiService === AI_SERVICE_LMSTUDIO) {
-                settingsWithApiKey.model = "local-model";
+                settingsWithApiKey.model = DEFAULT_OPENROUTER_CONFIG.model;
               } else if (frontmatter.aiService === AI_SERVICE_ANTHROPIC) {
-                settingsWithApiKey.model = "claude-3-sonnet-20240229";
+                settingsWithApiKey.model = DEFAULT_ANTHROPIC_CONFIG.model;
               } else if (frontmatter.aiService === AI_SERVICE_GEMINI) {
-                settingsWithApiKey.model = "gemini-1.5-flash";
+                settingsWithApiKey.model = DEFAULT_GEMINI_CONFIG.model;
+              } else if (frontmatter.aiService === AI_SERVICE_OLLAMA || frontmatter.aiService === AI_SERVICE_LMSTUDIO) {
+                console.log(`[ChatGPT MD] No model configured for ${frontmatter.aiService}. Skipping auto title inference. Please configure a model in settings.`);
+                new Notice(`Auto title inference skipped: No model configured for ${frontmatter.aiService}. Please set a model in settings.`, 6000);
+                return;
               }
             }
 

@@ -25,7 +25,7 @@ export const CHOOSE_CHAT_TEMPLATE_COMMAND_ID = "choose-chat-template";
 export const CLEAR_CHAT_COMMAND_ID = "clear-chat";
 
 export const CHAT_ERROR_MESSAGE_401 =
-  "I am sorry. There was an authorization issue with the external API (Status 401).\nPlease check your API key in the settings";
+  "I am sorry. There was an authorization issue with the external API (Status 401).\nPlease check your API key in the settings or set your default model in the settings if you use Ollama or LM Studio";
 export const CHAT_ERROR_MESSAGE_NO_CONNECTION =
   "I am sorry. There was an issue reaching the network.\nPlease check your network connection.";
 export const CHAT_ERROR_MESSAGE_404 =
@@ -59,16 +59,6 @@ export const ROLE_ASSISTANT = "assistant";
 export const ROLE_DEVELOPER = "developer";
 export const ROLE_SYSTEM = "system";
 export const ROLE_USER = "user";
-
-export const DEFAULT_CHAT_FRONT_MATTER = `---
-system_commands: ['I am a helpful assistant.']
-frequency_penalty: 0
-max_tokens: 300
-model: gpt-4.1-mini
-presence_penalty: 0
-stream: true
-temperature: 1
----`;
 
 export const FETCH_MODELS_TIMEOUT_MS = 6000;
 

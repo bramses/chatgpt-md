@@ -12,13 +12,13 @@ import { NotificationService } from "./NotificationService";
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   aiService: AI_SERVICE_OPENAI,
   frequency_penalty: 0,
-  max_tokens: 300,
-  model: "openai@gpt-4",
+  max_tokens: 400,
+  model: "openai@gpt-4.1-mini",
   presence_penalty: 0,
   stream: true,
   system_commands: null,
   tags: [],
-  temperature: 1,
+  temperature: 0.7,
   title: "Untitled",
   top_p: 1,
   url: "https://api.openai.com",
@@ -161,19 +161,21 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     config: OpenAIConfig,
     editor: Editor,
     headingPrefix: string,
-    setAtCursor?: boolean | undefined
+    setAtCursor?: boolean | undefined,
+    settings?: ChatGPT_MDSettings
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
     // Use the default implementation from BaseAiService
-    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor);
+    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings);
   }
 
   protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
-    config: OpenAIConfig
+    config: OpenAIConfig,
+    settings?: ChatGPT_MDSettings
   ): Promise<any> {
     // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config);
+    return this.defaultCallNonStreamingAPI(apiKey, messages, config, settings);
   }
 
   protected showNoTitleInferredNotification(): void {

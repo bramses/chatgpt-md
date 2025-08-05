@@ -1,6 +1,6 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { DEFAULT_CHAT_FRONT_MATTER, DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
+import { DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
 import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
@@ -71,55 +71,6 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "API Keys",
       },
 
-      // Service URLs
-      {
-        id: "openaiUrl",
-        name: "OpenAI API URL",
-        description: `URL for OpenAI API\nDefault URL: ${DEFAULT_OPENAI_CONFIG.url}`,
-        type: "text",
-        placeholder: DEFAULT_OPENAI_CONFIG.url,
-        group: "Service URLs",
-      },
-      {
-        id: "openrouterUrl",
-        name: "OpenRouter.ai API URL",
-        description: `URL for OpenRouter.ai API\nDefault URL: ${DEFAULT_OPENROUTER_CONFIG.url}`,
-        type: "text",
-        placeholder: DEFAULT_OPENROUTER_CONFIG.url,
-        group: "Service URLs",
-      },
-      {
-        id: "ollamaUrl",
-        name: "Ollama API URL",
-        description: `URL for Ollama API\nDefault URL: ${DEFAULT_OLLAMA_CONFIG.url}`,
-        type: "text",
-        placeholder: DEFAULT_OLLAMA_CONFIG.url,
-        group: "Service URLs",
-      },
-      {
-        id: "lmstudioUrl",
-        name: "LM Studio API URL",
-        description: `URL for LM Studio API\nDefault URL: ${DEFAULT_LMSTUDIO_CONFIG.url}`,
-        type: "text",
-        placeholder: DEFAULT_LMSTUDIO_CONFIG.url,
-        group: "Service URLs",
-      },
-      {
-        id: "anthropicUrl",
-        name: "Anthropic API URL",
-        description: `URL for Anthropic API\nDefault URL: ${DEFAULT_ANTHROPIC_CONFIG.url}`,
-        type: "text",
-        placeholder: DEFAULT_ANTHROPIC_CONFIG.url,
-        group: "Service URLs",
-      },
-      {
-        id: "geminiUrl",
-        name: "Gemini API URL",
-        description: `URL for Gemini API\nDefault URL: ${DEFAULT_GEMINI_CONFIG.url}`,
-        type: "text",
-        placeholder: DEFAULT_GEMINI_CONFIG.url,
-        group: "Service URLs",
-      },
 
       // Chat Behavior
       {
@@ -128,7 +79,14 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         description:
           "Default frontmatter for new chat files. You can change/use all of the settings exposed by the OpenAI API here: https://platform.openai.com/docs/api-reference/chat/create",
         type: "textarea",
-        placeholder: DEFAULT_CHAT_FRONT_MATTER,
+        placeholder: this.settingsProvider.settings.defaultChatFrontmatter,
+        group: "Chat Behavior",
+      },
+      {
+        id: "pluginSystemMessage",
+        name: "Plugin System Message",
+        description: "System message that provides context about the Obsidian/ChatGPT MD plugin environment. This helps the AI understand it's working within Obsidian and format responses appropriately.",
+        type: "textarea",
         group: "Chat Behavior",
       },
       {
@@ -151,6 +109,196 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         description: "Automatically infer title after 4 messages have been exchanged",
         type: "toggle",
         group: "Chat Behavior",
+      },
+      {
+        id: "inferTitleLanguage",
+        name: "Infer Title Language",
+        description: "Language to use for title inference.",
+        type: "dropdown",
+        options: {
+          English: "English",
+          Japanese: "Japanese",
+          Spanish: "Spanish",
+          French: "French",
+          German: "German",
+          Chinese: "Chinese",
+          Korean: "Korean",
+          Italian: "Italian",
+          Russian: "Russian",
+        },
+        group: "Chat Behavior",
+      },
+
+      // OpenAI Defaults
+      {
+        id: "openaiUrl",
+        name: "OpenAI API URL",
+        description: `URL for OpenAI API\nDefault URL: ${DEFAULT_OPENAI_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_OPENAI_CONFIG.url,
+        group: "OpenAI Defaults",
+      },
+      {
+        id: "openaiDefaultModel",
+        name: "Default OpenAI Model",
+        description: "Default model for OpenAI chats",
+        type: "text",
+        placeholder: "openai@gpt-4",
+        group: "OpenAI Defaults",
+      },
+      {
+        id: "openaiDefaultTemperature",
+        name: "Default OpenAI Temperature",
+        description: "Default temperature for OpenAI chats (0.0 to 2.0)",
+        type: "text",
+        placeholder: "0.7",
+        group: "OpenAI Defaults",
+      },
+      {
+        id: "openaiDefaultMaxTokens",
+        name: "Default OpenAI Max Tokens",
+        description: "Default max tokens for OpenAI chats",
+        type: "text",
+        placeholder: "400",
+        group: "OpenAI Defaults",
+      },
+
+      // Anthropic Defaults  
+      {
+        id: "anthropicUrl",
+        name: "Anthropic API URL",
+        description: `URL for Anthropic API\nDefault URL: ${DEFAULT_ANTHROPIC_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_ANTHROPIC_CONFIG.url,
+        group: "Anthropic Defaults",
+      },
+      {
+        id: "anthropicDefaultModel",
+        name: "Default Anthropic Model",
+        description: "Default model for Anthropic chats",
+        type: "text",
+        placeholder: "anthropic@claude-3-5-sonnet-20241022",
+        group: "Anthropic Defaults",
+      },
+      {
+        id: "anthropicDefaultTemperature",
+        name: "Default Anthropic Temperature",
+        description: "Default temperature for Anthropic chats (0.0 to 1.0)",
+        type: "text",
+        placeholder: "0.7",
+        group: "Anthropic Defaults",
+      },
+      {
+        id: "anthropicDefaultMaxTokens",
+        name: "Default Anthropic Max Tokens",
+        description: "Default max tokens for Anthropic chats",
+        type: "text",
+        placeholder: "400",
+        group: "Anthropic Defaults",
+      },
+
+      // Gemini Defaults
+      {
+        id: "geminiUrl",
+        name: "Gemini API URL",
+        description: `URL for Gemini API\nDefault URL: ${DEFAULT_GEMINI_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_GEMINI_CONFIG.url,
+        group: "Gemini Defaults",
+      },
+      {
+        id: "geminiDefaultModel",
+        name: "Default Gemini Model",
+        description: "Default model for Gemini chats",
+        type: "text",
+        placeholder: "gemini@gemini-1.5-pro",
+        group: "Gemini Defaults",
+      },
+      {
+        id: "geminiDefaultTemperature",
+        name: "Default Gemini Temperature",
+        description: "Default temperature for Gemini chats (0.0 to 2.0)",
+        type: "text",
+        placeholder: "0.7",
+        group: "Gemini Defaults",
+      },
+      {
+        id: "geminiDefaultMaxTokens",
+        name: "Default Gemini Max Tokens",
+        description: "Default max tokens for Gemini chats",
+        type: "text",
+        placeholder: "400",
+        group: "Gemini Defaults",
+      },
+
+      // OpenRouter Defaults
+      {
+        id: "openrouterUrl",
+        name: "OpenRouter.ai API URL",
+        description: `URL for OpenRouter.ai API\nDefault URL: ${DEFAULT_OPENROUTER_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_OPENROUTER_CONFIG.url,
+        group: "OpenRouter Defaults",
+      },
+      {
+        id: "openrouterDefaultModel",
+        name: "Default OpenRouter Model",
+        description: "Default model for OpenRouter chats",
+        type: "text",
+        placeholder: "openrouter@anthropic/claude-3.5-sonnet",
+        group: "OpenRouter Defaults",
+      },
+      {
+        id: "openrouterDefaultTemperature",
+        name: "Default OpenRouter Temperature",
+        description: "Default temperature for OpenRouter chats (0.0 to 2.0)",
+        type: "text",
+        placeholder: "0.7",
+        group: "OpenRouter Defaults",
+      },
+      {
+        id: "openrouterDefaultMaxTokens",
+        name: "Default OpenRouter Max Tokens",
+        description: "Default max tokens for OpenRouter chats",
+        type: "text",
+        placeholder: "400",
+        group: "OpenRouter Defaults",
+      },
+
+      // Ollama Defaults
+      {
+        id: "ollamaUrl",
+        name: "Ollama API URL",
+        description: `URL for Ollama API\nDefault URL: ${DEFAULT_OLLAMA_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_OLLAMA_CONFIG.url,
+        group: "Ollama Defaults",
+      },
+      {
+        id: "ollamaDefaultTemperature",
+        name: "Default Ollama Temperature",
+        description: "Default temperature for Ollama chats (0.0 to 2.0)",
+        type: "text",
+        placeholder: "0.7",
+        group: "Ollama Defaults",
+      },
+
+      // LM Studio Defaults
+      {
+        id: "lmstudioUrl",
+        name: "LM Studio API URL",
+        description: `URL for LM Studio API\nDefault URL: ${DEFAULT_LMSTUDIO_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_LMSTUDIO_CONFIG.url,
+        group: "LM Studio Defaults",
+      },
+      {
+        id: "lmstudioDefaultTemperature",
+        name: "Default LM Studio Temperature",
+        description: "Default temperature for LM Studio chats (0.0 to 2.0)",
+        type: "text",
+        placeholder: "0.7",
+        group: "LM Studio Defaults",
       },
 
       // Folders
@@ -184,24 +332,6 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         name: "Heading Level",
         description: `Heading level for messages (example for heading level 2: '## ${ROLE_IDENTIFIER}${ROLE_USER}'). Valid heading levels are 0, 1, 2, 3, 4, 5, 6`,
         type: "text",
-        group: "Formatting",
-      },
-      {
-        id: "inferTitleLanguage",
-        name: "Infer title language",
-        description: "Language to use for title inference.",
-        type: "dropdown",
-        options: {
-          English: "English",
-          Japanese: "Japanese",
-          Spanish: "Spanish",
-          French: "French",
-          German: "German",
-          Chinese: "Chinese",
-          Korean: "Korean",
-          Italian: "Italian",
-          Russian: "Russian",
-        },
         group: "Formatting",
       },
 
@@ -261,8 +391,8 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         // Set width for all textareas
         text.inputEl.style.width = "300px";
 
-        // Special height for defaultChatFrontmatter
-        if (schema.id === "defaultChatFrontmatter") {
+        // Special height for defaultChatFrontmatter and pluginSystemMessage
+        if (schema.id === "defaultChatFrontmatter" || schema.id === "pluginSystemMessage") {
           text.inputEl.style.height = "260px";
           text.inputEl.style.minHeight = "260px";
         }
