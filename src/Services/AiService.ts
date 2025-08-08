@@ -251,7 +251,12 @@ export abstract class BaseAiService implements IAiApiService {
       try {
         // Use a separate try/catch block for the API call to handle errors without returning them to the chat
         // For title inference, we call the API directly without the plugin system message
-        return await this.callNonStreamingAPIForTitleInference(apiKey, [{ role: ROLE_USER, content: prompt }], config, settings);
+        return await this.callNonStreamingAPIForTitleInference(
+          apiKey,
+          [{ role: ROLE_USER, content: prompt }],
+          config,
+          settings
+        );
       } catch (apiError) {
         // Log the error but don't return it to the chat
         console.error(`[ChatGPT MD] Error calling API for title inference:`, apiError);

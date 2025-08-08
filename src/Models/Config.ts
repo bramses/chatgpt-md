@@ -76,7 +76,6 @@ export interface FormattingSettings {
   inferTitleLanguage: string;
 }
 
-
 /**
  * Provider-specific frontmatter settings for OpenAI
  */
