@@ -46,6 +46,7 @@ export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) =>
             model.id.includes("o4") ||
             model.id.includes("o1") ||
             model.id.includes("gpt-4") ||
+            model.id.includes("gpt-5") ||
             model.id.includes("gpt-3")) &&
           !model.id.includes("audio") &&
           !model.id.includes("transcribe") &&
@@ -120,8 +121,13 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     };
 
     // Only include these parameters if the model supports them
-    // o1, o4, and search models don't support custom temperature and other parameters
-    const isRestrictedModel = modelName.includes("search") || modelName.includes("o1") || modelName.includes("o4");
+    // o1, o4, o3, gpt-5, and search models don't support custom temperature and other parameters
+    const isRestrictedModel =
+      modelName.includes("search") ||
+      modelName.includes("o1") ||
+      modelName.includes("o4") ||
+      modelName.includes("o3") ||
+      modelName.includes("gpt-5");
 
     if (!isRestrictedModel) {
       payload.temperature = config.temperature;

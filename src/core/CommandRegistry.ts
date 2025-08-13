@@ -144,8 +144,13 @@ export class CommandRegistry {
               } else if (frontmatter.aiService === AI_SERVICE_GEMINI) {
                 settingsWithApiKey.model = DEFAULT_GEMINI_CONFIG.model;
               } else if (frontmatter.aiService === AI_SERVICE_OLLAMA || frontmatter.aiService === AI_SERVICE_LMSTUDIO) {
-                console.log(`[ChatGPT MD] No model configured for ${frontmatter.aiService}. Skipping auto title inference. Please configure a model in settings.`);
-                new Notice(`Auto title inference skipped: No model configured for ${frontmatter.aiService}. Please set a model in settings.`, 6000);
+                console.log(
+                  `[ChatGPT MD] No model configured for ${frontmatter.aiService}. Skipping auto title inference. Please configure a model in settings.`
+                );
+                new Notice(
+                  `Auto title inference skipped: No model configured for ${frontmatter.aiService}. Please set a model in settings.`,
+                  6000
+                );
                 return;
               }
             }

@@ -55,10 +55,10 @@ export class SettingsService {
     let needsUpdate = false;
 
     // 1. Migrate URL settings (existing migrations)
-    needsUpdate = await this.migrateUrlSettings() || needsUpdate;
+    needsUpdate = (await this.migrateUrlSettings()) || needsUpdate;
 
     // 2. Migrate to new frontmatter structure
-    needsUpdate = await this.migrateFrontmatterSettings() || needsUpdate;
+    needsUpdate = (await this.migrateFrontmatterSettings()) || needsUpdate;
 
     // Save settings if any changes were made
     if (needsUpdate) {
@@ -118,10 +118,9 @@ export class SettingsService {
    * Migrate to new frontmatter settings structure
    */
   private async migrateFrontmatterSettings(): Promise<boolean> {
-
     // Check if migration is needed (if any of the new fields are missing)
-    const hasNewStructure = this.settings.hasOwnProperty('openaiDefaultModel') ||
-                           this.settings.hasOwnProperty('anthropicDefaultModel');
+    const hasNewStructure =
+      this.settings.hasOwnProperty("openaiDefaultModel") || this.settings.hasOwnProperty("anthropicDefaultModel");
 
     if (hasNewStructure) {
       console.log("[ChatGPT MD] New frontmatter structure already present, skipping migration");
@@ -188,19 +187,19 @@ export class SettingsService {
     // Define mappings for common old parameters to new structure
     const parameterMappings: Record<string, string> = {
       // These would now come from provider-specific settings instead of hardcoded values
-      'model: gpt-4': `model: \${openaiDefaultModel}`,
-      'model: gpt-4o': `model: \${openaiDefaultModel}`,
-      'model: claude-3': `model: \${anthropicDefaultModel}`,
-      'model: gemini-pro': `model: \${geminiDefaultModel}`,
-      'temperature: 1': `temperature: \${providerDefaultTemperature}`,
-      'max_tokens: 300': `max_tokens: \${providerDefaultMaxTokens}`,
+      "model: gpt-4": `model: \${openaiDefaultModel}`,
+      "model: gpt-4o": `model: \${openaiDefaultModel}`,
+      "model: claude-3": `model: \${anthropicDefaultModel}`,
+      "model: gemini-pro": `model: \${geminiDefaultModel}`,
+      "temperature: 1": `temperature: \${providerDefaultTemperature}`,
+      "max_tokens: 300": `max_tokens: \${providerDefaultMaxTokens}`,
     };
 
     let migratedString = frontmatterString;
 
     // Apply mappings
     for (const [oldParam, newParam] of Object.entries(parameterMappings)) {
-      migratedString = migratedString.replace(new RegExp(oldParam, 'g'), newParam);
+      migratedString = migratedString.replace(new RegExp(oldParam, "g"), newParam);
     }
 
     // Add a comment about the migration
