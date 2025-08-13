@@ -10,9 +10,10 @@ import {
   ROLE_ASSISTANT,
   ROLE_IDENTIFIER,
   ROLE_USER,
+  TRUNCATION_ERROR_INDICATOR,
   WIKI_LINKS_REGEX,
 } from "src/Constants";
-import { getHeadingPrefix } from "../Utilities/TextHelpers";
+import { getHeadingPrefix, unfinishedCodeBlock } from "../Utilities/TextHelpers";
 
 /**
  * Service responsible for all message-related operations
@@ -242,14 +243,6 @@ export class MessageService {
   }
 
   /**
-   * Check if a code block is unfinished
-   */
-  unfinishedCodeBlock(text: string): boolean {
-    const codeBlockMatches = text.match(/```/g);
-    return codeBlockMatches !== null && codeBlockMatches.length % 2 !== 0;
-  }
-
-  /**
    * Format a message for display
    */
   formatMessage(message: Message, headingLevel: number, model?: string): string {
@@ -308,8 +301,15 @@ export class MessageService {
     const responseStr = typeof response === "object" ? response.fullString || response : response;
     const model = typeof response === "object" ? response.model : undefined;
 
-    // Format response text (add closing code block if needed)
-    const formattedResponse = this.unfinishedCodeBlock(responseStr) ? responseStr + "\n```" : responseStr;
+    // Check if this is a truncation error message - if so, skip text processing
+    const isTruncationError = typeof responseStr === "string" && responseStr.includes(TRUNCATION_ERROR_INDICATOR);
+
+    // Format response text (add closing code block if needed) - but skip for error messages
+    const formattedResponse = isTruncationError
+      ? responseStr
+      : unfinishedCodeBlock(responseStr)
+        ? responseStr + "\n```"
+        : responseStr;
 
     // Create headers with model name if available
     const headingPrefix = getHeadingPrefix(settings.headingLevel);

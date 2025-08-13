@@ -14,6 +14,8 @@ import {
   API_ENDPOINTS,
   NEWLINE,
   ROLE_USER,
+  TITLE_INFERENCE_ERROR_HEADER,
+  TRUNCATION_ERROR_INDICATOR,
 } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ErrorService } from "./ErrorService";
@@ -90,6 +92,29 @@ export abstract class BaseAiService implements IAiApiService {
   }
 
   /**
+   * Helper method to handle truncation errors in title inference
+   */
+  private handleTitleTruncationError(view: MarkdownView, errorMessage: string): void {
+    const editor = view.editor;
+    // Move cursor to the end of the document
+    const lastLine = editor.lastLine();
+    const lastLineLength = editor.getLine(lastLine).length;
+    const endCursor = { line: lastLine, ch: lastLineLength };
+    editor.setCursor(endCursor);
+
+    const headingPrefix = "#".repeat(2) + " "; // Use heading level 2 for error
+    const errorHeader = `\n---\n${headingPrefix}${TITLE_INFERENCE_ERROR_HEADER}\n`;
+    editor.replaceRange(errorHeader + errorMessage + "\n", endCursor);
+  }
+
+  /**
+   * Helper method to check if response contains truncation error
+   */
+  private isTruncationError(response: string): boolean {
+    return response.includes(TRUNCATION_ERROR_INDICATOR);
+  }
+
+  /**
    * Get the default configuration for this service
    */
   abstract getDefaultConfig(): Record<string, any>;
@@ -153,11 +178,26 @@ export abstract class BaseAiService implements IAiApiService {
       let titleStr = "";
 
       if (typeof titleResponse === "string") {
+        // Check if this is a truncation error message
+        if (this.isTruncationError(titleResponse)) {
+          this.handleTitleTruncationError(view, titleResponse);
+          this.showNoTitleInferredNotification();
+          return "";
+        }
         titleStr = titleResponse;
       } else if (titleResponse && typeof titleResponse === "object") {
         // Type assertion for the response object
         const responseObj = titleResponse as { fullString?: string };
-        titleStr = responseObj.fullString || "";
+        const responseText = responseObj.fullString || "";
+
+        // Check if the object response contains a truncation error
+        if (this.isTruncationError(responseText)) {
+          this.handleTitleTruncationError(view, responseText);
+          this.showNoTitleInferredNotification();
+          return "";
+        }
+
+        titleStr = responseText;
       }
 
       // Only update the title if we got a valid non-empty title

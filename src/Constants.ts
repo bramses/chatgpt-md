@@ -93,3 +93,11 @@ Table formatting requirements:
 - Tables should NOT be wrapped in code blocks.
 
 Respond naturally and helpfully while being mindful of this Obsidian/note-taking context.`;
+
+// Truncation error messages
+export const TRUNCATION_ERROR_FULL =
+  "⚠️ **Response was truncated due to token limit.** Please increase the `max_tokens` setting in ChatGPT MD plugin settings to get the complete response.";
+export const TRUNCATION_ERROR_PARTIAL =
+  "⚠️ *Note: Some alternative responses were truncated due to token limit. Consider increasing `max_tokens` in settings for fuller responses.*";
+export const TRUNCATION_ERROR_INDICATOR = "Response was truncated due to token limit";
+export const TITLE_INFERENCE_ERROR_HEADER = "⚠️ Title Inference Error";

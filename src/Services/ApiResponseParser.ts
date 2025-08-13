@@ -6,6 +6,8 @@ import {
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
   ROLE_ASSISTANT,
+  TRUNCATION_ERROR_FULL,
+  TRUNCATION_ERROR_PARTIAL,
 } from "src/Constants";
 import { Editor } from "obsidian";
 import { NotificationService } from "./NotificationService";
@@ -27,6 +29,73 @@ export class ApiResponseParser {
 
   constructor(notificationService?: NotificationService) {
     this.notificationService = notificationService || new NotificationService();
+  }
+
+  /**
+   * Helper method to check choices and return appropriate response based on finish_reason
+   */
+  private handleChoicesWithFinishReason(choices: any[]): string | null {
+    if (!choices || choices.length === 0) {
+      return null;
+    }
+
+    const completeChoices = choices.filter((choice: any) => choice.finish_reason === "stop");
+    const truncatedChoices = choices.filter((choice: any) => choice.finish_reason === "length");
+
+    // If we have complete responses, use the first one
+    if (completeChoices.length > 0) {
+      const content = completeChoices[0].message?.content || "";
+      // If some choices were truncated, add a warning
+      if (truncatedChoices.length > 0) {
+        return content + "\n\n" + TRUNCATION_ERROR_PARTIAL;
+      }
+      // All responses were complete
+      return content;
+    }
+
+    // All choices were truncated
+    if (truncatedChoices.length > 0) {
+      return TRUNCATION_ERROR_FULL;
+    }
+
+    // Fallback to first choice if no specific finish_reason handling
+    return choices[0].message?.content || "";
+  }
+
+  /**
+   * Helper method to handle streaming truncation errors
+   */
+  private handleStreamingTruncation(
+    completeChoices: any[],
+    truncatedChoices: any[],
+    currentText: string,
+    editor: Editor,
+    setAtCursor?: boolean
+  ): string {
+    if (truncatedChoices.length === 0) return currentText;
+
+    let errorMessage;
+    if (completeChoices.length > 0) {
+      // Mixed results - some complete, some truncated
+      errorMessage = "\n\n" + TRUNCATION_ERROR_PARTIAL;
+    } else {
+      // All responses were truncated
+      errorMessage = "\n\n" + TRUNCATION_ERROR_FULL;
+    }
+
+    // Add error message to editor
+    if (setAtCursor) {
+      editor.replaceSelection(errorMessage);
+    } else {
+      const cursor = editor.getCursor();
+      editor.replaceRange(errorMessage, cursor);
+      editor.setCursor({
+        line: cursor.line,
+        ch: cursor.ch + errorMessage.length,
+      });
+    }
+
+    return currentText + errorMessage;
   }
 
   /**
@@ -68,11 +137,11 @@ export class ApiResponseParser {
   parseNonStreamingResponse(data: any, serviceType: string): string {
     switch (serviceType) {
       case AI_SERVICE_OPENAI:
-        return data.choices[0].message.content;
       case AI_SERVICE_OPENROUTER:
-        return data.choices[0].message.content;
       case AI_SERVICE_LMSTUDIO:
-        return data.choices[0].message.content;
+        // Handle OpenAI-compatible services with finish_reason validation
+        const result = this.handleChoicesWithFinishReason(data.choices);
+        return result !== null ? result : "";
       case AI_SERVICE_ANTHROPIC:
         // Anthropic's response format has a content array
         if (data.content && Array.isArray(data.content)) {
@@ -108,7 +177,12 @@ export class ApiResponseParser {
         return JSON.stringify(data);
       default:
         console.warn(`Unknown service type: ${serviceType}`);
-        return data?.choices?.[0]?.message?.content || data?.response || JSON.stringify(data);
+        // Check for OpenAI-like structure with finish_reason validation
+        const defaultResult = this.handleChoicesWithFinishReason(data?.choices);
+        if (defaultResult !== null) {
+          return defaultResult;
+        }
+        return data?.response || JSON.stringify(data);
     }
   }
 
@@ -228,13 +302,25 @@ export class ApiResponseParser {
         }
       }
 
-      if (json.choices && json.choices[0]) {
-        const { delta } = json.choices[0];
+      if (json.choices && json.choices.length > 0) {
+        // Check if any choices have finish_reason (this usually comes in the final chunk)
+        const finishedChoices = json.choices.filter((choice: any) => choice.finish_reason);
 
-        // Handle content in delta if it exists
-        if (delta && delta.content) {
-          // Use table buffering logic to handle content
-          return this.processContentWithTableBuffering(delta.content, currentText, editor, setAtCursor);
+        if (finishedChoices.length > 0) {
+          const completeChoices = finishedChoices.filter((choice: any) => choice.finish_reason === "stop");
+          const truncatedChoices = finishedChoices.filter((choice: any) => choice.finish_reason === "length");
+
+          // Handle truncation using helper method
+          return this.handleStreamingTruncation(completeChoices, truncatedChoices, currentText, editor, setAtCursor);
+        }
+
+        // Handle content in the first choice's delta if it exists
+        if (json.choices[0]) {
+          const { delta } = json.choices[0];
+          if (delta && delta.content) {
+            // Use table buffering logic to handle content
+            return this.processContentWithTableBuffering(delta.content, currentText, editor, setAtCursor);
+          }
         }
       }
 
