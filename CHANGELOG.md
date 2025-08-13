@@ -1,5 +1,27 @@
 # ChatGPT MD Changelog
 
+## v2.8.0 (August 2025) - GPT-5 Model Support
+
+### 🆕 New Features
+
+- **Latest OpenAI Models**: Full support for OpenAI's newest GPT-5 family:
+  - `gpt-5` - The flagship model with enhanced reasoning capabilities
+  - `gpt-5-mini` - Optimized for speed and efficiency
+  - `gpt-5-nano` - Ultra-lightweight for quick responses  
+  - `gpt-5-chat-latest` - Always-updated chat model
+
+### 🔧 Technical Improvements
+
+- **Smart Token Management**: Enhanced handling of token limit responses in non-streaming mode for more reliable interactions
+- **Robust API Integration**: Improved response parsing and error handling for the new model endpoints
+- **Performance Optimizations**: Refined message service architecture for faster processing
+
+### 📦 Under the Hood
+
+- Updated OpenAI service integration for GPT-5 compatibility
+- Enhanced settings configuration for new model options
+- Dependency updates for better security and performance
+
 ## v2.7.0 (August 2025) - Provider-Specific Default Models
 
 ### Major Features

@@ -4,13 +4,16 @@
 
 ![Chatting with links about vacation plans](images/chat-with-link.gif)
 
-## What's New in v2.7.0 🚀
-### 🎯 Provider-Specific Default Models
+## What's New in v2.8.0 🚀
+### 🆕 GPT-5 Model Support
 
-- **Service-Specific Defaults**: Each AI provider now has its own default model configuration in settings
-- **Enhanced Settings UI**: Redesigned settings panel with dedicated sections for each provider
-- **Better Model Prefixes**: Updated documentation with correct prefixes (`openai@gpt-4o`, `anthropic@claude-3-5-sonnet`, etc.)
-- **Automatic Migration**: Existing settings are preserved and upgraded automatically
+- **Latest OpenAI Models**: Full support for OpenAI's newest GPT-5 family:
+  - `gpt-5` - The flagship model with enhanced reasoning capabilities
+  - `gpt-5-mini` - Optimized for speed and efficiency
+  - `gpt-5-nano` - Ultra-lightweight for quick responses  
+  - `gpt-5-chat-latest` - Always-updated chat model
+- **Smart Token Management**: Enhanced handling of token limit responses for more reliable interactions
+- **Performance Optimizations**: Refined message service architecture and improved API integration
 
 ## A simple and quick Start 🏁
 Get started in just a few simple steps:
@@ -120,7 +123,7 @@ frequency_penalty: 0.5
 stream: true
 stop: null
 n: 1
-model: gpt-4.1-mini
+model: gpt-5-mini
 
 # Service-specific URLs (optional, will use global settings if not specified)
 openaiUrl: https://api.openai.com
@@ -129,16 +132,16 @@ openaiUrl: https://api.openai.com
 ---
 ```
 💡 Pro tip: Increasing `max_tokens` to a higher value e.g. `4096` for more complex tasks like reasoning, coding or text creation.
-The default model `gpt-4.1-mini` is a good compromise between fast and cheap responses. Change this if you have more complex needs.
+The default model `gpt-5-mini` is optimized for speed and efficiency. Upgrade to `gpt-5` for enhanced reasoning capabilities or use `gpt-5-nano` for ultra-lightweight responses.
 
 ### Multi Model Chats
 You can set and change the model for each request in your note. 
 Specify the `model` property via frontmatter:
 
-for openAI models
+for OpenAI models (including the latest GPT-5 family)
 ```
 ---
-model: gpt-4o
+model: gpt-5  # or gpt-5-mini, gpt-5-nano, gpt-5-chat-latest
 system_commands: [act as a senior javascript developer]
 ---
 ```
