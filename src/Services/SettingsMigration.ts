@@ -214,7 +214,7 @@ export class SettingsMigrationService {
     // Trim whitespace to avoid issues with formatting differences
     const currentMessage = settings.pluginSystemMessage?.trim();
     const originalMessage = ORIGINAL_PLUGIN_SYSTEM_MESSAGE.trim();
-    
+
     if (currentMessage !== originalMessage) {
       console.log("[ChatGPT MD] Plugin system message has been customized by user, skipping migration");
       return false;

@@ -33,19 +33,13 @@ export class SettingsService {
    * Migrate settings from older versions
    */
   async migrateSettings(): Promise<void> {
-    const needsUpdate = await this.migrationService.migrateSettings(
-      this.settings,
-      this.updateSettings.bind(this)
-    );
+    const needsUpdate = await this.migrationService.migrateSettings(this.settings, this.updateSettings.bind(this));
 
     // Save settings if any changes were made
     if (needsUpdate) {
       await this.saveSettings();
     }
   }
-
-
-
 
   /**
    * Migrate user's existing frontmatter strings from old format to new format
