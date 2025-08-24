@@ -3,6 +3,7 @@ import { ApiAuthService } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
+import { requestStream } from "./requestStream";
 
 /**
  * ApiService handles all API communication for the application
@@ -47,7 +48,8 @@ export class ApiService {
 
       this.abortController = new AbortController();
 
-      const response = await fetch(url, {
+      const response = await requestStream({
+        url,
         method: "POST",
         headers,
         body: JSON.stringify(payload),

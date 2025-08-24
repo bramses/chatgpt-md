@@ -1,4 +1,4 @@
-import { Editor } from "obsidian";
+import { Editor, requestUrl } from "obsidian";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_GEMINI, ROLE_ASSISTANT, ROLE_SYSTEM } from "src/Constants";
 import { BaseAiService, IAiApiService } from "./AiService";
@@ -32,7 +32,8 @@ export const fetchAvailableGeminiModels = async (url: string, apiKey: string) =>
     // Call the Gemini models API endpoint
     const modelsUrl = `${url.replace(/\/$/, "")}/v1beta/models`;
 
-    const response = await fetch(modelsUrl, {
+    const response = await requestUrl({
+      url: modelsUrl,
       method: "GET",
       headers: {
         "x-goog-api-key": apiKey,
@@ -40,11 +41,7 @@ export const fetchAvailableGeminiModels = async (url: string, apiKey: string) =>
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = response.json;
 
     // Extract model names from the response and add gemini@ prefix
     if (data.models && Array.isArray(data.models)) {
