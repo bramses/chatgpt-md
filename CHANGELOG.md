@@ -1,5 +1,30 @@
 # ChatGPT MD Changelog
 
+## v2.8.1-beta (August 2025) - CORS-Free Streaming & Network Improvements
+
+### 🚀 Major Network Improvements
+
+- **CORS-Free Streaming**: Implemented smart streaming that adapts to the environment
+  - **Desktop**: Uses Node.js HTTP modules to bypass CORS completely  
+  - **Mobile**: Gracefully falls back to standard fetch() where Node.js is unavailable
+  - Resolves connection issues with local services like LM Studio and Ollama on desktop
+  - Better reliability for cloud services (OpenAI, Anthropic, etc.) on both platforms
+- **IPv4/IPv6 Resolution**: Fixed localhost connection issues by forcing IPv4 resolution for local services
+- **Unified Network Layer**: All HTTP requests now use Obsidian's native `requestUrl` or custom `requestStream` for consistency
+
+### 🔧 Technical Improvements
+
+- **Enhanced Error Handling**: Better error messages for network connection issues
+- **Improved Local Service Support**: More reliable connections to LM Studio, Ollama, and other localhost services
+- **Network Debugging**: Added better logging for troubleshooting connection issues
+
+### 📦 Under the Hood
+
+- Created adaptive `requestStream()` function that uses Node.js HTTP on desktop, fetch() on mobile
+- Replaced all remaining `fetch()` calls with Obsidian's `requestUrl` for non-streaming requests  
+- Optimized network stack for both Electron (desktop) and mobile environments
+- Environment detection ensures compatibility across all Obsidian platforms
+
 ## v2.8.0 (August 2025) - GPT-5 Model Support
 
 ### 🆕 New Features
