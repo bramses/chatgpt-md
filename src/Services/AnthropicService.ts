@@ -1,4 +1,4 @@
-import { Editor } from "obsidian";
+import { Editor, requestUrl } from "obsidian";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_ANTHROPIC, ROLE_ASSISTANT, ROLE_SYSTEM } from "src/Constants";
 import { BaseAiService, IAiApiService } from "./AiService";
@@ -31,7 +31,8 @@ export const fetchAvailableAnthropicModels = async (url: string, apiKey: string)
     // Call the Anthropic models API endpoint
     const modelsUrl = `${url.replace(/\/$/, "")}/v1/models`;
 
-    const response = await fetch(modelsUrl, {
+    const response = await requestUrl({
+      url: modelsUrl,
       method: "GET",
       headers: {
         "x-api-key": apiKey,
@@ -41,11 +42,7 @@ export const fetchAvailableAnthropicModels = async (url: string, apiKey: string)
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = response.json;
 
     // Extract model IDs from the response and add anthropic@ prefix
     if (data.data && Array.isArray(data.data)) {
