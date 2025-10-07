@@ -5,7 +5,7 @@
 ### 🚀 Major Network Improvements
 
 - **CORS-Free Streaming**: Implemented smart streaming that adapts to the environment
-  - **Desktop**: Uses Node.js HTTP modules to bypass CORS completely  
+  - **Desktop**: Uses Node.js HTTP modules to bypass CORS completely
   - **Mobile**: Gracefully falls back to standard fetch() where Node.js is unavailable
   - Resolves connection issues with local services like LM Studio and Ollama on desktop
   - Better reliability for cloud services (OpenAI, Anthropic, etc.) on both platforms
@@ -21,7 +21,7 @@
 ### 📦 Under the Hood
 
 - Created adaptive `requestStream()` function that uses Node.js HTTP on desktop, fetch() on mobile
-- Replaced all remaining `fetch()` calls with Obsidian's `requestUrl` for non-streaming requests  
+- Replaced all remaining `fetch()` calls with Obsidian's `requestUrl` for non-streaming requests
 - Optimized network stack for both Electron (desktop) and mobile environments
 - Environment detection ensures compatibility across all Obsidian platforms
 
@@ -32,7 +32,7 @@
 - **Latest OpenAI Models**: Full support for OpenAI's newest GPT-5 family:
   - `gpt-5` - The flagship model with enhanced reasoning capabilities
   - `gpt-5-mini` - Optimized for speed and efficiency
-  - `gpt-5-nano` - Ultra-lightweight for quick responses  
+  - `gpt-5-nano` - Ultra-lightweight for quick responses
   - `gpt-5-chat-latest` - Always-updated chat model
 
 ### 🔧 Technical Improvements
@@ -113,7 +113,7 @@
 
 ### Improvements
 
-- **Enhanced Streaming**: More robust Server-Sent Events (SSE) handling with improved data payload processing  
+- **Enhanced Streaming**: More robust Server-Sent Events (SSE) handling with improved data payload processing
 - **Markdown Table Rendering**: Improved table rendering with buffering for better formatting consistency
 - **System Commands**: Enhanced system message handling with Obsidian-specific context and table formatting requirements
 - **OpenAI API Compatibility**: Used developer role for OpenAI API calls for better conversation context

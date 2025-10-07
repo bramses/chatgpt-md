@@ -3,20 +3,23 @@ let httpRequest: any;
 let httpsRequest: any;
 let URL: any;
 
-try {
-  const http = require("http");
-  const https = require("https");
-  const url = require("url");
-  
-  httpRequest = http.request;
-  httpsRequest = https.request;
-  URL = url.URL;
-} catch (error) {
-  // Node.js modules not available (mobile environment)
-  httpRequest = null;
-  httpsRequest = null;
-  URL = globalThis.URL; // Use Web API URL instead
-}
+// Initialize Node.js modules asynchronously
+(async () => {
+  try {
+    const http = await import("http");
+    const https = await import("https");
+    const url = await import("url");
+
+    httpRequest = http.request;
+    httpsRequest = https.request;
+    URL = url.URL;
+  } catch (_error) {
+    // Node.js modules not available (mobile environment)
+    httpRequest = null;
+    httpsRequest = null;
+    URL = globalThis.URL; // Use Web API URL instead
+  }
+})();
 
 /**
  * Options for streaming HTTP requests (similar to Obsidian's RequestUrlParam)
