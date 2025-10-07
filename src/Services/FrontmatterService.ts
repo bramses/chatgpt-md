@@ -47,7 +47,8 @@ export class FrontmatterService {
       : {};
 
     // Merge configurations with proper priority order
-    const mergedConfig = { ...settings, ...defaultFrontmatter, ...frontmatter } as Record<string, any>;
+    // Priority: defaultFrontmatter < settings < frontmatter
+    const mergedConfig = { ...defaultFrontmatter, ...settings, ...frontmatter } as Record<string, any>;
 
     // Determine AI service
     const aiService =
@@ -68,10 +69,12 @@ export class FrontmatterService {
     const defaultConfig = serviceDefaults[aiService] || DEFAULT_OPENAI_CONFIG;
 
     // Return final configuration with everything merged
+    // Priority order: defaultConfig < defaultFrontmatter < settings < frontmatter
+    // This ensures global settings override template defaults, but note frontmatter overrides everything
     return {
       ...defaultConfig,
-      ...settings,
       ...defaultFrontmatter,
+      ...settings,
       ...frontmatter,
       aiService,
     };
