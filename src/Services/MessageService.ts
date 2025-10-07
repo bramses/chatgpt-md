@@ -10,10 +10,9 @@ import {
   ROLE_ASSISTANT,
   ROLE_IDENTIFIER,
   ROLE_USER,
-  TRUNCATION_ERROR_INDICATOR,
   WIKI_LINKS_REGEX,
 } from "src/Constants";
-import { getHeadingPrefix, unfinishedCodeBlock } from "../Utilities/TextHelpers";
+import { getHeadingPrefix, getHeaderRole } from "../Utilities/TextHelpers";
 
 /**
  * Service responsible for all message-related operations
@@ -234,20 +233,11 @@ export class MessageService {
   }
 
   /**
-   * Get a header role string
-   */
-  getHeaderRole(headingPrefix: string, role: string, model?: string): string {
-    return `${NEWLINE}${HORIZONTAL_LINE_MD}${NEWLINE}${headingPrefix}${ROLE_IDENTIFIER}${role}${
-      model ? `<span style="font-size: small;"> (${model})</span>` : ``
-    }${NEWLINE}`;
-  }
-
-  /**
    * Format a message for display
    */
   formatMessage(message: Message, headingLevel: number, model?: string): string {
     const headingPrefix = getHeadingPrefix(headingLevel);
-    const roleHeader = this.getHeaderRole(headingPrefix, message.role, model);
+    const roleHeader = getHeaderRole(headingPrefix, message.role, model);
     return `${roleHeader}${message.content}`;
   }
 
@@ -256,8 +246,8 @@ export class MessageService {
    */
   appendMessage(editor: Editor, message: string, headingLevel: number): void {
     const headingPrefix = getHeadingPrefix(headingLevel);
-    const assistantRoleHeader = this.getHeaderRole(headingPrefix, ROLE_ASSISTANT);
-    const userRoleHeader = this.getHeaderRole(headingPrefix, ROLE_USER);
+    const assistantRoleHeader = getHeaderRole(headingPrefix, ROLE_ASSISTANT);
+    const userRoleHeader = getHeaderRole(headingPrefix, ROLE_USER);
 
     editor.replaceRange(`${assistantRoleHeader}${message}${userRoleHeader}`, editor.getCursor());
   }
@@ -277,19 +267,17 @@ export class MessageService {
   }
 
   /**
-   * Process a streaming response
+   * Process a streaming response by adding user delimiter
    */
   private processStreamingResponse(editor: Editor, settings: ChatGPT_MDSettings): void {
     const headingPrefix = getHeadingPrefix(settings.headingLevel);
-    const newLine = this.getHeaderRole(headingPrefix, ROLE_USER);
-    editor.replaceRange(newLine, editor.getCursor());
-
-    // move cursor to end of completion
+    const userHeader = getHeaderRole(headingPrefix, ROLE_USER);
     const cursor = editor.getCursor();
-    const newCursor = {
-      line: cursor.line,
-      ch: cursor.ch + newLine.length,
-    };
+
+    editor.replaceRange(userHeader, cursor);
+
+    // Move cursor to end using Obsidian's offset API
+    const newCursor = editor.offsetToPos(editor.posToOffset(cursor) + userHeader.length);
     editor.setCursor(newCursor);
   }
 
@@ -297,27 +285,14 @@ export class MessageService {
    * Process a standard (non-streaming) response
    */
   private processStandardResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings): void {
-    // Extract response text and model name
     const responseStr = typeof response === "object" ? response.fullString || response : response;
     const model = typeof response === "object" ? response.model : undefined;
 
-    // Check if this is a truncation error message - if so, skip text processing
-    const isTruncationError = typeof responseStr === "string" && responseStr.includes(TRUNCATION_ERROR_INDICATOR);
-
-    // Format response text (add closing code block if needed) - but skip for error messages
-    const formattedResponse = isTruncationError
-      ? responseStr
-      : unfinishedCodeBlock(responseStr)
-        ? responseStr + "\n```"
-        : responseStr;
-
-    // Create headers with model name if available
     const headingPrefix = getHeadingPrefix(settings.headingLevel);
-    const assistantHeader = this.getHeaderRole(headingPrefix, ROLE_ASSISTANT, model);
-    const userHeader = this.getHeaderRole(headingPrefix, ROLE_USER);
+    const assistantHeader = getHeaderRole(headingPrefix, ROLE_ASSISTANT, model);
+    const userHeader = getHeaderRole(headingPrefix, ROLE_USER);
 
-    // Insert the response
-    editor.replaceRange(`${assistantHeader}${formattedResponse}${userHeader}`, editor.getCursor());
+    editor.replaceRange(`${assistantHeader}${responseStr}${userHeader}`, editor.getCursor());
   }
 
   /**

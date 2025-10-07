@@ -8,17 +8,6 @@ import {
   ROLE_USER,
 } from "src/Constants";
 
-export const unfinishedCodeBlock = (txt: string): boolean => {
-  const codeBlockMatches = txt.match(/```/g) || [];
-  const isUnclosed = codeBlockMatches.length % 2 !== 0;
-
-  if (isUnclosed) {
-    console.log("[ChatGPT MD] Unclosed code block detected");
-  }
-
-  return isUnclosed;
-};
-
 const cleanupRole = (role: string): string => {
   const trimmedRole = role.trim().toLowerCase();
 
