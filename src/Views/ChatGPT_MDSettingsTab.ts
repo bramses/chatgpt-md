@@ -133,7 +133,7 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
       {
         id: "openaiUrl",
         name: "OpenAI API URL",
-        description: `URL for OpenAI API\nDefault URL: ${DEFAULT_OPENAI_CONFIG.url}`,
+        description: `URL for OpenAI API\nDefault URL: ${DEFAULT_OPENAI_CONFIG.url}\nFor Azure OpenAI, the URL should be in the format of https://<instance id>.openai.azure.com/openai/deployments/<deployment id>`,
         type: "text",
         placeholder: DEFAULT_OPENAI_CONFIG.url,
         group: "OpenAI Defaults",
@@ -141,7 +141,7 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
       {
         id: "openaiApiVersion",
         name: "OpenAI API Version",
-        description: "API Version for OpenAI API (for Azure)",
+        description: "API Version for Azure OpenAI API",
         type: "text",
         placeholder: "2024-08-01-preview",
         group: "OpenAI Defaults",
