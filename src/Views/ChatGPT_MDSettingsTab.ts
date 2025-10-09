@@ -139,6 +139,14 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "OpenAI Defaults",
       },
       {
+        id: "openaiApiVersion",
+        name: "OpenAI API Version",
+        description: "API Version for OpenAI API (for Azure)",
+        type: "text",
+        placeholder: "2024-08-01-preview",
+        group: "OpenAI Defaults",
+      },
+      {
         id: "openaiDefaultModel",
         name: "Default OpenAI Model",
         description: "Default model for OpenAI chats",

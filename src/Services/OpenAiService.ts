@@ -22,6 +22,7 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   title: "Untitled",
   top_p: 1,
   url: "https://api.openai.com",
+  openaiApiVersion: "",
 };
 
 export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) => {
@@ -213,4 +214,5 @@ export interface OpenAIConfig {
   title: string;
   top_p: number;
   url: string;
+  openaiApiVersion: string;
 }
