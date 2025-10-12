@@ -78,6 +78,9 @@ export class ApiResponseParser {
           const currentOffset = this.editor.posToOffset(this.cursorPosition);
           const newOffset = currentOffset + this.contentBuffer.length;
           this.cursorPosition = this.editor.offsetToPos(newOffset);
+
+          // Move visible cursor to match tracked position for real-time feedback
+          this.editor.setCursor(this.cursorPosition);
         } catch (error) {
           // Position became invalid - skip this flush
           console.warn("[ChatGPT MD] Flush skipped due to invalid position:", error);
