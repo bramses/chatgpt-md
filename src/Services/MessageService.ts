@@ -272,12 +272,19 @@ export class MessageService {
   private processStreamingResponse(editor: Editor, settings: ChatGPT_MDSettings): void {
     const headingPrefix = getHeadingPrefix(settings.headingLevel);
     const userHeader = getHeaderRole(headingPrefix, ROLE_USER);
-    const cursor = editor.getCursor();
 
-    editor.replaceRange(userHeader, cursor);
+    // Get cursor position set by ApiResponseParser after streaming completes
+    const cursorBeforeHeader = editor.getCursor();
 
-    // Move cursor to end using Obsidian's offset API
-    const newCursor = editor.offsetToPos(editor.posToOffset(cursor) + userHeader.length);
+    // Insert user header at current position
+    editor.replaceRange(userHeader, cursorBeforeHeader);
+
+    // Calculate cursor position after the inserted header
+    const newCursor = editor.offsetToPos(
+      editor.posToOffset(cursorBeforeHeader) + userHeader.length
+    );
+
+    // Set cursor to end of inserted content
     editor.setCursor(newCursor);
   }
 
@@ -292,7 +299,20 @@ export class MessageService {
     const assistantHeader = getHeaderRole(headingPrefix, ROLE_ASSISTANT, model);
     const userHeader = getHeaderRole(headingPrefix, ROLE_USER);
 
-    editor.replaceRange(`${assistantHeader}${responseStr}${userHeader}`, editor.getCursor());
+    // Get cursor position before insertion
+    const cursorBeforeInsertion = editor.getCursor();
+    const fullContent = `${assistantHeader}${responseStr}${userHeader}`;
+
+    // Insert full response content
+    editor.replaceRange(fullContent, cursorBeforeInsertion);
+
+    // Calculate final cursor position using offset API
+    const newCursor = editor.offsetToPos(
+      editor.posToOffset(cursorBeforeInsertion) + fullContent.length
+    );
+
+    // Set cursor to end of inserted content
+    editor.setCursor(newCursor);
   }
 
   /**
