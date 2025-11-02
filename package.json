@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-md",
-  "version": "2.9.1",
+  "version": "2.9.2-beta",
   "description": "A seamless integration of openAIs GPT LLMs and Ollama into Obsidian.",
   "main": "main.js",
   "type": "module",
