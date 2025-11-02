@@ -39,7 +39,12 @@ export class MessageService {
     for (const { regex, fullMatchIndex, titleIndex } of regexes) {
       for (const match of message.matchAll(regex)) {
         const fullLink = match[fullMatchIndex];
-        const linkTitle = match[titleIndex];
+        let linkTitle = match[titleIndex];
+
+        // For wiki links with aliases ([[file|alias]]), extract only the filename
+        if (linkTitle && linkTitle.includes("|")) {
+          linkTitle = linkTitle.split("|")[0].trim();
+        }
 
         // Skip URLs that start with http:// or https://
         if (
