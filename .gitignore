@@ -5,6 +5,11 @@
 *.iml
 .idea
 
+# nanocoder
+.nanocoder
+AGENTS.md
+agents.config.json
+
 # npm
 node_modules
 npm-debug.log
