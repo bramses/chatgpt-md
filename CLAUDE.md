@@ -11,6 +11,7 @@ ChatGPT MD is an Obsidian plugin that integrates multiple AI providers (OpenAI, 
 **Entry point**: `src/main.ts` → `main.js`
 
 **Common commands**:
+
 ```bash
 npm run dev        # Development with watch mode
 npm run build      # Production build with TypeScript checks
@@ -21,6 +22,7 @@ npm run lint:fix   # Auto-fix linting issues
 ## Architecture Overview
 
 The plugin uses **Service Locator pattern** for dependency injection:
+
 - `src/core/ServiceLocator.ts` - Central DI container
 - `src/core/CommandRegistry.ts` - Manages all Obsidian commands
 - AI services implement `IAiApiService` interface
@@ -30,6 +32,7 @@ The plugin uses **Service Locator pattern** for dependency injection:
 ## Code Organization
 
 Each directory has its own CLAUDE.md with detailed context that auto-loads when you work in that area:
+
 - `src/core/` - Core infrastructure (ServiceLocator, CommandRegistry)
 - `src/Services/` - Service implementations
 - `src/Views/` - UI components
@@ -38,6 +41,7 @@ Each directory has its own CLAUDE.md with detailed context that auto-loads when 
 ## Cross-cutting Documentation
 
 For topics that span multiple areas:
+
 - **[docs/development.md](docs/development.md)** - Build process, tooling, esbuild setup
 - **[docs/message-flow.md](docs/message-flow.md)** - Complete flow from user input to AI response
 

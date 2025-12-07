@@ -1,7 +1,7 @@
 import { Editor } from "obsidian";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_OLLAMA, ROLE_SYSTEM } from "src/Constants";
-import { BaseAiService, IAiApiService } from "./AiService";
+import { BaseAiService, IAiApiService, StreamingResponse } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ApiService } from "./ApiService";
 import { ApiAuthService } from "./ApiAuthService";

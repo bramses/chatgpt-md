@@ -167,7 +167,8 @@ export interface ServiceUrlSettings {
  * Combined settings interface
  */
 export interface ChatGPT_MDSettings
-  extends ApiKeySettings,
+  extends
+    ApiKeySettings,
     FolderSettings,
     ChatBehaviorSettings,
     FormattingSettings,

@@ -7,11 +7,13 @@ This directory contains the core architectural components of the plugin.
 **Central dependency injection container**
 
 Creates and manages all service instances:
+
 - Instantiates services once at plugin load
 - Provides getter methods for all services
 - Factory method `getAiApiService(serviceType)` returns appropriate AI service
 
 **Service instantiation order**:
+
 1. NotificationService, ErrorService
 2. ApiService, ApiAuthService, ApiResponseParser
 3. FileService, FrontmatterManager, EditorContentService
@@ -21,6 +23,7 @@ Creates and manages all service instances:
 
 **AI service factory**:
 Returns service based on type:
+
 - `AI_SERVICE_OPENAI` → OpenAiService
 - `AI_SERVICE_OLLAMA` → OllamaService
 - `AI_SERVICE_OPENROUTER` → OpenRouterService
@@ -33,9 +36,11 @@ Returns service based on type:
 **Manages all Obsidian commands**
 
 ### Main Command: Chat
+
 Location: `registerChatCommand()`
 
 Flow:
+
 1. Get EditorService and settings
 2. Parse frontmatter
 3. Extract messages from editor via MessageService
@@ -46,6 +51,7 @@ Flow:
 8. Optional auto title inference
 
 ### Other Commands
+
 - `registerSelectModelCommand()` - Opens model selection modal, fetches fresh models
 - `registerAddDividerCommand()` - Adds `<hr class="__chatgpt_plugin">`
 - `registerAddCommentBlockCommand()` - Inserts comment block
@@ -58,6 +64,7 @@ Flow:
 ### Model Initialization
 
 `initializeAvailableModels()`:
+
 - Runs in background on plugin load (non-blocking)
 - Fetches models from all configured services in parallel
 - 6 second timeout per service
