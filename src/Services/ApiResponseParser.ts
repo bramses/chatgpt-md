@@ -261,11 +261,7 @@ export class ApiResponseParser {
    * @param serviceType The AI service type
    * @returns The updated text
    */
-  processStreamLine(
-    line: string,
-    currentText: string,
-    serviceType: string
-  ): string {
+  processStreamLine(line: string, currentText: string, serviceType: string): string {
     switch (serviceType) {
       case AI_SERVICE_OPENAI:
       case AI_SERVICE_OPENROUTER:

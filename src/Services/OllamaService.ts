@@ -1,13 +1,19 @@
 import { Editor } from "obsidian";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_OLLAMA, ROLE_SYSTEM } from "src/Constants";
+import { BaseAiService, IAiApiService } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { BaseAiService, IAiApiService, OllamaModel, StreamingResponse } from "src/Services/AiService";
-import { ErrorService } from "./ErrorService";
-import { NotificationService } from "./NotificationService";
 import { ApiService } from "./ApiService";
 import { ApiAuthService } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
+import { ErrorService } from "./ErrorService";
+import { NotificationService } from "./NotificationService";
+import { createOpenAICompatible, OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
+
+export interface OllamaModel {
+  name: string;
+  [key: string]: any;
+}
 
 export interface OllamaStreamPayload {
   model: string;
@@ -60,6 +66,8 @@ export class OllamaService extends BaseAiService implements IAiApiService {
   protected notificationService: NotificationService;
   protected apiService: ApiService;
   protected apiAuthService: ApiAuthService;
+  protected provider: OpenAICompatibleProvider;
+
   protected apiResponseParser: ApiResponseParser;
   protected serviceType = AI_SERVICE_OLLAMA;
 
@@ -75,6 +83,10 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
     this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+    this.provider = createOpenAICompatible({
+      name: "ollama",
+      baseURL: DEFAULT_OLLAMA_CONFIG.url,
+    });
   }
 
   getDefaultConfig(): OllamaConfig {

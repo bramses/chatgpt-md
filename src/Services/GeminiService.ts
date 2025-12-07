@@ -8,6 +8,7 @@ import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
+import { createGoogleGenerativeAI, GoogleGenerativeAIProvider } from "@ai-sdk/google";
 
 export const DEFAULT_GEMINI_CONFIG: GeminiConfig = {
   aiService: AI_SERVICE_GEMINI,
@@ -79,6 +80,7 @@ export class GeminiService extends BaseAiService implements IAiApiService {
   protected apiAuthService: ApiAuthService;
   protected apiResponseParser: ApiResponseParser;
   protected serviceType = AI_SERVICE_GEMINI;
+  protected provider: GoogleGenerativeAIProvider;
 
   constructor(
     errorService?: ErrorService,
@@ -92,6 +94,10 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
     this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+    // Use the dedicated Google Generative AI provider from @ai-sdk/google
+    this.provider = createGoogleGenerativeAI({
+      apiKey: "", // Will be set per request via headers
+    });
   }
 
   getDefaultConfig(): GeminiConfig {

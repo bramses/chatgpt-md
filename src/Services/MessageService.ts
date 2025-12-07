@@ -12,7 +12,7 @@ import {
   ROLE_USER,
   WIKI_LINKS_REGEX,
 } from "src/Constants";
-import { getHeadingPrefix, getHeaderRole } from "../Utilities/TextHelpers";
+import { getHeaderRole, getHeadingPrefix } from "../Utilities/TextHelpers";
 
 /**
  * Service responsible for all message-related operations
@@ -280,9 +280,7 @@ export class MessageService {
     editor.replaceRange(userHeader, cursorBeforeHeader);
 
     // Calculate cursor position after the inserted header
-    const newCursor = editor.offsetToPos(
-      editor.posToOffset(cursorBeforeHeader) + userHeader.length
-    );
+    const newCursor = editor.offsetToPos(editor.posToOffset(cursorBeforeHeader) + userHeader.length);
 
     // Set cursor to end of inserted content
     editor.setCursor(newCursor);
@@ -307,9 +305,7 @@ export class MessageService {
     editor.replaceRange(fullContent, cursorBeforeInsertion);
 
     // Calculate final cursor position using offset API
-    const newCursor = editor.offsetToPos(
-      editor.posToOffset(cursorBeforeInsertion) + fullContent.length
-    );
+    const newCursor = editor.offsetToPos(editor.posToOffset(cursorBeforeInsertion) + fullContent.length);
 
     // Set cursor to end of inserted content
     editor.setCursor(newCursor);

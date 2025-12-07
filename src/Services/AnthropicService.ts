@@ -8,6 +8,7 @@ import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
+import { AnthropicProvider, createAnthropic } from "@ai-sdk/anthropic";
 
 export const DEFAULT_ANTHROPIC_CONFIG: AnthropicConfig = {
   aiService: AI_SERVICE_ANTHROPIC,
@@ -68,6 +69,7 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
   protected apiAuthService: ApiAuthService;
   protected apiResponseParser: ApiResponseParser;
   protected serviceType = AI_SERVICE_ANTHROPIC;
+  protected provider: AnthropicProvider;
 
   constructor(
     errorService?: ErrorService,
@@ -81,6 +83,10 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
     this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+    // Use the dedicated Anthropic provider from @ai-sdk/anthropic
+    this.provider = createAnthropic({
+      apiKey: "", // Will be set per request via headers
+    });
   }
 
   getDefaultConfig(): AnthropicConfig {

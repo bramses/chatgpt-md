@@ -8,6 +8,7 @@ import { NotificationService } from "./NotificationService";
 import { ApiService } from "./ApiService";
 import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
+import { createOpenRouter, OpenRouterProvider } from "@openrouter/ai-sdk-provider";
 
 // Define a constant for OpenRouter service
 export interface OpenRouterModel {
@@ -97,6 +98,8 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
   protected notificationService: NotificationService;
   protected apiService: ApiService;
   protected apiAuthService: ApiAuthService;
+  protected provider: OpenRouterProvider;
+
   protected apiResponseParser: ApiResponseParser;
   protected serviceType = AI_SERVICE_OPENROUTER;
 
@@ -112,6 +115,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
     this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+    this.provider = createOpenRouter();
   }
 
   getDefaultConfig(): OpenRouterConfig {

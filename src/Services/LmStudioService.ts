@@ -8,6 +8,7 @@ import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
+import { createOpenAICompatible, OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
 
 export const DEFAULT_LMSTUDIO_CONFIG: LmStudioConfig = {
   aiService: AI_SERVICE_LMSTUDIO,
@@ -65,6 +66,8 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
   protected apiService: ApiService;
   protected apiAuthService: ApiAuthService;
   protected apiResponseParser: ApiResponseParser;
+  protected provider: OpenAICompatibleProvider;
+
   protected serviceType = AI_SERVICE_LMSTUDIO;
 
   constructor(
@@ -79,6 +82,10 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
     this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
     this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+    this.provider = createOpenAICompatible({
+      name: "lmstudio",
+      baseURL: DEFAULT_LMSTUDIO_CONFIG.url,
+    });
   }
 
   getDefaultConfig(): LmStudioConfig {

@@ -2,6 +2,14 @@
 # yarn lockfile v1
 
 
+"@ai-sdk/anthropic@^2.0.53":
+  version "2.0.53"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/anthropic/-/anthropic-2.0.53.tgz#bf361ef25bb3f6018fb09824ac88007c9a0ed67d"
+  integrity sha512-ih7NV+OFSNWZCF+tYYD7ovvvM+gv7TRKQblpVohg2ipIwC9Y0TirzocJVREzZa/v9luxUwFbsPji++DUDWWxsg==
+  dependencies:
+    "@ai-sdk/provider" "2.0.0"
+    "@ai-sdk/provider-utils" "3.0.18"
+
 "@ai-sdk/gateway@2.0.0-beta.72":
   version "2.0.0-beta.72"
   resolved "https://registry.yarnpkg.com/@ai-sdk/gateway/-/gateway-2.0.0-beta.72.tgz#5fa97b7744674565f256677b071a2a090274af10"
@@ -10,6 +18,22 @@
     "@ai-sdk/provider" "3.0.0-beta.24"
     "@ai-sdk/provider-utils" "4.0.0-beta.43"
     "@vercel/oidc" "3.0.5"
+
+"@ai-sdk/google@^2.0.44":
+  version "2.0.44"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/google/-/google-2.0.44.tgz#f7a20b97691c68a7fd639fad6ebd4423042fe479"
+  integrity sha512-c5dck36FjqiVoeeMJQLTEmUheoURcGTU/nBT6iJu8/nZiKFT/y8pD85KMDRB7RerRYaaQOtslR2d6/5PditiRw==
+  dependencies:
+    "@ai-sdk/provider" "2.0.0"
+    "@ai-sdk/provider-utils" "3.0.18"
+
+"@ai-sdk/openai-compatible@^1.0.28":
+  version "1.0.28"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/openai-compatible/-/openai-compatible-1.0.28.tgz#328b598c4c01cb6b5ff01236d27eddf7ca91d6bb"
+  integrity sha512-yKubDxLYtXyGUzkr9lNStf/lE/I+Okc8tmotvyABhsQHHieLKk6oV5fJeRJxhr67Ejhg+FRnwUOxAmjRoFM4dA==
+  dependencies:
+    "@ai-sdk/provider" "2.0.0"
+    "@ai-sdk/provider-utils" "3.0.18"
 
 "@ai-sdk/openai@^2.0.77":
   version "2.0.77"
@@ -293,6 +317,20 @@
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/@marijn/find-cluster-break/-/find-cluster-break-1.0.2.tgz#775374306116d51c0c500b8c4face0f9a04752d8"
   integrity sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g==
+
+"@openrouter/ai-sdk-provider@^1.4.1":
+  version "1.4.1"
+  resolved "https://registry.yarnpkg.com/@openrouter/ai-sdk-provider/-/ai-sdk-provider-1.4.1.tgz#d5e64d29b1c9445e147250995155a46c8ee06d62"
+  integrity sha512-dj88dldpAreSNPVkO3ap19XGgx98nb/WeTrPdiUmErKSyFGYQvrjpXTn7WFyhGPDRrEdhua6oaBshsA8yiuGlg==
+  dependencies:
+    "@openrouter/sdk" "^0.1.27"
+
+"@openrouter/sdk@^0.1.27":
+  version "0.1.27"
+  resolved "https://registry.yarnpkg.com/@openrouter/sdk/-/sdk-0.1.27.tgz#d02a82b0f534c991602e649dafb15d2140b5844d"
+  integrity sha512-RH//L10bSmc81q25zAZudiI4kNkLgxF2E+WU42vghp3N6TEvZ6F0jK7uT3tOxkEn91gzmMw9YVmDENy7SJsajQ==
+  dependencies:
+    zod "^3.25.0 || ^4.0.0"
 
 "@opentelemetry/api@1.9.0":
   version "1.9.0"
@@ -1060,7 +1098,7 @@ yocto-queue@^0.1.0:
   resolved "https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz#0294eb3dee05028d31ee1a5fa2c556a6aaf10a1b"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
 
-zod@4.1.13:
+zod@4.1.13, "zod@^3.25.0 || ^4.0.0":
   version "4.1.13"
   resolved "https://registry.yarnpkg.com/zod/-/zod-4.1.13.tgz#93699a8afe937ba96badbb0ce8be6033c0a4b6b1"
   integrity sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig==

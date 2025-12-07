@@ -20,10 +20,16 @@ import {
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
+import { OpenAIProvider } from "@ai-sdk/openai";
+import { OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
+import { AnthropicProvider } from "@ai-sdk/anthropic";
+import { GoogleGenerativeAIProvider } from "@ai-sdk/google";
+import { OpenRouterProvider } from "@openrouter/ai-sdk-provider";
 
 /**
  * Interface defining the contract for AI service implementations
  */
+
 export interface IAiApiService {
   /**
    * Call the AI API with the given parameters
@@ -64,6 +70,16 @@ export type StreamingResponse = {
 };
 
 /**
+ * Type definition for all supported AI providers
+ */
+export type AiProvider =
+  | OpenAIProvider
+  | OpenAICompatibleProvider
+  | AnthropicProvider
+  | GoogleGenerativeAIProvider
+  | OpenRouterProvider;
+
+/**
  * Base class for AI service implementations
  * Contains common functionality and defines abstract methods that must be implemented by subclasses
  */
@@ -73,6 +89,9 @@ export abstract class BaseAiService implements IAiApiService {
   protected apiResponseParser: ApiResponseParser;
   protected readonly errorService: ErrorService;
   protected readonly notificationService: NotificationService;
+
+  // Abstract property that subclasses must implement to specify their provider
+  protected abstract provider: AiProvider;
 
   // Abstract property that subclasses must implement to specify their service type
   protected abstract serviceType: string;

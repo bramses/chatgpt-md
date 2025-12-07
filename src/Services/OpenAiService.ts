@@ -8,6 +8,7 @@ import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
+import { createOpenAI, OpenAIProvider } from "@ai-sdk/openai";
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   aiService: AI_SERVICE_OPENAI,
@@ -73,6 +74,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
   protected apiAuthService: ApiAuthService;
   protected apiResponseParser: ApiResponseParser;
   protected serviceType = AI_SERVICE_OPENAI;
+  protected provider: OpenAIProvider;
 
   constructor(
     errorService?: ErrorService,
@@ -86,6 +88,8 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
     this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+
+    this.provider = createOpenAI();
   }
 
   getDefaultConfig(): OpenAIConfig {
