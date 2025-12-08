@@ -126,7 +126,6 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     return false; // OpenRouter uses messages array, not system field
   }
 
-
   protected async callStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
@@ -149,7 +148,15 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
     // Use the common AI SDK streaming method from base class
-    return this.callAiSdkStreamText(this.provider(modelName), modelName, messages, config, editor, headingPrefix, setAtCursor);
+    return this.callAiSdkStreamText(
+      this.provider(modelName),
+      modelName,
+      messages,
+      config,
+      editor,
+      headingPrefix,
+      setAtCursor
+    );
   }
 
   protected async callNonStreamingAPI(

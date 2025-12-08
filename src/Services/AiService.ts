@@ -25,7 +25,7 @@ import { OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
 import { AnthropicProvider } from "@ai-sdk/anthropic";
 import { GoogleGenerativeAIProvider } from "@ai-sdk/google";
 import { OpenRouterProvider } from "@openrouter/ai-sdk-provider";
-import { generateText, streamText, LanguageModel } from "ai";
+import { generateText, LanguageModel, streamText } from "ai";
 
 /**
  * Interface defining the contract for AI service implementations
@@ -328,7 +328,6 @@ export abstract class BaseAiService implements IAiApiService {
     this.apiService?.stopStreaming();
   }
 
-
   /**
    * Get the full API endpoint URL
    */
@@ -378,7 +377,6 @@ export abstract class BaseAiService implements IAiApiService {
     return [...systemMessages, ...messages];
   }
 
-
   /**
    * Handle API errors for both streaming and non-streaming calls
    */
@@ -404,7 +402,6 @@ export abstract class BaseAiService implements IAiApiService {
       context: { model: config.model, url: config.url },
     });
   }
-
 
   /**
    * Common AI SDK generateText implementation

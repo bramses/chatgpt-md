@@ -29,7 +29,6 @@ export class ApiService {
     this.apiResponseParser = apiResponseParser || new ApiResponseParser();
   }
 
-
   /**
    * Make a non-streaming API request
    * @param url The API endpoint URL
