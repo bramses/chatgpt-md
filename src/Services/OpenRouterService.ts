@@ -191,8 +191,20 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     setAtCursor?: boolean | undefined,
     settings?: ChatGPT_MDSettings
   ): Promise<StreamingResponse> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings);
+    // Create a fetch adapter that uses Obsidian's requestUrl
+    const customFetch = this.apiService.createFetchAdapter();
+
+    // Initialize the OpenRouter provider
+    this.provider = createOpenRouter({
+      apiKey: apiKey,
+      fetch: customFetch,
+    });
+
+    // Extract model name (remove provider prefix if present)
+    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
+
+    // Use the common AI SDK streaming method from base class
+    return this.callAiSdkStreamText(this.provider(modelName), modelName, messages, config, editor, headingPrefix, setAtCursor);
   }
 
   protected async callNonStreamingAPI(

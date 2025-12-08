@@ -193,39 +193,21 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     setAtCursor?: boolean | undefined,
     settings?: ChatGPT_MDSettings
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
-    try {
-      // Use the common preparation method
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings!);
+    // Create a fetch adapter that uses Obsidian's requestUrl
+    const customFetch = this.apiService.createFetchAdapter();
 
-      // Insert assistant header
-      const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, config.model);
+    // Initialize the Gemini provider
+    this.provider = createGoogleGenerativeAI({
+      apiKey: apiKey,
+      baseURL: `${config.url}/v1`,
+      fetch: customFetch,
+    });
 
-      // Make streaming request using ApiService with Gemini-specific endpoint
-      const response = await this.apiService.makeStreamingRequest(
-        this.getApiUrl(config),
-        payload,
-        headers,
-        this.serviceType
-      );
+    // Extract model name (remove provider prefix if present)
+    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
-      // Process the streaming response using ApiResponseParser
-      const result = await this.apiResponseParser.processStreamResponse(
-        response,
-        this.serviceType,
-        editor,
-        cursorPositions,
-        setAtCursor,
-        this.apiService
-      );
-
-      // Use the helper method to process the result
-      return this.processStreamingResult(result);
-    } catch (err) {
-      // The error is already handled by the ApiService, which uses ErrorService
-      // Just return the error message for the chat
-      const errorMessage = `Error: ${err}`;
-      return { fullString: errorMessage, mode: "streaming" };
-    }
+    // Use the common AI SDK streaming method from base class
+    return this.callAiSdkStreamText(this.provider(modelName), modelName, messages, config, editor, headingPrefix, setAtCursor);
   }
 
   protected async callNonStreamingAPI(

@@ -25,7 +25,7 @@ import { OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
 import { AnthropicProvider } from "@ai-sdk/anthropic";
 import { GoogleGenerativeAIProvider } from "@ai-sdk/google";
 import { OpenRouterProvider } from "@openrouter/ai-sdk-provider";
-import { generateText, LanguageModel } from "ai";
+import { generateText, streamText, LanguageModel } from "ai";
 
 /**
  * Interface defining the contract for AI service implementations
@@ -529,6 +529,85 @@ export abstract class BaseAiService implements IAiApiService {
 
     // Return in expected format
     return { fullString: text, model: modelName };
+  }
+
+  /**
+   * Common AI SDK streamText implementation
+   * Can be used by any service that has a provider
+   */
+  protected async callAiSdkStreamText(
+    model: LanguageModel,
+    modelName: string,
+    messages: Message[],
+    config: Record<string, any>,
+    editor: Editor,
+    headingPrefix: string,
+    setAtCursor?: boolean
+  ): Promise<StreamingResponse> {
+    try {
+      // Convert messages to AI SDK format
+      const aiSdkMessages = messages.map((msg) => ({
+        role: msg.role as "user" | "assistant" | "system",
+        content: msg.content,
+      }));
+
+      // Insert assistant header
+      const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, modelName);
+
+      // Setup abort controller
+      const abortController = new AbortController();
+      this.apiService.setAbortController(abortController);
+
+      // Call AI SDK streamText
+      const { textStream } = streamText({
+        model,
+        messages: aiSdkMessages,
+        abortSignal: abortController.signal,
+      });
+
+      let fullText = "";
+      let currentCursor = setAtCursor ? cursorPositions.initialCursor : cursorPositions.newCursor;
+
+      // Iterate over the text stream
+      for await (const textPart of textStream) {
+        // Check if streaming was aborted
+        if (this.apiService.wasAborted()) {
+          break;
+        }
+
+        fullText += textPart;
+
+        // Update the editor with the new text
+        if (setAtCursor) {
+          editor.replaceSelection(textPart);
+        } else {
+          // Insert at tracked cursor position
+          editor.replaceRange(textPart, currentCursor);
+
+          // Update cursor position using Obsidian's offset API
+          // This correctly handles multi-line content
+          const currentOffset = editor.posToOffset(currentCursor);
+          const newOffset = currentOffset + textPart.length;
+          currentCursor = editor.offsetToPos(newOffset);
+        }
+      }
+
+      // Move visible cursor to final position
+      if (!setAtCursor) {
+        editor.setCursor(currentCursor);
+      }
+
+      // Return the streaming response
+      return {
+        fullString: fullText,
+        mode: "streaming",
+        wasAborted: this.apiService.wasAborted(),
+      };
+    } catch (err) {
+      // Handle errors
+      const errorMessage = `Error: ${err}`;
+      return { fullString: errorMessage, mode: "streaming" };
+    }
   }
 }
 

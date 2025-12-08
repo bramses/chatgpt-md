@@ -152,8 +152,22 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     setAtCursor?: boolean | undefined,
     settings?: ChatGPT_MDSettings
   ): Promise<StreamingResponse> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings);
+    // Create a fetch adapter that uses Obsidian's requestUrl
+    const customFetch = this.apiService.createFetchAdapter();
+
+    // Initialize the Ollama provider (OpenAI-compatible)
+    this.provider = createOpenAICompatible({
+      name: "ollama",
+      apiKey: apiKey || "ollama", // Ollama doesn't require real key
+      baseURL: `${config.url}/v1`,
+      fetch: customFetch,
+    });
+
+    // Extract model name (remove provider prefix if present)
+    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
+
+    // Use the common AI SDK streaming method from base class
+    return this.callAiSdkStreamText(this.provider(modelName), modelName, messages, config, editor, headingPrefix, setAtCursor);
   }
 
   protected async callNonStreamingAPI(

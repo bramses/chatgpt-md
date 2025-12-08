@@ -178,6 +178,15 @@ export class ApiService {
   }
 
   /**
+   * Set the abort controller for external streaming implementations
+   * This allows AI SDK streaming to use the same abort mechanism
+   */
+  setAbortController(controller: AbortController): void {
+    this.abortController = controller;
+    this.wasStreamingAborted = false;
+  }
+
+  /**
    * Stop any ongoing streaming request
    */
   stopStreaming(): void {
