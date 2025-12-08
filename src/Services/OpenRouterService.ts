@@ -21,17 +21,6 @@ export interface OpenRouterModel {
   };
 }
 
-export interface OpenRouterStreamPayload {
-  model: string;
-  messages: Array<Message>;
-  temperature: number;
-  top_p: number;
-  presence_penalty: number;
-  frequency_penalty: number;
-  max_tokens: number;
-  stream: boolean;
-}
-
 export interface OpenRouterConfig {
   apiKey: string;
   aiService: string;
@@ -137,50 +126,6 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     return false; // OpenRouter uses messages array, not system field
   }
 
-  createPayload(config: OpenRouterConfig, messages: Message[]): OpenRouterStreamPayload {
-    // Remove the provider prefix if it exists in the model name
-    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
-
-    // Process system commands using the centralized method
-    const processedMessages = this.processSystemCommands(messages, config.system_commands);
-
-    return {
-      model: modelName,
-      messages: processedMessages,
-      max_tokens: config.max_tokens,
-      temperature: config.temperature,
-      top_p: config.top_p,
-      presence_penalty: config.presence_penalty,
-      frequency_penalty: config.frequency_penalty,
-      stream: config.stream,
-    };
-  }
-
-  handleAPIError(err: any, config: OpenRouterConfig, prefix: string): never {
-    // Use the new ErrorService to handle errors
-    const context = {
-      model: config.model,
-      url: config.url,
-      defaultUrl: DEFAULT_OPENROUTER_CONFIG.url,
-      aiService: AI_SERVICE_OPENROUTER,
-    };
-
-    // Special handling for custom URL errors
-    if (err instanceof Object && config.url !== DEFAULT_OPENROUTER_CONFIG.url) {
-      return this.errorService.handleUrlError(
-        config.url,
-        DEFAULT_OPENROUTER_CONFIG.url,
-        AI_SERVICE_OPENROUTER
-      ) as never;
-    }
-
-    // Use the centralized error handling
-    return this.errorService.handleApiError(err, AI_SERVICE_OPENROUTER, {
-      context,
-      showNotification: true,
-      logToConsole: true,
-    }) as never;
-  }
 
   protected async callStreamingAPI(
     apiKey: string | undefined,

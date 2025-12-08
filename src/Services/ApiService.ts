@@ -29,46 +29,6 @@ export class ApiService {
     this.apiResponseParser = apiResponseParser || new ApiResponseParser();
   }
 
-  /**
-   * Make a streaming API request
-   * @param url The API endpoint URL
-   * @param payload The request payload
-   * @param headers The request headers
-   * @param serviceType The AI service type (openai, openrouter, ollama)
-   * @returns A Response object for streaming
-   */
-  async makeStreamingRequest(
-    url: string,
-    payload: any,
-    headers: Record<string, string>,
-    serviceType: string
-  ): Promise<Response> {
-    try {
-      console.log(`[ChatGPT MD] Making streaming request to ${serviceType}`, payload);
-
-      this.abortController = new AbortController();
-
-      const response = await requestStream({
-        url,
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-        signal: this.abortController.signal,
-      });
-
-      if (!response.ok) {
-        throw await this.handleHttpError(response, serviceType, payload, url);
-      }
-
-      if (!response.body) {
-        throw new Error("The response body was empty");
-      }
-
-      return response;
-    } catch (error) {
-      return this.handleRequestError(error, serviceType, payload, url);
-    }
-  }
 
   /**
    * Make a non-streaming API request

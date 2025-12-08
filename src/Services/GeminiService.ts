@@ -1,6 +1,6 @@
 import { Editor, requestUrl } from "obsidian";
 import { Message } from "src/Models/Message";
-import { AI_SERVICE_GEMINI, ROLE_ASSISTANT, ROLE_SYSTEM } from "src/Constants";
+import { AI_SERVICE_GEMINI, ROLE_SYSTEM } from "src/Constants";
 import { BaseAiService, IAiApiService } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ApiService } from "./ApiService";
@@ -118,72 +118,6 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     return false; // Gemini doesn't support separate system field - system messages are included in contents
   }
 
-  createPayload(config: GeminiConfig, messages: Message[]): GeminiStreamPayload {
-    // Convert messages to Gemini format
-    const geminiContents = this.convertToGeminiContents(messages);
-
-    // Create base payload - Note: model is NOT included in payload for Gemini, it's in the URL
-    const payload: GeminiStreamPayload = {
-      contents: geminiContents,
-      generationConfig: {
-        maxOutputTokens: config.max_tokens,
-        temperature: config.temperature,
-        topP: config.top_p,
-      },
-    };
-
-    return payload;
-  }
-
-  /**
-   * Convert standard messages to Gemini format
-   * Gemini uses 'user' and 'model' roles with contents array containing parts
-   */
-  private convertToGeminiContents(messages: Message[]): GeminiContent[] {
-    const result: GeminiContent[] = [];
-
-    // Process messages and convert roles
-    for (const message of messages) {
-      // Map roles to Gemini format
-      let role: "user" | "model";
-      if (message.role === ROLE_ASSISTANT) {
-        role = "model"; // Gemini uses 'model' instead of 'assistant'
-      } else {
-        // All other roles (user, developer, system) are treated as user
-        role = "user";
-      }
-
-      result.push({
-        role,
-        parts: [{ text: message.content }],
-      });
-    }
-
-    return result;
-  }
-
-  handleAPIError(err: any, config: GeminiConfig, prefix: string): never {
-    // Use the new ErrorService to handle errors
-    const context = {
-      model: config.model,
-      url: config.url,
-      defaultUrl: DEFAULT_GEMINI_CONFIG.url,
-      aiService: AI_SERVICE_GEMINI,
-    };
-
-    // Special handling for custom URL errors
-    if (err instanceof Object && config.url !== DEFAULT_GEMINI_CONFIG.url) {
-      return this.errorService.handleUrlError(config.url, DEFAULT_GEMINI_CONFIG.url, AI_SERVICE_GEMINI) as never;
-    }
-
-    // Use the centralized error handling
-    return this.errorService.handleApiError(err, AI_SERVICE_GEMINI, {
-      context,
-      showNotification: true,
-      logToConsole: true,
-    }) as never;
-  }
-
   protected async callStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
@@ -232,63 +166,6 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     // Use the common AI SDK method from base class
     return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
   }
-
-  /**
-   * Override prepareApiCall to handle Gemini-specific API structure
-   */
-  protected prepareApiCall(
-    apiKey: string | undefined,
-    messages: Message[],
-    config: Record<string, any>,
-    settings: ChatGPT_MDSettings,
-    skipPluginSystemMessage: boolean = false
-  ) {
-    // Validate API key
-    this.apiAuthService.validateApiKey(apiKey, this.serviceType);
-
-    // Add plugin system message to help LLM understand context (unless skipped)
-    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages, settings);
-
-    // Create payload and headers
-    const geminiConfig = config as GeminiConfig;
-    const payload = this.createPayload(geminiConfig, finalMessages);
-    const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.serviceType);
-
-    // Gemini uses x-goog-api-key header
-    headers["x-goog-api-key"] = apiKey!;
-
-    return { payload, headers };
-  }
-
-  /**
-   * Override getApiUrl to handle Gemini's model-specific endpoint structure
-   */
-  protected getApiUrl(config: Record<string, any>): string {
-    const geminiConfig = config as GeminiConfig;
-    const modelName = geminiConfig.model.includes("@") ? geminiConfig.model.split("@")[1] : geminiConfig.model;
-
-    // Gemini uses different endpoints for streaming vs non-streaming
-    if (geminiConfig.stream) {
-      // For streaming, use streamGenerateContent with alt=sse parameter
-      return `${geminiConfig.url}/v1beta/models/${modelName}:streamGenerateContent?alt=sse`;
-    } else {
-      return `${geminiConfig.url}/v1beta/models/${modelName}:generateContent`;
-    }
-  }
-}
-
-export interface GeminiContent {
-  role: "user" | "model";
-  parts: Array<{ text: string }>;
-}
-
-export interface GeminiStreamPayload {
-  contents: GeminiContent[];
-  generationConfig: {
-    maxOutputTokens: number;
-    temperature: number;
-    topP: number;
-  };
 }
 
 export interface GeminiConfig {

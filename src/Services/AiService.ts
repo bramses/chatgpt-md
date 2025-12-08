@@ -140,16 +140,6 @@ export abstract class BaseAiService implements IAiApiService {
   abstract getDefaultConfig(): Record<string, any>;
 
   /**
-   * Create a payload for the API request
-   */
-  abstract createPayload(config: Record<string, any>, messages: Message[]): Record<string, any>;
-
-  /**
-   * Handle API errors
-   */
-  abstract handleAPIError(err: unknown, config: Record<string, any>, prefix: string): never;
-
-  /**
    * Call the AI API with the given parameters
    */
   async callAIAPI(
@@ -338,23 +328,6 @@ export abstract class BaseAiService implements IAiApiService {
     this.apiService?.stopStreaming();
   }
 
-  /**
-   * Process streaming result and handle aborted case
-   * This centralizes the common logic for all AI services
-   */
-  protected processStreamingResult(result: { text: string; wasAborted: boolean }): StreamingResponse {
-    // If streaming was aborted and text is empty, return empty string with wasAborted flag
-    if (result.wasAborted && result.text === "") {
-      return { fullString: "", mode: "streaming", wasAborted: true };
-    }
-
-    // Normal case - return the text with wasAborted flag
-    return {
-      fullString: result.text,
-      mode: "streaming",
-      wasAborted: result.wasAborted,
-    };
-  }
 
   /**
    * Get the full API endpoint URL
@@ -405,33 +378,6 @@ export abstract class BaseAiService implements IAiApiService {
     return [...systemMessages, ...messages];
   }
 
-  /**
-   * Prepare API call with common setup
-   */
-  protected prepareApiCall(
-    apiKey: string | undefined,
-    messages: Message[],
-    config: Record<string, any>,
-    settings: ChatGPT_MDSettings,
-    skipPluginSystemMessage: boolean = false
-  ) {
-    // Validate API key
-    this.apiAuthService.validateApiKey(apiKey, this.serviceType);
-
-    // Add plugin system message to help LLM understand context (unless skipped)
-    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages, settings);
-
-    // Create payload and headers
-    const payload = this.createPayload(config, finalMessages);
-    const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.serviceType);
-
-    // Add plugin system message to payload if service supports system field and not skipped
-    if (this.supportsSystemField() && !skipPluginSystemMessage && !payload.system) {
-      payload.system = settings.pluginSystemMessage;
-    }
-
-    return { payload, headers };
-  }
 
   /**
    * Handle API errors for both streaming and non-streaming calls
@@ -459,52 +405,6 @@ export abstract class BaseAiService implements IAiApiService {
     });
   }
 
-  /**
-   * Default streaming API implementation that can be used by most services
-   */
-  protected async defaultCallStreamingAPI(
-    apiKey: string | undefined,
-    messages: Message[],
-    config: Record<string, any>,
-    editor: Editor,
-    headingPrefix: string,
-    setAtCursor?: boolean,
-    settings?: ChatGPT_MDSettings
-  ): Promise<StreamingResponse> {
-    try {
-      // Use the common preparation method
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings!);
-
-      // Insert assistant header
-      const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
-
-      // Make streaming request using ApiService with centralized endpoint
-      const response = await this.apiService.makeStreamingRequest(
-        this.getApiEndpoint(config),
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Process the streaming response using ApiResponseParser
-      const result = await this.apiResponseParser.processStreamResponse(
-        response,
-        this.serviceType,
-        editor,
-        cursorPositions,
-        setAtCursor,
-        this.apiService
-      );
-
-      // Use the helper method to process the result
-      return this.processStreamingResult(result);
-    } catch (err) {
-      // The error is already handled by the ApiService, which uses ErrorService
-      // Just return the error message for the chat
-      const errorMessage = `Error: ${err}`;
-      return { fullString: errorMessage, mode: "streaming" };
-    }
-  }
 
   /**
    * Common AI SDK generateText implementation

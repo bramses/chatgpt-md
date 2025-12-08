@@ -15,12 +15,6 @@ export interface OllamaModel {
   [key: string]: any;
 }
 
-export interface OllamaStreamPayload {
-  model: string;
-  messages: Message[];
-  stream?: boolean;
-}
-
 export interface OllamaConfig {
   apiKey?: string;
   aiService: string;
@@ -105,42 +99,6 @@ export class OllamaService extends BaseAiService implements IAiApiService {
 
   protected supportsSystemField(): boolean {
     return false; // Ollama uses messages array, not system field
-  }
-
-  createPayload(config: OllamaConfig, messages: Message[]): OllamaStreamPayload {
-    // Remove the provider prefix if it exists in the model name
-    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
-
-    // Process system commands using the centralized method
-    const processedMessages = this.processSystemCommands(messages, config.system_commands);
-
-    return {
-      model: modelName,
-      messages: processedMessages,
-      stream: config.stream,
-    };
-  }
-
-  handleAPIError(err: any, config: OllamaConfig, prefix: string): never {
-    // Use the new ErrorService to handle errors
-    const context = {
-      model: config.model,
-      url: config.url,
-      defaultUrl: DEFAULT_OLLAMA_CONFIG.url,
-      aiService: AI_SERVICE_OLLAMA,
-    };
-
-    // Special handling for custom URL errors
-    if (err instanceof Object && config.url !== DEFAULT_OLLAMA_CONFIG.url) {
-      return this.errorService.handleUrlError(config.url, DEFAULT_OLLAMA_CONFIG.url, AI_SERVICE_OLLAMA) as never;
-    }
-
-    // Use the centralized error handling
-    return this.errorService.handleApiError(err, AI_SERVICE_OLLAMA, {
-      context,
-      showNotification: true,
-      logToConsole: true,
-    }) as never;
   }
 
   protected async callStreamingAPI(

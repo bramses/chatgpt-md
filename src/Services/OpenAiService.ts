@@ -108,61 +108,6 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     return false; // OpenAI uses messages array, not system field
   }
 
-  createPayload(config: OpenAIConfig, messages: Message[]): OpenAIStreamPayload {
-    // Remove the provider prefix if it exists in the model name
-    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
-
-    // Process system commands using the centralized method
-    const processedMessages = this.processSystemCommands(messages, config.system_commands);
-
-    // Create base payload
-    const payload: OpenAIStreamPayload = {
-      model: modelName,
-      messages: processedMessages,
-      max_completion_tokens: config.max_tokens,
-      stream: config.stream,
-    };
-
-    // Only include these parameters if the model supports them
-    // o1, o4, o3, gpt-5, and search models don't support custom temperature and other parameters
-    const isRestrictedModel =
-      modelName.includes("search") ||
-      modelName.includes("o1") ||
-      modelName.includes("o4") ||
-      modelName.includes("o3") ||
-      modelName.includes("gpt-5");
-
-    if (!isRestrictedModel) {
-      payload.temperature = config.temperature;
-      payload.top_p = config.top_p;
-      payload.presence_penalty = config.presence_penalty;
-      payload.frequency_penalty = config.frequency_penalty;
-    }
-
-    return payload;
-  }
-
-  handleAPIError(err: any, config: OpenAIConfig, prefix: string): never {
-    // Use the new ErrorService to handle errors
-    const context = {
-      model: config.model,
-      url: config.url,
-      defaultUrl: DEFAULT_OPENAI_CONFIG.url,
-      aiService: AI_SERVICE_OPENAI,
-    };
-
-    // Special handling for custom URL errors
-    if (err instanceof Object && config.url !== DEFAULT_OPENAI_CONFIG.url) {
-      return this.errorService.handleUrlError(config.url, DEFAULT_OPENAI_CONFIG.url, AI_SERVICE_OPENAI) as never;
-    }
-
-    // Use the centralized error handling
-    return this.errorService.handleApiError(err, AI_SERVICE_OPENAI, {
-      context,
-      showNotification: true,
-      logToConsole: true,
-    }) as never;
-  }
 
   protected async callStreamingAPI(
     apiKey: string | undefined,
@@ -212,17 +157,6 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     // Use the common AI SDK method from base class
     return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
   }
-}
-
-export interface OpenAIStreamPayload {
-  model: string;
-  messages: Array<Message>;
-  temperature?: number;
-  top_p?: number;
-  presence_penalty?: number;
-  frequency_penalty?: number;
-  max_completion_tokens: number;
-  stream: boolean;
 }
 
 export interface OpenAIConfig {

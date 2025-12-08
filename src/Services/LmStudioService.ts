@@ -105,50 +105,6 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
     return false; // LmStudio uses messages array, not system field
   }
 
-  createPayload(config: LmStudioConfig, messages: Message[]): LmStudioStreamPayload {
-    // Remove the provider prefix if it exists in the model name
-    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
-
-    // Process system commands using the centralized method
-    const processedMessages = this.processSystemCommands(messages, config.system_commands);
-
-    // Create base payload
-    const payload: LmStudioStreamPayload = {
-      model: modelName,
-      messages: processedMessages,
-      max_completion_tokens: config.max_tokens,
-      stream: config.stream,
-      temperature: config.temperature,
-      top_p: config.top_p,
-      presence_penalty: config.presence_penalty,
-      frequency_penalty: config.frequency_penalty,
-    };
-
-    return payload;
-  }
-
-  handleAPIError(err: any, config: LmStudioConfig, prefix: string): never {
-    // Use the new ErrorService to handle errors
-    const context = {
-      model: config.model,
-      url: config.url,
-      defaultUrl: DEFAULT_LMSTUDIO_CONFIG.url,
-      aiService: AI_SERVICE_LMSTUDIO,
-    };
-
-    // Special handling for custom URL errors
-    if (err instanceof Object && config.url !== DEFAULT_LMSTUDIO_CONFIG.url) {
-      return this.errorService.handleUrlError(config.url, DEFAULT_LMSTUDIO_CONFIG.url, AI_SERVICE_LMSTUDIO) as never;
-    }
-
-    // Use the centralized error handling
-    return this.errorService.handleApiError(err, AI_SERVICE_LMSTUDIO, {
-      context,
-      showNotification: true,
-      logToConsole: true,
-    }) as never;
-  }
-
   protected async callStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
@@ -199,17 +155,6 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
     // Use the common AI SDK method from base class
     return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
   }
-}
-
-export interface LmStudioStreamPayload {
-  model: string;
-  messages: Array<Message>;
-  temperature: number;
-  top_p: number;
-  presence_penalty: number;
-  frequency_penalty: number;
-  max_completion_tokens: number;
-  stream: boolean;
 }
 
 export interface LmStudioConfig {
