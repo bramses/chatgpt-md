@@ -201,4 +201,40 @@ export class ApiService {
   resetAbortedFlag(): void {
     this.wasStreamingAborted = false;
   }
+
+  /**
+   * Create a fetch-compatible function that uses requestStream
+   * This allows third-party libraries (like AI SDK) to use Obsidian's requestUrl under the hood
+   * @returns A fetch-compatible function
+   */
+  createFetchAdapter(): typeof fetch {
+    return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+      const requestOptions = {
+        url,
+        method: init?.method || "GET",
+        headers: init?.headers
+          ? typeof init.headers === "object" && "forEach" in init.headers
+            ? this.convertHeadersToRecord(init.headers as Headers)
+            : (init.headers as Record<string, string>)
+          : {},
+        body: init?.body ? (typeof init.body === "string" ? init.body : JSON.stringify(init.body)) : undefined,
+        signal: init?.signal || undefined,
+      };
+
+      return requestStream(requestOptions);
+    };
+  }
+
+  /**
+   * Convert Headers object to plain Record
+   */
+  private convertHeadersToRecord(headers: Headers): Record<string, string> {
+    const record: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      record[key] = value;
+    });
+    return record;
+  }
 }

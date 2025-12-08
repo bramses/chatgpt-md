@@ -25,6 +25,7 @@ import { OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
 import { AnthropicProvider } from "@ai-sdk/anthropic";
 import { GoogleGenerativeAIProvider } from "@ai-sdk/google";
 import { OpenRouterProvider } from "@openrouter/ai-sdk-provider";
+import { generateText, LanguageModel } from "ai";
 
 /**
  * Interface defining the contract for AI service implementations
@@ -170,7 +171,7 @@ export abstract class BaseAiService implements IAiApiService {
 
     return options.stream && editor
       ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings)
-      : this.callNonStreamingAPI(apiKey, messages, config, settings);
+      : this.callNonStreamingAPI(apiKey, messages, config, settings, this.provider);
   }
 
   /**
@@ -267,7 +268,8 @@ export abstract class BaseAiService implements IAiApiService {
     apiKey: string | undefined,
     messages: Message[],
     config: Record<string, any>,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    provider?: AiProvider
   ): Promise<any>;
 
   /**
@@ -537,7 +539,8 @@ export abstract class BaseAiService implements IAiApiService {
     apiKey: string | undefined,
     messages: Message[],
     config: Record<string, any>,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    provider?: AiProvider
   ): Promise<any> {
     try {
       console.log(`[ChatGPT MD] "no stream"`, config);
@@ -560,6 +563,31 @@ export abstract class BaseAiService implements IAiApiService {
 
       return this.handleApiCallError(err, config, isTitleInference);
     }
+  }
+
+  /**
+   * Common AI SDK generateText implementation
+   * Can be used by any service that has a provider
+   */
+  protected async callAiSdkGenerateText(
+    model: LanguageModel,
+    modelName: string,
+    messages: Message[]
+  ): Promise<{ fullString: string; model: string }> {
+    // Convert messages to AI SDK format
+    const aiSdkMessages = messages.map((msg) => ({
+      role: msg.role as "user" | "assistant" | "system",
+      content: msg.content,
+    }));
+
+    // Call AI SDK generateText
+    const { text } = await generateText({
+      model,
+      messages: aiSdkMessages,
+    });
+
+    // Return in expected format
+    return { fullString: text, model: modelName };
   }
 }
 

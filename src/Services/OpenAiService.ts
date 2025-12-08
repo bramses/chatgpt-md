@@ -11,6 +11,7 @@ import { NotificationService } from "./NotificationService";
 import { createOpenAI, OpenAIProvider } from "@ai-sdk/openai";
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
+  apiKey: "",
   aiService: AI_SERVICE_OPENAI,
   frequency_penalty: 0,
   max_tokens: 400,
@@ -88,8 +89,6 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
     this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
-
-    this.provider = createOpenAI();
   }
 
   getDefaultConfig(): OpenAIConfig {
@@ -184,8 +183,21 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     config: OpenAIConfig,
     settings?: ChatGPT_MDSettings
   ): Promise<any> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config, settings);
+    // Create a fetch adapter that uses Obsidian's requestUrl
+    const customFetch = this.apiService.createFetchAdapter();
+
+    // Initialize the OpenAI provider
+    this.provider = createOpenAI({
+      apiKey: apiKey,
+      baseURL: `${config.url}/v1`,
+      fetch: customFetch,
+    });
+
+    // Extract model name (remove provider prefix if present)
+    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
+
+    // Use the common AI SDK method from base class
+    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
   }
 
   protected showNoTitleInferredNotification(): void {
@@ -205,6 +217,7 @@ export interface OpenAIStreamPayload {
 }
 
 export interface OpenAIConfig {
+  apiKey: string;
   aiService: string;
   frequency_penalty: number;
   max_tokens: number;

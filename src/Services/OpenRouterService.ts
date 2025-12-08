@@ -33,6 +33,7 @@ export interface OpenRouterStreamPayload {
 }
 
 export interface OpenRouterConfig {
+  apiKey: string;
   aiService: string;
   frequency_penalty: number;
   max_tokens: number;
@@ -49,6 +50,7 @@ export interface OpenRouterConfig {
 }
 
 export const DEFAULT_OPENROUTER_CONFIG: OpenRouterConfig = {
+  apiKey: "",
   aiService: AI_SERVICE_OPENROUTER,
   frequency_penalty: 0.5,
   max_tokens: 400,
@@ -199,8 +201,20 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     config: OpenRouterConfig,
     settings?: ChatGPT_MDSettings
   ): Promise<any> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config, settings);
+    // Create a fetch adapter that uses Obsidian's requestUrl
+    const customFetch = this.apiService.createFetchAdapter();
+
+    // Initialize the OpenRouter provider
+    this.provider = createOpenRouter({
+      apiKey: apiKey,
+      fetch: customFetch,
+    });
+
+    // Extract model name (remove provider prefix if present)
+    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
+
+    // Use the common AI SDK method from base class
+    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
   }
 
   protected showNoTitleInferredNotification(): void {

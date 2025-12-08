@@ -11,6 +11,7 @@ import { NotificationService } from "./NotificationService";
 import { AnthropicProvider, createAnthropic } from "@ai-sdk/anthropic";
 
 export const DEFAULT_ANTHROPIC_CONFIG: AnthropicConfig = {
+  apiKey: "",
   aiService: AI_SERVICE_ANTHROPIC,
   max_tokens: 400,
   model: "anthropic@claude-sonnet-4-20250514",
@@ -83,10 +84,6 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
     this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
-    // Use the dedicated Anthropic provider from @ai-sdk/anthropic
-    this.provider = createAnthropic({
-      apiKey: "", // Will be set per request via headers
-    });
   }
 
   getDefaultConfig(): AnthropicConfig {
@@ -202,8 +199,24 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     config: AnthropicConfig,
     settings?: ChatGPT_MDSettings
   ): Promise<any> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config, settings);
+    // Create a fetch adapter that uses Obsidian's requestUrl
+    const customFetch = this.apiService.createFetchAdapter();
+
+    // Initialize the Anthropic provider
+    this.provider = createAnthropic({
+      apiKey: apiKey,
+      baseURL: `${config.url}/v1`,
+      headers: {
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      fetch: customFetch,
+    });
+
+    // Extract model name (remove provider prefix if present)
+    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
+
+    // Use the common AI SDK method from base class
+    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
   }
 
   protected showNoTitleInferredNotification(): void {
@@ -251,9 +264,6 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
       payload.system = anthropicConfig.system_commands.join("\n\n");
     }
 
-    // Add Anthropic-specific header for direct browser access
-    headers["anthropic-dangerous-direct-browser-access"] = "true";
-
     return { payload, headers };
   }
 }
@@ -273,6 +283,7 @@ export interface AnthropicStreamPayload {
 }
 
 export interface AnthropicConfig {
+  apiKey: string;
   aiService: string;
   max_tokens: number;
   model: string;

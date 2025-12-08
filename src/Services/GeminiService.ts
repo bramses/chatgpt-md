@@ -11,6 +11,7 @@ import { NotificationService } from "./NotificationService";
 import { createGoogleGenerativeAI, GoogleGenerativeAIProvider } from "@ai-sdk/google";
 
 export const DEFAULT_GEMINI_CONFIG: GeminiConfig = {
+  apiKey: "",
   aiService: AI_SERVICE_GEMINI,
   max_tokens: 400,
   model: "gemini@gemini-2.5-flash",
@@ -233,27 +234,21 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     config: GeminiConfig,
     settings?: ChatGPT_MDSettings
   ): Promise<any> {
-    try {
-      console.log(`[ChatGPT MD] "no stream"`, config);
+    // Create a fetch adapter that uses Obsidian's requestUrl
+    const customFetch = this.apiService.createFetchAdapter();
 
-      config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings!);
+    // Initialize the Gemini provider
+    this.provider = createGoogleGenerativeAI({
+      apiKey: apiKey,
+      baseURL: `${config.url}/v1`,
+      fetch: customFetch,
+    });
 
-      const response = await this.apiService.makeNonStreamingRequest(
-        this.getApiUrl(config), // Use custom URL generation for Gemini
-        payload,
-        headers,
-        this.serviceType
-      );
+    // Extract model name (remove provider prefix if present)
+    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
-      // Return simple object with response and model
-      return { fullString: response, model: config.model };
-    } catch (err) {
-      const isTitleInference =
-        messages.length === 1 && messages[0].content?.toString().includes("Infer title from the summary");
-
-      return this.handleApiCallError(err, config, isTitleInference);
-    }
+    // Use the common AI SDK method from base class
+    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
   }
 
   protected showNoTitleInferredNotification(): void {
@@ -346,6 +341,7 @@ export interface GeminiStreamPayload {
 }
 
 export interface GeminiConfig {
+  apiKey: string;
   aiService: string;
   max_tokens: number;
   model: string;

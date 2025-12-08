@@ -22,6 +22,7 @@ export interface OllamaStreamPayload {
 }
 
 export interface OllamaConfig {
+  apiKey?: string;
   aiService: string;
   model: string;
   url: string;
@@ -161,8 +162,22 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     config: OllamaConfig,
     settings?: ChatGPT_MDSettings
   ): Promise<any> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config, settings);
+    // Create a fetch adapter that uses Obsidian's requestUrl
+    const customFetch = this.apiService.createFetchAdapter();
+
+    // Initialize the Ollama provider (OpenAI-compatible)
+    this.provider = createOpenAICompatible({
+      name: "ollama",
+      apiKey: apiKey,
+      baseURL: `${config.url}/v1`,
+      fetch: customFetch,
+    });
+
+    // Extract model name (remove provider prefix if present)
+    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
+
+    // Use the common AI SDK method from base class
+    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
   }
 
   protected showNoTitleInferredNotification(): void {
