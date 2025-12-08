@@ -216,8 +216,4 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     // Use the common AI SDK method from base class
     return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
   }
-
-  protected showNoTitleInferredNotification(): void {
-    this.notificationService.showWarning("Could not infer title. The file name was not changed.");
-  }
 }

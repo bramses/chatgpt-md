@@ -251,37 +251,6 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
   }
 
-  protected showNoTitleInferredNotification(): void {
-    this.notificationService.showWarning("Could not infer title. The file name was not changed.");
-  }
-
-  /**
-   * Override callNonStreamingAPIForTitleInference to use custom Gemini URL generation
-   */
-  protected async callNonStreamingAPIForTitleInference(
-    apiKey: string | undefined,
-    messages: Message[],
-    config: Record<string, any>,
-    settings: ChatGPT_MDSettings
-  ): Promise<any> {
-    try {
-      config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings, true); // Skip plugin system message
-
-      const response = await this.apiService.makeNonStreamingRequest(
-        this.getApiUrl(config), // Use custom URL generation for Gemini
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Return simple object with response and model
-      return response;
-    } catch (err) {
-      throw err; // Re-throw for title inference error handling
-    }
-  }
-
   /**
    * Override prepareApiCall to handle Gemini-specific API structure
    */

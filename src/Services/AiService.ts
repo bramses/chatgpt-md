@@ -311,13 +311,14 @@ export abstract class BaseAiService implements IAiApiService {
 
       try {
         // Use a separate try/catch block for the API call to handle errors without returning them to the chat
-        // For title inference, we call the API directly without the plugin system message
-        return await this.callNonStreamingAPIForTitleInference(
+        // Call the regular non-streaming API (which uses AI SDK)
+        const response = await this.callNonStreamingAPI(
           apiKey,
           [{ role: ROLE_USER, content: prompt }],
           config,
           settings
         );
+        return response.fullString || response;
       } catch (apiError) {
         // Log the error but don't return it to the chat
         console.error(`[ChatGPT MD] Error calling API for title inference:`, apiError);
@@ -329,33 +330,6 @@ export abstract class BaseAiService implements IAiApiService {
       return "";
     }
   };
-
-  /**
-   * Call non-streaming API specifically for title inference (without plugin system message)
-   */
-  protected async callNonStreamingAPIForTitleInference(
-    apiKey: string | undefined,
-    messages: Message[],
-    config: Record<string, any>,
-    settings: ChatGPT_MDSettings
-  ): Promise<any> {
-    try {
-      config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings, true); // Skip plugin system message
-
-      const response = await this.apiService.makeNonStreamingRequest(
-        this.getApiEndpoint(config),
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Return simple object with response and model
-      return response;
-    } catch (err) {
-      throw err; // Re-throw for title inference error handling
-    }
-  }
 
   /**
    * Stop streaming
@@ -529,39 +503,6 @@ export abstract class BaseAiService implements IAiApiService {
       // Just return the error message for the chat
       const errorMessage = `Error: ${err}`;
       return { fullString: errorMessage, mode: "streaming" };
-    }
-  }
-
-  /**
-   * Default non-streaming API implementation that can be used by most services
-   */
-  protected async defaultCallNonStreamingAPI(
-    apiKey: string | undefined,
-    messages: Message[],
-    config: Record<string, any>,
-    settings?: ChatGPT_MDSettings,
-    provider?: AiProvider
-  ): Promise<any> {
-    try {
-      console.log(`[ChatGPT MD] "no stream"`, config);
-
-      config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings!);
-
-      const response = await this.apiService.makeNonStreamingRequest(
-        this.getApiEndpoint(config),
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Return simple object with response and model
-      return { fullString: response, model: payload.model };
-    } catch (err) {
-      const isTitleInference =
-        messages.length === 1 && messages[0].content?.toString().includes("Infer title from the summary");
-
-      return this.handleApiCallError(err, config, isTitleInference);
     }
   }
 

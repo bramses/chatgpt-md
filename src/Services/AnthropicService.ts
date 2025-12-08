@@ -219,10 +219,6 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
   }
 
-  protected showNoTitleInferredNotification(): void {
-    this.notificationService.showWarning("Could not infer title. The file name was not changed.");
-  }
-
   /**
    * Override prepareApiCall to add Anthropic-specific headers and handle system message combination
    */
