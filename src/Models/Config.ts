@@ -86,6 +86,7 @@ export interface OpenAIFrontmatterSettings {
   openaiDefaultMaxTokens: number;
   openaiDefaultPresencePenalty: number;
   openaiDefaultFrequencyPenalty: number;
+  openaiApiVersion: string;
 }
 
 /**
@@ -223,6 +224,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   openaiDefaultMaxTokens: DEFAULT_OPENAI_CONFIG.max_tokens,
   openaiDefaultPresencePenalty: DEFAULT_OPENAI_CONFIG.presence_penalty,
   openaiDefaultFrequencyPenalty: DEFAULT_OPENAI_CONFIG.frequency_penalty,
+  openaiApiVersion: DEFAULT_OPENAI_CONFIG.openaiApiVersion,
 
   // Anthropic Defaults
   anthropicDefaultModel: DEFAULT_ANTHROPIC_CONFIG.model,

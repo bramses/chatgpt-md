@@ -22,6 +22,7 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   title: "Untitled",
   top_p: 1,
   url: "https://api.openai.com",
+  openaiApiVersion: "",
 };
 
 export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) => {
@@ -187,6 +188,30 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
   protected showNoTitleInferredNotification(): void {
     this.notificationService.showWarning("Could not infer title. The file name was not changed.");
   }
+
+  /**
+   * Override getApiEndpoint to handle Azure OpenAI URLs
+   *
+   * OpenAI (default):
+   * https://api.openai.com/v1/chat/completions
+   * Azure OpenAI (example)
+   * https://<instance id>.openai.azure.com/openai/deployments/<deployment id>/chat/completions?api-version=<version>
+   */
+  protected getApiEndpoint(config: Record<string, any>): string {
+    let endpoint = super.getApiEndpoint(config);
+    const isAzure = config.url.includes(".openai.azure.com");
+
+    if (isAzure) {
+      endpoint = endpoint.replace("/v1", "");
+    }
+
+    if (config.openaiApiVersion) {
+      const separator = endpoint.includes("?") ? "&" : "?";
+      endpoint = `${endpoint}${separator}api-version=${config.openaiApiVersion}`;
+    }
+
+    return endpoint;
+  }
 }
 
 export interface OpenAIStreamPayload {
@@ -213,4 +238,5 @@ export interface OpenAIConfig {
   title: string;
   top_p: number;
   url: string;
+  openaiApiVersion: string;
 }
