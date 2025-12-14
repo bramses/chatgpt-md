@@ -9,6 +9,7 @@ import { ApiService } from "./ApiService";
 import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
 import { ApiResponseParser } from "./ApiResponseParser";
 import { createOpenRouter, OpenRouterProvider } from "@openrouter/ai-sdk-provider";
+import { ToolService } from "./ToolService";
 
 // Define a constant for OpenRouter service
 export interface OpenRouterModel {
@@ -133,7 +134,8 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean | undefined,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    toolService?: ToolService
   ): Promise<StreamingResponse> {
     // Create a fetch adapter that uses Obsidian's requestUrl
     const customFetch = this.apiService.createFetchAdapter();
@@ -147,6 +149,8 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     // Extract model name (remove provider prefix if present)
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
+    const tools = toolService?.getToolsForRequest(settings!);
+
     // Use the common AI SDK streaming method from base class
     return this.callAiSdkStreamText(
       this.provider(modelName),
@@ -155,7 +159,9 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       config,
       editor,
       headingPrefix,
-      setAtCursor
+      setAtCursor,
+      tools,
+      toolService
     );
   }
 
@@ -163,7 +169,9 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     apiKey: string | undefined,
     messages: Message[],
     config: OpenRouterConfig,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    provider?: OpenRouterProvider,
+    toolService?: ToolService
   ): Promise<any> {
     // Create a fetch adapter that uses Obsidian's requestUrl
     const customFetch = this.apiService.createFetchAdapter();
@@ -177,7 +185,9 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     // Extract model name (remove provider prefix if present)
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
+    const tools = toolService?.getToolsForRequest(settings!);
+
     // Use the common AI SDK method from base class
-    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
+    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages, tools, toolService);
   }
 }

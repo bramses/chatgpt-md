@@ -105,6 +105,11 @@ export class CommandRegistry {
           // Get the appropriate API key for the service
           const apiKeyToUse = this.apiAuthService.getApiKey(settings, frontmatter.aiService);
 
+          // Get tool service if tools are enabled
+          const toolService = settings.enableToolCalling
+            ? this.serviceLocator.getToolService()
+            : undefined;
+
           const response = await this.aiService.callAIAPI(
             messagesWithRoleAndMessage,
             frontmatter,
@@ -113,7 +118,8 @@ export class CommandRegistry {
             editor,
             settings.generateAtCursor,
             apiKeyToUse,
-            settings
+            settings,
+            toolService
           );
 
           editorService.processResponse(editor, response, settings);

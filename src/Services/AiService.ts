@@ -26,6 +26,7 @@ import { AnthropicProvider } from "@ai-sdk/anthropic";
 import { GoogleGenerativeAIProvider } from "@ai-sdk/google";
 import { OpenRouterProvider } from "@openrouter/ai-sdk-provider";
 import { generateText, LanguageModel, streamText } from "ai";
+import { ToolService } from "./ToolService";
 
 /**
  * Interface defining the contract for AI service implementations
@@ -43,7 +44,8 @@ export interface IAiApiService {
     editor?: Editor,
     setAtCursor?: boolean,
     apiKey?: string,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    toolService?: ToolService
   ): Promise<{
     fullString: string;
     mode: string;
@@ -150,7 +152,8 @@ export abstract class BaseAiService implements IAiApiService {
     editor?: Editor,
     setAtCursor?: boolean,
     apiKey?: string,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    toolService?: ToolService
   ): Promise<any> {
     const config = { ...this.getDefaultConfig(), ...options };
 
@@ -160,8 +163,8 @@ export abstract class BaseAiService implements IAiApiService {
     }
 
     return options.stream && editor
-      ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings)
-      : this.callNonStreamingAPI(apiKey, messages, config, settings, this.provider);
+      ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings, toolService)
+      : this.callNonStreamingAPI(apiKey, messages, config, settings, this.provider, toolService);
   }
 
   /**
@@ -248,7 +251,8 @@ export abstract class BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    toolService?: ToolService
   ): Promise<StreamingResponse>;
 
   /**
@@ -259,7 +263,8 @@ export abstract class BaseAiService implements IAiApiService {
     messages: Message[],
     config: Record<string, any>,
     settings?: ChatGPT_MDSettings,
-    provider?: AiProvider
+    provider?: AiProvider,
+    toolService?: ToolService
   ): Promise<any>;
 
   /**
@@ -410,7 +415,9 @@ export abstract class BaseAiService implements IAiApiService {
   protected async callAiSdkGenerateText(
     model: LanguageModel,
     modelName: string,
-    messages: Message[]
+    messages: Message[],
+    tools?: Record<string, any>,
+    toolService?: ToolService
   ): Promise<{ fullString: string; model: string }> {
     // Convert messages to AI SDK format
     const aiSdkMessages = messages.map((msg) => ({
@@ -418,14 +425,35 @@ export abstract class BaseAiService implements IAiApiService {
       content: msg.content,
     }));
 
-    // Call AI SDK generateText
-    const { text } = await generateText({
+    // Prepare request
+    const request: any = {
       model,
       messages: aiSdkMessages,
-    });
+    };
+
+    // Add tools if provided
+    if (tools && Object.keys(tools).length > 0) {
+      request.tools = tools;
+    }
+
+    // Call AI SDK generateText
+    const response = await generateText(request);
+
+    // Handle tool calls if present
+    if (toolService && response.toolCalls && response.toolCalls.length > 0) {
+      console.log(`[ChatGPT MD] AI requested ${response.toolCalls.length} tool call(s)`);
+
+      await toolService.handleToolApprovalRequests(
+        response.toolCalls,
+        { app: (this as any).app, toolCallId: '', messages: aiSdkMessages }
+      );
+
+      // TODO: Continue conversation with tool results
+      // This would require recursive call or handling in the caller
+    }
 
     // Return in expected format
-    return { fullString: text, model: modelName };
+    return { fullString: response.text, model: modelName };
   }
 
   /**
@@ -439,7 +467,9 @@ export abstract class BaseAiService implements IAiApiService {
     config: Record<string, any>,
     editor: Editor,
     headingPrefix: string,
-    setAtCursor?: boolean
+    setAtCursor?: boolean,
+    tools?: Record<string, any>,
+    toolService?: ToolService
   ): Promise<StreamingResponse> {
     try {
       // Convert messages to AI SDK format
@@ -455,12 +485,21 @@ export abstract class BaseAiService implements IAiApiService {
       const abortController = new AbortController();
       this.apiService.setAbortController(abortController);
 
-      // Call AI SDK streamText
-      const { textStream } = streamText({
+      // Prepare request
+      const request: any = {
         model,
         messages: aiSdkMessages,
         abortSignal: abortController.signal,
-      });
+      };
+
+      // Add tools if provided
+      if (tools && Object.keys(tools).length > 0) {
+        request.tools = tools;
+      }
+
+      // Call AI SDK streamText
+      const result = streamText(request);
+      const { textStream } = result;
 
       let fullText = "";
       let currentCursor = setAtCursor ? cursorPositions.initialCursor : cursorPositions.newCursor;
@@ -486,6 +525,28 @@ export abstract class BaseAiService implements IAiApiService {
           const currentOffset = editor.posToOffset(currentCursor);
           const newOffset = currentOffset + textPart.length;
           currentCursor = editor.offsetToPos(newOffset);
+        }
+      }
+
+      // Handle tool calls after streaming completes
+      const finalResult = await result;
+      if (toolService && finalResult.toolCalls) {
+        const toolCalls = await finalResult.toolCalls;
+        if (toolCalls && toolCalls.length > 0) {
+          console.log(`[ChatGPT MD] AI requested ${toolCalls.length} tool call(s)`);
+
+          // Show tool request indicator in editor
+          const toolNotice = "\n\n_[Tool approval required - check popup]_\n";
+          editor.replaceRange(toolNotice, currentCursor);
+
+          // Handle tool approvals
+          await toolService.handleToolApprovalRequests(
+            toolCalls,
+            { app: (this as any).app, toolCallId: '', messages: aiSdkMessages }
+          );
+
+          // TODO: Continue conversation with tool results
+          // This would require recursively calling streamText again
         }
       }
 

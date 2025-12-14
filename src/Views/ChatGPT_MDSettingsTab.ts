@@ -111,6 +111,16 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "Chat Behavior",
       },
       {
+        id: "enableToolCalling",
+        name: "Enable AI Tool Calling (Experimental)",
+        description:
+          "Allow the AI to use tools like vault search and file reading. " +
+          "All tool calls require your explicit approval via popup. " +
+          "⚠️ Experimental feature - tools may access your vault data.",
+        type: "toggle",
+        group: "Chat Behavior",
+      },
+      {
         id: "inferTitleLanguage",
         name: "Infer Title Language",
         description: "Language to use for title inference.",

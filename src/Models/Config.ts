@@ -60,6 +60,8 @@ export interface ChatBehaviorSettings {
   generateAtCursor: boolean;
   /** Whether to automatically infer title after 4 messages have been exchanged */
   autoInferTitle: boolean;
+  /** Whether to enable AI tool calling (vault search, file read) */
+  enableToolCalling: boolean;
   /** System message that provides context about the Obsidian/ChatGPT MD plugin environment */
   pluginSystemMessage: string;
 }
@@ -207,6 +209,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   stream: true,
   generateAtCursor: false,
   autoInferTitle: false,
+  enableToolCalling: false,
   pluginSystemMessage: PLUGIN_SYSTEM_MESSAGE,
 
   // Formatting

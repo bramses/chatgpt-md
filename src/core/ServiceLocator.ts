@@ -27,6 +27,10 @@ import {
   AI_SERVICE_OPENROUTER,
 } from "src/Constants";
 import { SettingsService } from "src/Services/SettingsService";
+import { VaultTools } from "src/Services/VaultTools";
+import { ToolRegistry } from "src/Services/ToolRegistry";
+import { ToolExecutor } from "src/Services/ToolExecutor";
+import { ToolService } from "src/Services/ToolService";
 
 /**
  * ServiceLocator is responsible for creating and providing access to services
@@ -49,6 +53,10 @@ export class ServiceLocator {
   private apiAuthService: ApiAuthService;
   private apiResponseParser: ApiResponseParser;
   private settingsService: SettingsService;
+  private vaultTools: VaultTools;
+  private toolRegistry: ToolRegistry;
+  private toolExecutor: ToolExecutor;
+  private toolService: ToolService;
 
   constructor(app: App, plugin: Plugin) {
     this.app = app;
@@ -89,6 +97,20 @@ export class ServiceLocator {
 
     // Initialize settings service
     this.settingsService = new SettingsService(this.plugin, this.notificationService, this.errorService);
+
+    // Initialize tool services
+    this.vaultTools = new VaultTools(this.app, this.fileService);
+    this.toolRegistry = new ToolRegistry(this.app, this.vaultTools);
+    this.toolExecutor = new ToolExecutor(
+      this.app,
+      this.toolRegistry,
+      this.notificationService
+    );
+    this.toolService = new ToolService(
+      this.app,
+      this.toolRegistry,
+      this.toolExecutor
+    );
   }
 
   /**
@@ -203,5 +225,33 @@ export class ServiceLocator {
    */
   getSettingsService(): SettingsService {
     return this.settingsService;
+  }
+
+  /**
+   * Get the tool service for AI tool calling
+   */
+  getToolService(): ToolService {
+    return this.toolService;
+  }
+
+  /**
+   * Get the tool registry
+   */
+  getToolRegistry(): ToolRegistry {
+    return this.toolRegistry;
+  }
+
+  /**
+   * Get the vault tools
+   */
+  getVaultTools(): VaultTools {
+    return this.vaultTools;
+  }
+
+  /**
+   * Get the tool executor
+   */
+  getToolExecutor(): ToolExecutor {
+    return this.toolExecutor;
   }
 }

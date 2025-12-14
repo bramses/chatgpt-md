@@ -9,6 +9,7 @@ import { ApiResponseParser } from "./ApiResponseParser";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
 import { createOpenAI, OpenAIProvider } from "@ai-sdk/openai";
+import { ToolService } from "./ToolService";
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   apiKey: "",
@@ -115,7 +116,8 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean | undefined,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    toolService?: ToolService
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
     // Create a fetch adapter that uses Obsidian's requestUrl
     const customFetch = this.apiService.createFetchAdapter();
@@ -130,6 +132,9 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     // Extract model name (remove provider prefix if present)
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
+    // Get tools if enabled
+    const tools = toolService?.getToolsForRequest(settings!);
+
     // Use the common AI SDK streaming method from base class
     return this.callAiSdkStreamText(
       this.provider(modelName),
@@ -138,7 +143,9 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
       config,
       editor,
       headingPrefix,
-      setAtCursor
+      setAtCursor,
+      tools,
+      toolService
     );
   }
 
@@ -146,7 +153,9 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     apiKey: string | undefined,
     messages: Message[],
     config: OpenAIConfig,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    provider?: OpenAIProvider,
+    toolService?: ToolService
   ): Promise<any> {
     // Create a fetch adapter that uses Obsidian's requestUrl
     const customFetch = this.apiService.createFetchAdapter();
@@ -161,8 +170,11 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     // Extract model name (remove provider prefix if present)
     const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
 
+    // Get tools if enabled
+    const tools = toolService?.getToolsForRequest(settings!);
+
     // Use the common AI SDK method from base class
-    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages);
+    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages, tools, toolService);
   }
 }
 
