@@ -47,15 +47,21 @@ export class ToolApprovalModal extends Modal {
     argsContainer.createEl("h4", { text: "Arguments:" });
 
     const argsList = argsContainer.createEl("ul");
-    for (const [key, value] of Object.entries(this.args)) {
-      const displayValue = Array.isArray(value) && value.length > 3
-        ? `[${value.slice(0, 3).join(', ')}... (${value.length} total)]`
-        : JSON.stringify(value);
-      argsList.createEl("li", { text: `${key}: ${displayValue}` });
+
+    // Safely iterate over args if they exist
+    if (this.args && typeof this.args === 'object') {
+      for (const [key, value] of Object.entries(this.args)) {
+        const displayValue = Array.isArray(value) && value.length > 3
+          ? `[${value.slice(0, 3).join(', ')}... (${value.length} total)]`
+          : JSON.stringify(value);
+        argsList.createEl("li", { text: `${key}: ${displayValue}` });
+      }
+    } else {
+      argsList.createEl("li", { text: "(no arguments)" });
     }
 
     // File selection for file_read tool
-    if (this.toolName === "file_read" && Array.isArray(this.args.filePaths)) {
+    if (this.toolName === "file_read" && this.args && Array.isArray(this.args.filePaths)) {
       this.renderFileSelection(contentEl, this.args.filePaths);
     }
 
@@ -153,19 +159,22 @@ export class ToolApprovalModal extends Modal {
    * Get modified arguments based on user selections
    */
   private getModifiedArgs(): Record<string, any> {
+    // Default to empty object if args undefined
+    const baseArgs = this.args || {};
+
     // For file_read, filter to only selected files
-    if (this.toolName === "file_read" && this.args.filePaths) {
+    if (this.toolName === "file_read" && baseArgs.filePaths) {
       const selectedFiles = Array.from(this.fileSelections.entries())
         .filter(([_, selected]) => selected)
         .map(([path, _]) => path);
 
       return {
-        ...this.args,
+        ...baseArgs,
         filePaths: selectedFiles,
       };
     }
 
-    return this.args;
+    return baseArgs;
   }
 
   /**

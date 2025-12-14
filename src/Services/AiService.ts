@@ -443,13 +443,72 @@ export abstract class BaseAiService implements IAiApiService {
     if (toolService && response.toolCalls && response.toolCalls.length > 0) {
       console.log(`[ChatGPT MD] AI requested ${response.toolCalls.length} tool call(s)`);
 
-      await toolService.handleToolApprovalRequests(
-        response.toolCalls,
-        { app: (this as any).app, toolCallId: '', messages: aiSdkMessages }
-      );
+      // Request user approval and execute tool calls
+      const toolResults = await toolService.handleToolCalls(response.toolCalls);
 
-      // TODO: Continue conversation with tool results
-      // This would require recursive call or handling in the caller
+      console.log('[ChatGPT MD] Tool results:', toolResults);
+
+      // Format tool results for the AI to understand
+      const formattedResults = toolResults
+        .map((tr: any) => {
+          const result = tr.result;
+          if (Array.isArray(result)) {
+            // Format array results with markdown links for file paths
+            const formattedArray = result.map((item: any) => {
+              if (item.path && item.basename) {
+                // Convert file paths to markdown links
+                return {
+                  ...item,
+                  path: `[${item.basename}](${item.path})`,
+                };
+              }
+              return item;
+            });
+            return `Tool "${tr.toolCallId}": ${JSON.stringify(formattedArray, null, 2)}`;
+          } else if (typeof result === 'object' && result !== null) {
+            return `Tool "${tr.toolCallId}": ${JSON.stringify(result, null, 2)}`;
+          } else {
+            return `Tool "${tr.toolCallId}": ${String(result)}`;
+          }
+        })
+        .join('\n\n');
+
+      // Add tool results to messages and call generateText again to get final response
+      const updatedMessages = [...aiSdkMessages];
+
+      // Add assistant message with the initial response (may be empty)
+      const assistantContent = response.text && response.text.trim() ? response.text : '';
+      if (assistantContent) {
+        updatedMessages.push({
+          role: 'assistant',
+          content: assistantContent,
+        });
+      }
+
+      // Add tool results as user message
+      updatedMessages.push({
+        role: 'user',
+        content: `Tool execution results:\n\n${formattedResults}`,
+      });
+
+      // Call generateText again with tool results
+      // Create a new request without tools to avoid infinite loops
+      const continuationRequest: any = {
+        model,
+        messages: updatedMessages,
+        // Don't include tools in the second call to avoid re-triggering tools
+      };
+
+      const finalResponse = await generateText(continuationRequest);
+
+      console.log('[ChatGPT MD] Final response after tool execution:', finalResponse.text);
+      console.log('[ChatGPT MD] Final response type:', typeof finalResponse.text);
+      console.log('[ChatGPT MD] Full final response:', finalResponse);
+
+      // Ensure we return a string
+      const finalText = typeof finalResponse.text === 'string' ? finalResponse.text : String(finalResponse.text || '');
+
+      return { fullString: finalText, model: modelName };
     }
 
     // Return in expected format
@@ -536,17 +595,56 @@ export abstract class BaseAiService implements IAiApiService {
           console.log(`[ChatGPT MD] AI requested ${toolCalls.length} tool call(s)`);
 
           // Show tool request indicator in editor
-          const toolNotice = "\n\n_[Tool approval required - check popup]_\n";
+          const toolNotice = "\n\n_[Tool approval required - requesting approval...]_\n";
           editor.replaceRange(toolNotice, currentCursor);
+          currentCursor = editor.offsetToPos(editor.posToOffset(currentCursor) + toolNotice.length);
 
-          // Handle tool approvals
-          await toolService.handleToolApprovalRequests(
-            toolCalls,
-            { app: (this as any).app, toolCallId: '', messages: aiSdkMessages }
-          );
+          // Request user approval and execute tool calls
+          const toolResults = await toolService.handleToolCalls(toolCalls);
 
-          // TODO: Continue conversation with tool results
-          // This would require recursively calling streamText again
+          // Clear the notice and add tool results to editor
+          editor.replaceRange('', { line: currentCursor.line - 1, ch: 0 }, currentCursor);
+          currentCursor = { line: currentCursor.line - 1, ch: 0 };
+
+          // Add tool results summary to editor
+          const resultsSummary = `\n\n_Tool results:_\n\`\`\`\n${JSON.stringify(toolResults, null, 2)}\n\`\`\`\n\n`;
+          editor.replaceRange(resultsSummary, currentCursor);
+          currentCursor = editor.offsetToPos(editor.posToOffset(currentCursor) + resultsSummary.length);
+
+          // Call streamText again with tool results included in messages
+          const updatedMessages = [...aiSdkMessages];
+          updatedMessages.push({
+            role: 'assistant',
+            content: fullText,
+          });
+          updatedMessages.push({
+            role: 'user',
+            content: `Tool execution results: ${JSON.stringify(toolResults)}`,
+          });
+
+          // Call streamText again for continuation
+          const continuationRequest: any = {
+            model,
+            messages: updatedMessages,
+          };
+          if (tools && Object.keys(tools).length > 0) {
+            continuationRequest.tools = tools;
+          }
+
+          // Continue streaming the response
+          const continuationResult = streamText(continuationRequest);
+          const continuationTextStream = continuationResult.textStream;
+
+          for await (const textPart of continuationTextStream) {
+            if (this.apiService.wasAborted()) {
+              break;
+            }
+            fullText += textPart;
+            editor.replaceRange(textPart, currentCursor);
+            const currentOffset = editor.posToOffset(currentCursor);
+            const newOffset = currentOffset + textPart.length;
+            currentCursor = editor.offsetToPos(newOffset);
+          }
         }
       }
 

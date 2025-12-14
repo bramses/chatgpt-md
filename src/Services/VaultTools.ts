@@ -25,10 +25,19 @@ export class VaultTools {
     // Get all markdown files
     const files = this.app.vault.getMarkdownFiles();
 
+    // Get the current file path to exclude it from search
+    const currentFile = this.app.workspace.getActiveFile();
+    const currentFilePath = currentFile?.path;
+
     for (const file of files) {
       // Check if aborted
       if (context.abortSignal?.aborted) {
         break;
+      }
+
+      // Skip current file
+      if (currentFilePath && file.path === currentFilePath) {
+        continue;
       }
 
       // Search in filename

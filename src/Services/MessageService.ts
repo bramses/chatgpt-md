@@ -290,8 +290,15 @@ export class MessageService {
    * Process a standard (non-streaming) response
    */
   private processStandardResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings): void {
-    const responseStr = typeof response === "object" ? response.fullString || response : response;
-    const model = typeof response === "object" ? response.model : undefined;
+    let responseStr: string;
+    let model: string | undefined;
+
+    if (typeof response === "object" && response !== null) {
+      responseStr = response.fullString || JSON.stringify(response.text || response) || "[No response]";
+      model = response.model;
+    } else {
+      responseStr = String(response || "[No response]");
+    }
 
     const headingPrefix = getHeadingPrefix(settings.headingLevel);
     const assistantHeader = getHeaderRole(headingPrefix, ROLE_ASSISTANT, model);
