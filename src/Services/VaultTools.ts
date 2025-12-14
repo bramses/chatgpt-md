@@ -13,6 +13,7 @@ export class VaultTools {
 
   /**
    * Search vault for files matching query (searches filename and content)
+   * Supports multi-word queries - matches files containing ANY of the words (OR search)
    */
   async searchVault(
     args: { query: string; limit?: number },
@@ -20,6 +21,12 @@ export class VaultTools {
   ): Promise<VaultSearchResult[]> {
     const { query, limit = 10 } = args;
     const lowerQuery = query.toLowerCase();
+
+    // Split query into individual words for OR search
+    const queryWords = lowerQuery
+      .split(/\s+/)
+      .filter(word => word.length > 0);
+
     const results: VaultSearchResult[] = [];
 
     // Get all markdown files
@@ -40,23 +47,37 @@ export class VaultTools {
         continue;
       }
 
-      // Search in filename
-      if (file.basename.toLowerCase().includes(lowerQuery)) {
+      const lowerBasename = file.basename.toLowerCase();
+
+      // Check if filename matches any query word
+      let filenameMatch = false;
+      for (const word of queryWords) {
+        if (lowerBasename.includes(word)) {
+          filenameMatch = true;
+          break;
+        }
+      }
+
+      if (filenameMatch) {
         results.push({
           path: file.path,
           basename: file.basename,
           matches: 1,
         });
-      }
-      // Search in content
-      else {
+      } else {
+        // Check if file content matches any query word
         const content = await this.app.vault.read(file);
-        if (content.toLowerCase().includes(lowerQuery)) {
-          results.push({
-            path: file.path,
-            basename: file.basename,
-            matches: 1,
-          });
+        const lowerContent = content.toLowerCase();
+
+        for (const word of queryWords) {
+          if (lowerContent.includes(word)) {
+            results.push({
+              path: file.path,
+              basename: file.basename,
+              matches: 1,
+            });
+            break;
+          }
         }
       }
 

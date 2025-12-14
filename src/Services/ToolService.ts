@@ -1,4 +1,4 @@
-import { App } from "obsidian";
+import { App, TFile } from "obsidian";
 import { ToolRegistry } from "./ToolRegistry";
 import { ToolExecutor } from "./ToolExecutor";
 import { ChatGPT_MDSettings } from "src/Models/Config";
@@ -55,6 +55,51 @@ export class ToolService {
       `[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} search results`
     );
     return decision.approvedResults;
+  }
+
+  /**
+   * Read file contents for approved vault_search results
+   */
+  async readFilesFromSearchResults(
+    searchResults: VaultSearchResult[]
+  ): Promise<Array<{ path: string; content: string }>> {
+    const fileContents: Array<{ path: string; content: string }> = [];
+
+    console.log(`[ChatGPT MD] readFilesFromSearchResults called with ${searchResults.length} results`);
+
+    for (const searchResult of searchResults) {
+      try {
+        // Extract actual file path from markdown link format if needed
+        // vault_search returns paths as markdown links like "[basename](path)"
+        let actualPath = searchResult.path;
+        const markdownMatch = actualPath.match(/\]\((.*?)\)$/);
+        if (markdownMatch) {
+          actualPath = markdownMatch[1];
+          console.log(`[ChatGPT MD] Extracted actual path from markdown link: ${actualPath}`);
+        }
+
+        console.log(`[ChatGPT MD] Attempting to read file: ${actualPath}`);
+        const file = this.app.vault.getAbstractFileByPath(actualPath);
+        console.log(`[ChatGPT MD] getAbstractFileByPath returned:`, file);
+
+        if (file instanceof TFile) {
+          console.log(`[ChatGPT MD] File is TFile, reading content...`);
+          const content = await this.app.vault.read(file);
+          console.log(`[ChatGPT MD] Successfully read ${content.length} characters from ${actualPath}`);
+          fileContents.push({
+            path: actualPath,
+            content: content,
+          });
+        } else {
+          console.log(`[ChatGPT MD] File is not TFile instance. Type: ${typeof file}, Constructor: ${file?.constructor?.name}`);
+        }
+      } catch (error) {
+        console.error(`[ChatGPT MD] Error reading file ${searchResult.path}:`, error);
+      }
+    }
+
+    console.log(`[ChatGPT MD] readFilesFromSearchResults completed: read ${fileContents.length} files`);
+    return fileContents;
   }
 
   /**
