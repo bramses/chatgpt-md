@@ -448,23 +448,40 @@ export abstract class BaseAiService implements IAiApiService {
 
       console.log('[ChatGPT MD] Tool results:', toolResults);
 
+      // Handle vault_search results approval - filter results before sending to LLM
+      const filteredToolResults = [];
+      for (const tr of toolResults) {
+        // Check if this is a vault_search result that needs approval
+        const correspondingToolCall = response.toolCalls.find((tc: any) => {
+          const tcId = tc.toolCallId || tc.id || 'unknown';
+          return tcId === tr.toolCallId;
+        });
+
+        if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search' && Array.isArray(tr.result)) {
+          // Request approval for search results before showing to LLM
+          const query = (correspondingToolCall.input as any)?.query || 'unknown';
+          const approvedResults = await toolService.requestSearchResultsApproval(
+            query,
+            tr.result
+          );
+
+          filteredToolResults.push({
+            ...tr,
+            result: approvedResults,
+          });
+        } else {
+          // Keep other tool results as-is
+          filteredToolResults.push(tr);
+        }
+      }
+
       // Format tool results for the AI to understand
-      const formattedResults = toolResults
+      const formattedResults = filteredToolResults
         .map((tr: any) => {
           const result = tr.result;
           if (Array.isArray(result)) {
-            // Format array results with markdown links for file paths
-            const formattedArray = result.map((item: any) => {
-              if (item.path && item.basename) {
-                // Convert file paths to markdown links
-                return {
-                  ...item,
-                  path: `[${item.basename}](${item.path})`,
-                };
-              }
-              return item;
-            });
-            return `Tool "${tr.toolCallId}": ${JSON.stringify(formattedArray, null, 2)}`;
+            // Format array results as JSON (paths are already formatted as markdown links from tool)
+            return `Tool "${tr.toolCallId}": ${JSON.stringify(result, null, 2)}`;
           } else if (typeof result === 'object' && result !== null) {
             return `Tool "${tr.toolCallId}": ${JSON.stringify(result, null, 2)}`;
           } else {
@@ -492,22 +509,102 @@ export abstract class BaseAiService implements IAiApiService {
       });
 
       // Call generateText again with tool results
-      // Create a new request without tools to avoid infinite loops
+      // Include tools in the continuation so the AI can make more tool calls (e.g., file_read after vault_search)
       const continuationRequest: any = {
         model,
         messages: updatedMessages,
-        // Don't include tools in the second call to avoid re-triggering tools
       };
 
-      const finalResponse = await generateText(continuationRequest);
+      // Include tools if they exist (for chained tool calls like vault_search -> file_read)
+      if (tools && Object.keys(tools).length > 0) {
+        continuationRequest.tools = tools;
+      }
 
-      console.log('[ChatGPT MD] Final response after tool execution:', finalResponse.text);
-      console.log('[ChatGPT MD] Final response type:', typeof finalResponse.text);
-      console.log('[ChatGPT MD] Full final response:', finalResponse);
+      const continuationResponse = await generateText(continuationRequest);
 
-      // Ensure we return a string
-      const finalText = typeof finalResponse.text === 'string' ? finalResponse.text : String(finalResponse.text || '');
+      console.log('[ChatGPT MD] Continuation response after tool execution:', continuationResponse.text);
+      console.log('[ChatGPT MD] Continuation tool calls:', continuationResponse.toolCalls?.length);
 
+      // Handle any additional tool calls from the continuation
+      if (toolService && continuationResponse.toolCalls && continuationResponse.toolCalls.length > 0) {
+        console.log(`[ChatGPT MD] AI made additional tool call(s) after tool results: ${continuationResponse.toolCalls.length}`);
+
+        // Recursively handle any additional tool calls
+        const additionalToolResults = await toolService.handleToolCalls(continuationResponse.toolCalls);
+
+        console.log('[ChatGPT MD] Additional tool results:', additionalToolResults);
+
+        // Filter results based on tool type (same privacy filtering as initial results)
+        const filteredAdditionalResults = [];
+        for (const tr of additionalToolResults) {
+          // Check if this is a vault_search result that needs approval
+          const correspondingToolCall = continuationResponse.toolCalls.find((tc: any) => {
+            const tcId = tc.toolCallId || tc.id || 'unknown';
+            return tcId === tr.toolCallId;
+          });
+
+          if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search' && Array.isArray(tr.result)) {
+            // Request approval for search results before showing to LLM
+            const query = (correspondingToolCall.input as any)?.query || 'unknown';
+            const approvedResults = await toolService.requestSearchResultsApproval(
+              query,
+              tr.result
+            );
+
+            filteredAdditionalResults.push({
+              ...tr,
+              result: approvedResults,
+            });
+          } else {
+            // Keep other tool results as-is
+            filteredAdditionalResults.push(tr);
+          }
+        }
+
+        // Format the additional tool results
+        const additionalFormattedResults = filteredAdditionalResults
+          .map((tr: any) => {
+            const result = tr.result;
+            if (Array.isArray(result)) {
+              return `Tool "${tr.toolCallId}": ${JSON.stringify(result, null, 2)}`;
+            } else if (typeof result === 'object' && result !== null) {
+              return `Tool "${tr.toolCallId}": ${JSON.stringify(result, null, 2)}`;
+            } else {
+              return `Tool "${tr.toolCallId}": ${String(result)}`;
+            }
+          })
+          .join('\n\n');
+
+        // Add the continuation response and additional tool results to messages
+        const finalMessages = [...updatedMessages];
+
+        const continuationContent = continuationResponse.text && continuationResponse.text.trim() ? continuationResponse.text : '';
+        if (continuationContent) {
+          finalMessages.push({
+            role: 'assistant',
+            content: continuationContent,
+          });
+        }
+
+        finalMessages.push({
+          role: 'user',
+          content: `Additional tool execution results:\n\n${additionalFormattedResults}`,
+        });
+
+        // Call generateText one more time to get the final response
+        const finalRequest: any = {
+          model,
+          messages: finalMessages,
+          // Don't include tools in the final call to prevent infinite loops
+        };
+
+        const finalResponse = await generateText(finalRequest);
+        const finalText = typeof finalResponse.text === 'string' ? finalResponse.text : String(finalResponse.text || '');
+        return { fullString: finalText, model: modelName };
+      }
+
+      // No additional tool calls, return the continuation response
+      const finalText = typeof continuationResponse.text === 'string' ? continuationResponse.text : String(continuationResponse.text || '');
       return { fullString: finalText, model: modelName };
     }
 
@@ -602,12 +699,39 @@ export abstract class BaseAiService implements IAiApiService {
           // Request user approval and execute tool calls
           const toolResults = await toolService.handleToolCalls(toolCalls);
 
+          // Handle vault_search results approval - filter results before sending to LLM
+          const filteredToolResults = [];
+          for (const tr of toolResults) {
+            // Check if this is a vault_search result that needs approval
+            const correspondingToolCall = toolCalls.find((tc: any) => {
+              const tcId = tc.toolCallId || tc.id || 'unknown';
+              return tcId === tr.toolCallId;
+            });
+
+            if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search' && Array.isArray(tr.result)) {
+              // Request approval for search results before showing to LLM
+              const query = (correspondingToolCall.input as any)?.query || 'unknown';
+              const approvedResults = await toolService.requestSearchResultsApproval(
+                query,
+                tr.result
+              );
+
+              filteredToolResults.push({
+                ...tr,
+                result: approvedResults,
+              });
+            } else {
+              // Keep other tool results as-is
+              filteredToolResults.push(tr);
+            }
+          }
+
           // Clear the notice and add tool results to editor
           editor.replaceRange('', { line: currentCursor.line - 1, ch: 0 }, currentCursor);
           currentCursor = { line: currentCursor.line - 1, ch: 0 };
 
           // Add tool results summary to editor
-          const resultsSummary = `\n\n_Tool results:_\n\`\`\`\n${JSON.stringify(toolResults, null, 2)}\n\`\`\`\n\n`;
+          const resultsSummary = `\n\n_Tool results:_\n\`\`\`\n${JSON.stringify(filteredToolResults, null, 2)}\n\`\`\`\n\n`;
           editor.replaceRange(resultsSummary, currentCursor);
           currentCursor = editor.offsetToPos(editor.posToOffset(currentCursor) + resultsSummary.length);
 
@@ -619,7 +743,7 @@ export abstract class BaseAiService implements IAiApiService {
           });
           updatedMessages.push({
             role: 'user',
-            content: `Tool execution results: ${JSON.stringify(toolResults)}`,
+            content: `Tool execution results: ${JSON.stringify(filteredToolResults)}`,
           });
 
           // Call streamText again for continuation
@@ -644,6 +768,64 @@ export abstract class BaseAiService implements IAiApiService {
             const currentOffset = editor.posToOffset(currentCursor);
             const newOffset = currentOffset + textPart.length;
             currentCursor = editor.offsetToPos(newOffset);
+          }
+
+          // Check if there were additional tool calls in the continuation
+          const continuationFinalResult = await continuationResult;
+          const additionalToolCalls = continuationFinalResult.toolCalls ? await Promise.resolve(continuationFinalResult.toolCalls) : [];
+          if (toolService && additionalToolCalls && additionalToolCalls.length > 0) {
+            console.log(`[ChatGPT MD] AI made additional tool call(s) in continuation: ${additionalToolCalls.length}`);
+
+            // Handle the additional tool calls
+            const additionalToolResults = await toolService.handleToolCalls(additionalToolCalls);
+
+            // Filter results based on tool type (same privacy filtering as initial results)
+            const filteredAdditionalResults = [];
+            for (const tr of additionalToolResults) {
+              // Check if this is a vault_search result that needs approval
+              const correspondingToolCall = additionalToolCalls.find((tc: any) => {
+                const tcId = tc.toolCallId || tc.id || 'unknown';
+                return tcId === tr.toolCallId;
+              });
+
+              if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search' && Array.isArray(tr.result)) {
+                // Request approval for search results before showing to LLM
+                const query = (correspondingToolCall.input as any)?.query || 'unknown';
+                const approvedResults = await toolService.requestSearchResultsApproval(
+                  query,
+                  tr.result
+                );
+
+                filteredAdditionalResults.push({
+                  ...tr,
+                  result: approvedResults,
+                });
+              } else {
+                // Keep other tool results as-is
+                filteredAdditionalResults.push(tr);
+              }
+            }
+
+            // Add separator and tool results to editor
+            editor.replaceRange("\n\n_[Additional tool results:]_\n", currentCursor);
+            currentCursor = editor.offsetToPos(editor.posToOffset(currentCursor) + "\n\n_[Additional tool results:]_\n".length);
+
+            // Format and display the additional tool results
+            const additionalFormattedResults = filteredAdditionalResults
+              .map((tr: any) => {
+                const result = tr.result;
+                if (Array.isArray(result)) {
+                  return JSON.stringify(result, null, 2);
+                } else if (typeof result === 'object' && result !== null) {
+                  return JSON.stringify(result, null, 2);
+                } else {
+                  return String(result);
+                }
+              })
+              .join('\n\n');
+
+            editor.replaceRange(additionalFormattedResults + "\n\n", currentCursor);
+            currentCursor = editor.offsetToPos(editor.posToOffset(currentCursor) + additionalFormattedResults.length + "\n\n".length);
           }
         }
       }

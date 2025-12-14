@@ -107,21 +107,25 @@ export class ToolApprovalModal extends Modal {
    * Render file selection UI for file_read tool
    */
   private renderFileSelection(container: HTMLElement, filePaths: string[]): void {
-    container.createEl("h4", { text: "Select files to share with AI:" });
+    container.createEl("h4", { text: "Which files should the AI read?" });
 
     const fileListContainer = container.createDiv({ cls: "file-selection-list" });
 
-    // Initialize all files as selected by default
+    // Initialize all files as selected by default (if not already set)
     for (const path of filePaths) {
-      this.fileSelections.set(path, true);
+      // Only set to true if not already in the map (preserve user selections)
+      if (!this.fileSelections.has(path)) {
+        this.fileSelections.set(path, true);
+      }
 
       const fileName = path.split('/').pop() || path;
+      const currentValue = this.fileSelections.get(path) || false;
 
       new Setting(fileListContainer)
         .setName(fileName)
         .setDesc(path)
         .addToggle((toggle) =>
-          toggle.setValue(true).onChange((value) => {
+          toggle.setValue(currentValue).onChange((value) => {
             this.fileSelections.set(path, value);
           })
         );
@@ -168,6 +172,12 @@ export class ToolApprovalModal extends Modal {
         .filter(([_, selected]) => selected)
         .map(([path, _]) => path);
 
+      console.log('[ChatGPT MD] File selections:', {
+        original: baseArgs.filePaths,
+        selected: selectedFiles,
+        selections: Array.from(this.fileSelections.entries())
+      });
+
       return {
         ...baseArgs,
         filePaths: selectedFiles,
@@ -193,8 +203,8 @@ export class ToolApprovalModal extends Modal {
    */
   private getToolPurpose(): string {
     const purposes: Record<string, string> = {
-      vault_search: "Search your vault for files matching the query. Returns file names and content previews.",
-      file_read: "Read the full contents of the specified files. You can select which files to share.",
+      vault_search: "Search your vault for files matching the query. Returns file names and content previews. The current note is excluded.",
+      file_read: "Read the full contents of the specified files. You can select which files you want to share with the AI.",
     };
     return purposes[this.toolName] || "Execute a tool operation.";
   }

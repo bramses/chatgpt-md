@@ -42,12 +42,10 @@ export class VaultTools {
 
       // Search in filename
       if (file.basename.toLowerCase().includes(lowerQuery)) {
-        const content = await this.app.vault.read(file);
         results.push({
           path: file.path,
           basename: file.basename,
           matches: 1,
-          preview: content.substring(0, 200),
         });
       }
       // Search in content
@@ -58,7 +56,6 @@ export class VaultTools {
             path: file.path,
             basename: file.basename,
             matches: 1,
-            preview: this.extractPreview(content, query, 100),
           });
         }
       }

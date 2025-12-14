@@ -35,7 +35,7 @@ export interface VaultSearchResult {
   path: string;
   basename: string;
   matches: number;
-  preview: string;
+  preview?: string; // Optional: file preview (removed for privacy - use file_read for full content)
 }
 
 /**
@@ -54,4 +54,20 @@ export interface FileReadResult {
   path: string;
   content: string;
   size: number;
+}
+
+/**
+ * Request to approve search results before showing to LLM
+ */
+export interface SearchResultsApprovalRequest {
+  query: string;
+  results: VaultSearchResult[];
+}
+
+/**
+ * User's decision on which search results to share with LLM
+ */
+export interface SearchResultsApprovalDecision {
+  approved: boolean;
+  approvedResults: VaultSearchResult[]; // Only the approved results
 }

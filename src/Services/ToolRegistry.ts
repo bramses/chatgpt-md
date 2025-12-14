@@ -32,11 +32,17 @@ export class ToolRegistry {
       ),
       execute: async (args: { query: string; limit?: number }) => {
         // Tool execution - approval is handled by the caller via ToolExecutor
-        return await this.vaultTools.searchVault(args, {
+        const results = await this.vaultTools.searchVault(args, {
           app: this.app,
           toolCallId: '',
           messages: [],
         });
+
+        // Format results with markdown links for file paths
+        return results.map(result => ({
+          ...result,
+          path: `[${result.basename}](${result.path})`,
+        }));
       },
     });
     this.registerTool("vault_search", vaultSearchTool);
