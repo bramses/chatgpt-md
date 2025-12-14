@@ -22,6 +22,7 @@ This document provides a comprehensive plan for implementing AI SDK v6 tool call
 ## User Requirements
 
 Based on user decisions:
+
 - **Search Scope**: File names AND content (full search)
 - **Providers**: OpenAI, Anthropic, Gemini, OpenRouter
 - **Initial Tools**: Vault search + file read (two tools)
@@ -67,6 +68,7 @@ Supporting Components:
 ## Implementation Phases
 
 ### Phase 1: Foundation (New Files)
+
 Create 6 new files with core tool functionality:
 
 1. **`src/Models/Tool.ts`** - TypeScript type definitions
@@ -77,12 +79,14 @@ Create 6 new files with core tool functionality:
 6. **`src/Services/ToolService.ts`** - Main orchestration
 
 ### Phase 2: Settings Integration
+
 Modify 2 files to add tool calling settings:
 
 7. **`src/Models/Config.ts`** - Add `enableToolCalling: boolean`
 8. **`src/Views/ChatGPT_MDSettingsTab.ts`** - Add settings UI
 
 ### Phase 3: AI SDK Integration
+
 Modify 5 files to integrate tools with AI SDK:
 
 9. **`src/Services/AiService.ts`** - Add tools parameter to base methods
@@ -92,6 +96,7 @@ Modify 5 files to integrate tools with AI SDK:
 13. **`src/Services/OpenRouterService.ts`** - Pass tools to base
 
 ### Phase 4: Service Integration
+
 Modify 2 files to wire everything together:
 
 14. **`src/core/ServiceLocator.ts`** - Register tool services
@@ -100,27 +105,32 @@ Modify 2 files to wire everything together:
 ## Key Design Decisions
 
 ### 1. Human-in-the-Loop Approval
+
 - **Every** tool call requires explicit user approval
 - Modal blocks until user decides
 - User can see exactly what will be shared
 - Cancel prevents any data from being sent
 
 ### 2. Two-Tool Approach
+
 - **vault_search**: Searches file names and content, returns previews
 - **file_read**: Reads full file contents, user selects which files
 
 This allows AI to:
+
 1. First search for relevant files
 2. Then request to read specific files
 3. User approves each step separately
 
 ### 3. Privacy-First Design
+
 - Tool calling **disabled by default**
 - Search shows previews (200 chars), not full content
 - File read shows checkboxes - user selects which files to share
 - Limit results (10 default, 50 max) to prevent token overflow
 
 ### 4. AI SDK v6 Best Practices
+
 - Use `tool()` helper from AI SDK
 - Zod schemas for type-safe parameter validation
 - Tools passed to `generateText()` and `streamText()`
@@ -154,6 +164,7 @@ src/
 ## Dependencies
 
 Already installed:
+
 - ✅ `ai@6.0.0-beta.134` - AI SDK v6
 - ✅ `zod@4.1.13` - Schema validation
 - ✅ `obsidian@latest` - Obsidian API

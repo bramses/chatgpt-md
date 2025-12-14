@@ -7,6 +7,7 @@ This guide provides a quick overview for AI agents implementing tool calling. Fo
 ## What We're Building
 
 Add two tools to the ChatGPT MD plugin:
+
 1. **vault_search** - Search vault by file name and content
 2. **file_read** - Read file contents with user approval
 
@@ -46,9 +47,11 @@ Add two tools to the ChatGPT MD plugin:
 ### ✅ Phase 2: Settings (2 files)
 
 7. **`src/Models/Config.ts`** - Add to `ChatBehaviorSettings`
+
    ```typescript
    enableToolCalling: boolean; // Add this field
    ```
+
    - Add to `DEFAULT_SETTINGS`: `enableToolCalling: false`
 
 8. **`src/Views/ChatGPT_MDSettingsTab.ts`** - Add to schema
@@ -72,48 +75,56 @@ Add two tools to the ChatGPT MD plugin:
    - Handle tool calls in response
 
 10-13. **Service Implementations** (OpenAi, Anthropic, Gemini, OpenRouter)
-   - Update `callAIAPI()` - add `toolService?: ToolService` parameter
-   - Update `callStreamingAPI()` - add `toolService?: ToolService` parameter
-   - Update `callNonStreamingAPI()` - add `toolService?: ToolService` parameter
-   - Get tools: `const tools = toolService?.getToolsForRequest(settings)`
-   - Pass to base class
+
+- Update `callAIAPI()` - add `toolService?: ToolService` parameter
+- Update `callStreamingAPI()` - add `toolService?: ToolService` parameter
+- Update `callNonStreamingAPI()` - add `toolService?: ToolService` parameter
+- Get tools: `const tools = toolService?.getToolsForRequest(settings)`
+- Pass to base class
 
 ### ✅ Phase 4: Service Integration (2 files)
 
 14. **`src/core/ServiceLocator.ts`** - Register services
-   - Add private fields: `vaultTools`, `toolRegistry`, `toolExecutor`, `toolService`
-   - Initialize in `initializeServices()`
-   - Add getters: `getToolService()`, `getToolRegistry()`
+
+- Add private fields: `vaultTools`, `toolRegistry`, `toolExecutor`, `toolService`
+- Initialize in `initializeServices()`
+- Add getters: `getToolService()`, `getToolRegistry()`
 
 15. **`src/core/CommandRegistry.ts`** - Wire to commands
-   - In `registerChatCommand()`:
-   ```typescript
-   const toolService = settings.enableToolCalling
-     ? this.serviceLocator.getToolService()
-     : undefined;
-   ```
-   - Pass to `callAIAPI()`
+
+- In `registerChatCommand()`:
+
+```typescript
+const toolService = settings.enableToolCalling ? this.serviceLocator.getToolService() : undefined;
+```
+
+- Pass to `callAIAPI()`
 
 ## Critical Code Patterns
 
 ### Tool Definition with Zod (ToolRegistry.ts)
+
 ```typescript
 import { tool } from "ai";
 import { z } from "zod";
 
-this.registerTool("vault_search", tool({
-  description: 'Search vault for files by name or content',
-  parameters: z.object({
-    query: z.string().describe('Search query'),
-    limit: z.number().optional().default(10),
-  }),
-  execute: async (args, context) => {
-    return await this.vaultTools.searchVault(args, context);
-  },
-}));
+this.registerTool(
+  "vault_search",
+  tool({
+    description: "Search vault for files by name or content",
+    parameters: z.object({
+      query: z.string().describe("Search query"),
+      limit: z.number().optional().default(10),
+    }),
+    execute: async (args, context) => {
+      return await this.vaultTools.searchVault(args, context);
+    },
+  })
+);
 ```
 
 ### Modal Promise Pattern (ToolApprovalModal.ts)
+
 ```typescript
 class ToolApprovalModal extends Modal {
   private modalPromise: Promise<ToolApprovalDecision>;
@@ -137,6 +148,7 @@ class ToolApprovalModal extends Modal {
 ```
 
 ### Vault Search (VaultTools.ts)
+
 ```typescript
 async searchVault(args: { query: string; limit?: number }) {
   const files = this.app.vault.getMarkdownFiles();
@@ -175,6 +187,7 @@ async searchVault(args: { query: string; limit?: number }) {
 ```
 
 ### Passing Tools to AI SDK (AiService.ts)
+
 ```typescript
 protected async callAiSdkStreamText(
   model: LanguageModel,

@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, TFile } from "obsidian";
+import { Editor, MarkdownView } from "obsidian";
 import { Message } from "src/Models/Message";
 import { ApiService } from "./ApiService";
 import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
@@ -446,26 +446,23 @@ export abstract class BaseAiService implements IAiApiService {
       // Request user approval and execute tool calls
       const toolResults = await toolService.handleToolCalls(response.toolCalls);
 
-      console.log('[ChatGPT MD] Tool results:', toolResults);
+      console.log("[ChatGPT MD] Tool results:", toolResults);
 
       // Handle vault_search results approval - filter results before sending to LLM
       const filteredToolResults = [];
       for (const tr of toolResults) {
         // Check if this is a vault_search result that needs approval
         const correspondingToolCall = response.toolCalls.find((tc: any) => {
-          const tcId = tc.toolCallId || tc.id || 'unknown';
+          const tcId = tc.toolCallId || tc.id || "unknown";
           return tcId === tr.toolCallId;
         });
 
-        if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search' && Array.isArray(tr.result)) {
+        if (correspondingToolCall && correspondingToolCall.toolName === "vault_search" && Array.isArray(tr.result)) {
           // Only request approval if there are results to approve
           if (tr.result.length > 0) {
             // Request approval for search results before showing to LLM
-            const query = (correspondingToolCall.input as any)?.query || 'unknown';
-            const approvedResults = await toolService.requestSearchResultsApproval(
-              query,
-              tr.result
-            );
+            const query = (correspondingToolCall.input as any)?.query || "unknown";
+            const approvedResults = await toolService.requestSearchResultsApproval(query, tr.result);
 
             filteredToolResults.push({
               ...tr,
@@ -485,10 +482,10 @@ export abstract class BaseAiService implements IAiApiService {
       const updatedMessages = [...aiSdkMessages];
 
       // Add assistant message with the initial response (may be empty)
-      const assistantContent = response.text && response.text.trim() ? response.text : '';
+      const assistantContent = response.text && response.text.trim() ? response.text : "";
       if (assistantContent) {
         updatedMessages.push({
-          role: 'assistant',
+          role: "assistant",
           content: assistantContent,
         });
       }
@@ -497,34 +494,44 @@ export abstract class BaseAiService implements IAiApiService {
       for (const tr of filteredToolResults) {
         const result = tr.result;
         const correspondingToolCall = response.toolCalls.find((tc: any) => {
-          const tcId = tc.toolCallId || tc.id || 'unknown';
+          const tcId = tc.toolCallId || tc.id || "unknown";
           return tcId === tr.toolCallId;
         });
 
         // Special handling for empty vault_search results
         if (Array.isArray(result) && result.length === 0) {
-          if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search') {
-            const query = (correspondingToolCall.input as any)?.query || 'unknown';
+          if (correspondingToolCall && correspondingToolCall.toolName === "vault_search") {
+            const query = (correspondingToolCall.input as any)?.query || "unknown";
             updatedMessages.push({
-              role: 'user',
+              role: "user",
               content: `[vault_search result - no files found]\n\nThe search for "${query}" returned no results. Try searching with different keywords or single words.`,
             });
           }
         }
         // Handle file_read results (from explicit file_read tool calls)
-        else if (Array.isArray(result) && result.length > 0 && correspondingToolCall && correspondingToolCall.toolName === 'file_read') {
+        else if (
+          Array.isArray(result) &&
+          result.length > 0 &&
+          correspondingToolCall &&
+          correspondingToolCall.toolName === "file_read"
+        ) {
           // Add file contents as distinct messages
           for (const fileResult of result) {
-            if (fileResult.content && typeof fileResult.content === 'string') {
+            if (fileResult.content && typeof fileResult.content === "string") {
               updatedMessages.push({
-                role: 'user',
+                role: "user",
                 content: `[file_read result]\n\nFile: ${fileResult.path}\n\n${fileResult.content}`,
               });
             }
           }
         }
         // Handle vault_search results with files found
-        else if (Array.isArray(result) && result.length > 0 && correspondingToolCall && correspondingToolCall.toolName === 'vault_search') {
+        else if (
+          Array.isArray(result) &&
+          result.length > 0 &&
+          correspondingToolCall &&
+          correspondingToolCall.toolName === "vault_search"
+        ) {
           // For vault_search results, automatically read the approved files
           console.log(`[ChatGPT MD] Reading files from vault_search results:`, result);
           if (toolService) {
@@ -533,7 +540,7 @@ export abstract class BaseAiService implements IAiApiService {
             for (const fc of fileContents) {
               console.log(`[ChatGPT MD] Adding file content for: ${fc.path} (${fc.content.length} chars)`);
               updatedMessages.push({
-                role: 'user',
+                role: "user",
                 content: `[vault_search result]\n\nFile: ${fc.path}\n\n${fc.content}`,
               });
             }
@@ -543,7 +550,7 @@ export abstract class BaseAiService implements IAiApiService {
         }
       }
 
-      console.log('[ChatGPT MD] Updated messages with tool context:', JSON.stringify(updatedMessages, null, 2));
+      console.log("[ChatGPT MD] Updated messages with tool context:", JSON.stringify(updatedMessages, null, 2));
 
       // Call generateText again with tool results
       // DON'T include tools in continuation - the LLM should answer based on the provided context
@@ -555,37 +562,36 @@ export abstract class BaseAiService implements IAiApiService {
 
       const continuationResponse = await generateText(continuationRequest);
 
-      console.log('[ChatGPT MD] Continuation response after tool execution:', continuationResponse.text);
-      console.log('[ChatGPT MD] Continuation response full:', JSON.stringify(continuationResponse, null, 2));
-      console.log('[ChatGPT MD] Continuation tool calls:', continuationResponse.toolCalls?.length);
+      console.log("[ChatGPT MD] Continuation response after tool execution:", continuationResponse.text);
+      console.log("[ChatGPT MD] Continuation response full:", JSON.stringify(continuationResponse, null, 2));
+      console.log("[ChatGPT MD] Continuation tool calls:", continuationResponse.toolCalls?.length);
 
       // Handle any additional tool calls from the continuation
       if (toolService && continuationResponse.toolCalls && continuationResponse.toolCalls.length > 0) {
-        console.log(`[ChatGPT MD] AI made additional tool call(s) after tool results: ${continuationResponse.toolCalls.length}`);
+        console.log(
+          `[ChatGPT MD] AI made additional tool call(s) after tool results: ${continuationResponse.toolCalls.length}`
+        );
 
         // Recursively handle any additional tool calls
         const additionalToolResults = await toolService.handleToolCalls(continuationResponse.toolCalls);
 
-        console.log('[ChatGPT MD] Additional tool results:', additionalToolResults);
+        console.log("[ChatGPT MD] Additional tool results:", additionalToolResults);
 
         // Filter results based on tool type (same privacy filtering as initial results)
         const filteredAdditionalResults = [];
         for (const tr of additionalToolResults) {
           // Check if this is a vault_search result that needs approval
           const correspondingToolCall = continuationResponse.toolCalls.find((tc: any) => {
-            const tcId = tc.toolCallId || tc.id || 'unknown';
+            const tcId = tc.toolCallId || tc.id || "unknown";
             return tcId === tr.toolCallId;
           });
 
-          if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search' && Array.isArray(tr.result)) {
+          if (correspondingToolCall && correspondingToolCall.toolName === "vault_search" && Array.isArray(tr.result)) {
             // Only request approval if there are results to approve
             if (tr.result.length > 0) {
               // Request approval for search results before showing to LLM
-              const query = (correspondingToolCall.input as any)?.query || 'unknown';
-              const approvedResults = await toolService.requestSearchResultsApproval(
-                query,
-                tr.result
-              );
+              const query = (correspondingToolCall.input as any)?.query || "unknown";
+              const approvedResults = await toolService.requestSearchResultsApproval(query, tr.result);
 
               filteredAdditionalResults.push({
                 ...tr,
@@ -609,30 +615,32 @@ export abstract class BaseAiService implements IAiApiService {
           // Special handling for empty vault_search results
           if (Array.isArray(result) && result.length === 0) {
             const correspondingToolCall = continuationResponse.toolCalls.find((tc: any) => {
-              const tcId = tc.toolCallId || tc.id || 'unknown';
+              const tcId = tc.toolCallId || tc.id || "unknown";
               return tcId === tr.toolCallId;
             });
 
-            if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search') {
-              const query = (correspondingToolCall.input as any)?.query || 'unknown';
-              additionalToolContextParts.push(`The search for "${query}" returned no results. Try searching with different keywords or single words.`);
+            if (correspondingToolCall && correspondingToolCall.toolName === "vault_search") {
+              const query = (correspondingToolCall.input as any)?.query || "unknown";
+              additionalToolContextParts.push(
+                `The search for "${query}" returned no results. Try searching with different keywords or single words.`
+              );
             }
           }
           // Format file_read results as context
           else if (Array.isArray(result) && result.length > 0) {
             const correspondingToolCall = continuationResponse.toolCalls.find((tc: any) => {
-              const tcId = tc.toolCallId || tc.id || 'unknown';
+              const tcId = tc.toolCallId || tc.id || "unknown";
               return tcId === tr.toolCallId;
             });
 
-            if (correspondingToolCall && correspondingToolCall.toolName === 'file_read') {
+            if (correspondingToolCall && correspondingToolCall.toolName === "file_read") {
               // Add file contents as context
               for (const fileResult of result) {
-                if (fileResult.content && typeof fileResult.content === 'string') {
+                if (fileResult.content && typeof fileResult.content === "string") {
                   additionalToolContextParts.push(`From file "${fileResult.path}":\n${fileResult.content}`);
                 }
               }
-            } else if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search') {
+            } else if (correspondingToolCall && correspondingToolCall.toolName === "vault_search") {
               // Add search results
               additionalToolContextParts.push(`Search results:\n${JSON.stringify(result, null, 2)}`);
             }
@@ -642,10 +650,11 @@ export abstract class BaseAiService implements IAiApiService {
         // Add the continuation response and additional tool results to messages
         const finalMessages = [...updatedMessages];
 
-        const continuationContent = continuationResponse.text && continuationResponse.text.trim() ? continuationResponse.text : '';
+        const continuationContent =
+          continuationResponse.text && continuationResponse.text.trim() ? continuationResponse.text : "";
         if (continuationContent) {
           finalMessages.push({
-            role: 'assistant',
+            role: "assistant",
             content: continuationContent,
           });
         }
@@ -653,8 +662,8 @@ export abstract class BaseAiService implements IAiApiService {
         // Add all additional tool context to messages
         if (additionalToolContextParts.length > 0) {
           finalMessages.push({
-            role: 'user',
-            content: additionalToolContextParts.join('\n\n'),
+            role: "user",
+            content: additionalToolContextParts.join("\n\n"),
           });
         }
 
@@ -666,7 +675,8 @@ export abstract class BaseAiService implements IAiApiService {
         };
 
         const finalResponse = await generateText(finalRequest);
-        const finalText = typeof finalResponse.text === 'string' ? finalResponse.text : String(finalResponse.text || '');
+        const finalText =
+          typeof finalResponse.text === "string" ? finalResponse.text : String(finalResponse.text || "");
         return { fullString: finalText, model: modelName };
       }
 
@@ -687,7 +697,7 @@ export abstract class BaseAiService implements IAiApiService {
       };
 
       const finalResponse = await generateText(finalRequest);
-      const finalText = typeof finalResponse.text === 'string' ? finalResponse.text : String(finalResponse.text || '');
+      const finalText = typeof finalResponse.text === "string" ? finalResponse.text : String(finalResponse.text || "");
       return { fullString: finalText, model: modelName };
     }
 
@@ -787,19 +797,20 @@ export abstract class BaseAiService implements IAiApiService {
           for (const tr of toolResults) {
             // Check if this is a vault_search result that needs approval
             const correspondingToolCall = toolCalls.find((tc: any) => {
-              const tcId = tc.toolCallId || tc.id || 'unknown';
+              const tcId = tc.toolCallId || tc.id || "unknown";
               return tcId === tr.toolCallId;
             });
 
-            if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search' && Array.isArray(tr.result)) {
+            if (
+              correspondingToolCall &&
+              correspondingToolCall.toolName === "vault_search" &&
+              Array.isArray(tr.result)
+            ) {
               // Only request approval if there are results to approve
               if (tr.result.length > 0) {
                 // Request approval for search results before showing to LLM
-                const query = (correspondingToolCall.input as any)?.query || 'unknown';
-                const approvedResults = await toolService.requestSearchResultsApproval(
-                  query,
-                  tr.result
-                );
+                const query = (correspondingToolCall.input as any)?.query || "unknown";
+                const approvedResults = await toolService.requestSearchResultsApproval(query, tr.result);
 
                 filteredToolResults.push({
                   ...tr,
@@ -816,40 +827,39 @@ export abstract class BaseAiService implements IAiApiService {
           }
 
           // Clear the tool request notice
-          editor.replaceRange('', { line: currentCursor.line - 1, ch: 0 }, currentCursor);
+          editor.replaceRange("", { line: currentCursor.line - 1, ch: 0 }, currentCursor);
           currentCursor = { line: currentCursor.line - 1, ch: 0 };
 
           // Tool results are NOT shown to the user - they are only sent to the LLM for processing
           // User only sees the LLM's response
 
           // Format tool results with special handling for empty searches
-          const formattedToolResults = filteredToolResults
-            .map((tr: any) => {
-              const result = tr.result;
+          const formattedToolResults = filteredToolResults.map((tr: any) => {
+            const result = tr.result;
 
-              // Special handling for empty vault_search results
-              if (Array.isArray(result) && result.length === 0) {
-                const correspondingToolCall = toolCalls.find((tc: any) => {
-                  const tcId = tc.toolCallId || tc.id || 'unknown';
-                  return tcId === tr.toolCallId;
-                });
+            // Special handling for empty vault_search results
+            if (Array.isArray(result) && result.length === 0) {
+              const correspondingToolCall = toolCalls.find((tc: any) => {
+                const tcId = tc.toolCallId || tc.id || "unknown";
+                return tcId === tr.toolCallId;
+              });
 
-                if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search') {
-                  const query = (correspondingToolCall.input as any)?.query || 'unknown';
-                  return {
-                    toolCallId: tr.toolCallId,
-                    result: `The search for "${query}" returned no results. Try searching with different keywords or single words.`,
-                  };
-                }
+              if (correspondingToolCall && correspondingToolCall.toolName === "vault_search") {
+                const query = (correspondingToolCall.input as any)?.query || "unknown";
+                return {
+                  toolCallId: tr.toolCallId,
+                  result: `The search for "${query}" returned no results. Try searching with different keywords or single words.`,
+                };
               }
+            }
 
-              return tr;
-            });
+            return tr;
+          });
 
           // Add assistant message with initial response
           const updatedMessages = [...aiSdkMessages];
           updatedMessages.push({
-            role: 'assistant',
+            role: "assistant",
             content: fullText,
           });
 
@@ -857,34 +867,44 @@ export abstract class BaseAiService implements IAiApiService {
           for (const tr of filteredToolResults) {
             const result = tr.result;
             const correspondingToolCall = toolCalls.find((tc: any) => {
-              const tcId = tc.toolCallId || tc.id || 'unknown';
+              const tcId = tc.toolCallId || tc.id || "unknown";
               return tcId === tr.toolCallId;
             });
 
             // Special handling for empty vault_search results
             if (Array.isArray(result) && result.length === 0) {
-              if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search') {
-                const query = (correspondingToolCall.input as any)?.query || 'unknown';
+              if (correspondingToolCall && correspondingToolCall.toolName === "vault_search") {
+                const query = (correspondingToolCall.input as any)?.query || "unknown";
                 updatedMessages.push({
-                  role: 'user',
+                  role: "user",
                   content: `[vault_search result - no files found]\n\nThe search for "${query}" returned no results. Try searching with different keywords or single words.`,
                 });
               }
             }
             // Handle file_read results (from explicit file_read tool calls)
-            else if (Array.isArray(result) && result.length > 0 && correspondingToolCall && correspondingToolCall.toolName === 'file_read') {
+            else if (
+              Array.isArray(result) &&
+              result.length > 0 &&
+              correspondingToolCall &&
+              correspondingToolCall.toolName === "file_read"
+            ) {
               // Add file contents as distinct messages
               for (const fileResult of result) {
-                if (fileResult.content && typeof fileResult.content === 'string') {
+                if (fileResult.content && typeof fileResult.content === "string") {
                   updatedMessages.push({
-                    role: 'user',
+                    role: "user",
                     content: `[file_read result]\n\nFile: ${fileResult.path}\n\n${fileResult.content}`,
                   });
                 }
               }
             }
             // Handle vault_search results with files found
-            else if (Array.isArray(result) && result.length > 0 && correspondingToolCall && correspondingToolCall.toolName === 'vault_search') {
+            else if (
+              Array.isArray(result) &&
+              result.length > 0 &&
+              correspondingToolCall &&
+              correspondingToolCall.toolName === "vault_search"
+            ) {
               // For vault_search results, automatically read the approved files
               console.log(`[ChatGPT MD] Reading files from vault_search results:`, result);
               if (toolService) {
@@ -893,7 +913,7 @@ export abstract class BaseAiService implements IAiApiService {
                 for (const fc of fileContents) {
                   console.log(`[ChatGPT MD] Adding file content for: ${fc.path} (${fc.content.length} chars)`);
                   updatedMessages.push({
-                    role: 'user',
+                    role: "user",
                     content: `[vault_search result]\n\nFile: ${fc.path}\n\n${fc.content}`,
                   });
                 }
@@ -903,7 +923,7 @@ export abstract class BaseAiService implements IAiApiService {
             }
           }
 
-          console.log('[ChatGPT MD] Updated messages with tool context:', JSON.stringify(updatedMessages, null, 2));
+          console.log("[ChatGPT MD] Updated messages with tool context:", JSON.stringify(updatedMessages, null, 2));
 
           // Call streamText again for continuation (WITHOUT tools - just answer based on context)
           const continuationRequest: any = {
@@ -929,7 +949,9 @@ export abstract class BaseAiService implements IAiApiService {
 
           // Check if there were additional tool calls in the continuation
           const continuationFinalResult = await continuationResult;
-          const additionalToolCalls = continuationFinalResult.toolCalls ? await Promise.resolve(continuationFinalResult.toolCalls) : [];
+          const additionalToolCalls = continuationFinalResult.toolCalls
+            ? await Promise.resolve(continuationFinalResult.toolCalls)
+            : [];
           if (toolService && additionalToolCalls && additionalToolCalls.length > 0) {
             console.log(`[ChatGPT MD] AI made additional tool call(s) in continuation: ${additionalToolCalls.length}`);
 
@@ -941,19 +963,20 @@ export abstract class BaseAiService implements IAiApiService {
             for (const tr of additionalToolResults) {
               // Check if this is a vault_search result that needs approval
               const correspondingToolCall = additionalToolCalls.find((tc: any) => {
-                const tcId = tc.toolCallId || tc.id || 'unknown';
+                const tcId = tc.toolCallId || tc.id || "unknown";
                 return tcId === tr.toolCallId;
               });
 
-              if (correspondingToolCall && correspondingToolCall.toolName === 'vault_search' && Array.isArray(tr.result)) {
+              if (
+                correspondingToolCall &&
+                correspondingToolCall.toolName === "vault_search" &&
+                Array.isArray(tr.result)
+              ) {
                 // Only request approval if there are results to approve
                 if (tr.result.length > 0) {
                   // Request approval for search results before showing to LLM
-                  const query = (correspondingToolCall.input as any)?.query || 'unknown';
-                  const approvedResults = await toolService.requestSearchResultsApproval(
-                    query,
-                    tr.result
-                  );
+                  const query = (correspondingToolCall.input as any)?.query || "unknown";
+                  const approvedResults = await toolService.requestSearchResultsApproval(query, tr.result);
 
                   filteredAdditionalResults.push({
                     ...tr,

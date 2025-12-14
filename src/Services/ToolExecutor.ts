@@ -1,7 +1,7 @@
 import { App } from "obsidian";
 import { ToolRegistry } from "./ToolRegistry";
 import { NotificationService } from "./NotificationService";
-import { ToolApprovalRequest, ToolApprovalDecision, ToolExecutionContext } from "src/Models/Tool";
+import { ToolApprovalDecision, ToolApprovalRequest, ToolExecutionContext } from "src/Models/Tool";
 import { ToolApprovalModal } from "src/Views/ToolApprovalModal";
 
 /**
@@ -38,10 +38,7 @@ export class ToolExecutor {
   /**
    * Execute a tool with user approval
    */
-  async executeWithApproval(
-    request: ToolApprovalRequest,
-    context: ToolExecutionContext
-  ): Promise<any> {
+  async executeWithApproval(request: ToolApprovalRequest, context: ToolExecutionContext): Promise<any> {
     // Request approval from user
     const decision = await this.requestApproval(request);
 

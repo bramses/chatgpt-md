@@ -1,6 +1,6 @@
 import { App, TFile } from "obsidian";
 import { FileService } from "./FileService";
-import { ToolExecutionContext, VaultSearchResult, FileReadResult } from "src/Models/Tool";
+import { FileReadResult, ToolExecutionContext, VaultSearchResult } from "src/Models/Tool";
 
 /**
  * Service for Obsidian vault-specific tool operations
@@ -23,9 +23,7 @@ export class VaultTools {
     const lowerQuery = query.toLowerCase();
 
     // Split query into individual words for OR search
-    const queryWords = lowerQuery
-      .split(/\s+/)
-      .filter(word => word.length > 0);
+    const queryWords = lowerQuery.split(/\s+/).filter((word) => word.length > 0);
 
     const results: VaultSearchResult[] = [];
 
@@ -94,10 +92,7 @@ export class VaultTools {
   /**
    * Read contents of specified files
    */
-  async readFiles(
-    args: { filePaths: string[] },
-    context: ToolExecutionContext
-  ): Promise<FileReadResult[]> {
+  async readFiles(args: { filePaths: string[] }, context: ToolExecutionContext): Promise<FileReadResult[]> {
     const { filePaths } = args;
     const results: FileReadResult[] = [];
 
@@ -156,10 +151,10 @@ export class VaultTools {
     let preview = content.substring(start, end);
 
     if (start > 0) {
-      preview = '...' + preview;
+      preview = "..." + preview;
     }
     if (end < content.length) {
-      preview = preview + '...';
+      preview = preview + "...";
     }
 
     return preview;

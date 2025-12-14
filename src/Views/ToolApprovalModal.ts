@@ -49,11 +49,12 @@ export class ToolApprovalModal extends Modal {
     const argsList = argsContainer.createEl("ul");
 
     // Safely iterate over args if they exist
-    if (this.args && typeof this.args === 'object') {
+    if (this.args && typeof this.args === "object") {
       for (const [key, value] of Object.entries(this.args)) {
-        const displayValue = Array.isArray(value) && value.length > 3
-          ? `[${value.slice(0, 3).join(', ')}... (${value.length} total)]`
-          : JSON.stringify(value);
+        const displayValue =
+          Array.isArray(value) && value.length > 3
+            ? `[${value.slice(0, 3).join(", ")}... (${value.length} total)]`
+            : JSON.stringify(value);
         argsList.createEl("li", { text: `${key}: ${displayValue}` });
       }
     } else {
@@ -90,16 +91,14 @@ export class ToolApprovalModal extends Modal {
     );
 
     buttonContainer.addButton((btn) =>
-      btn
-        .setButtonText("Cancel")
-        .onClick(() => {
-          this.result = {
-            approvalId: this.toolName,
-            approved: false,
-          };
-          this.resolveModalPromise(this.result);
-          this.close();
-        })
+      btn.setButtonText("Cancel").onClick(() => {
+        this.result = {
+          approvalId: this.toolName,
+          approved: false,
+        };
+        this.resolveModalPromise(this.result);
+        this.close();
+      })
     );
   }
 
@@ -118,7 +117,7 @@ export class ToolApprovalModal extends Modal {
         this.fileSelections.set(path, true);
       }
 
-      const fileName = path.split('/').pop() || path;
+      const fileName = path.split("/").pop() || path;
       const currentValue = this.fileSelections.get(path) || false;
 
       new Setting(fileListContainer)
@@ -135,27 +134,23 @@ export class ToolApprovalModal extends Modal {
     const selectButtonContainer = new Setting(container);
 
     selectButtonContainer.addButton((btn) =>
-      btn
-        .setButtonText("Select All")
-        .onClick(() => {
-          filePaths.forEach(path => this.fileSelections.set(path, true));
-          // Refresh modal
-          const { contentEl } = this;
-          contentEl.empty();
-          this.onOpen();
-        })
+      btn.setButtonText("Select All").onClick(() => {
+        filePaths.forEach((path) => this.fileSelections.set(path, true));
+        // Refresh modal
+        const { contentEl } = this;
+        contentEl.empty();
+        this.onOpen();
+      })
     );
 
     selectButtonContainer.addButton((btn) =>
-      btn
-        .setButtonText("Deselect All")
-        .onClick(() => {
-          filePaths.forEach(path => this.fileSelections.set(path, false));
-          // Refresh modal
-          const { contentEl } = this;
-          contentEl.empty();
-          this.onOpen();
-        })
+      btn.setButtonText("Deselect All").onClick(() => {
+        filePaths.forEach((path) => this.fileSelections.set(path, false));
+        // Refresh modal
+        const { contentEl } = this;
+        contentEl.empty();
+        this.onOpen();
+      })
     );
   }
 
@@ -172,10 +167,10 @@ export class ToolApprovalModal extends Modal {
         .filter(([_, selected]) => selected)
         .map(([path, _]) => path);
 
-      console.log('[ChatGPT MD] File selections:', {
+      console.log("[ChatGPT MD] File selections:", {
         original: baseArgs.filePaths,
         selected: selectedFiles,
-        selections: Array.from(this.fileSelections.entries())
+        selections: Array.from(this.fileSelections.entries()),
       });
 
       return {
@@ -203,8 +198,10 @@ export class ToolApprovalModal extends Modal {
    */
   private getToolPurpose(): string {
     const purposes: Record<string, string> = {
-      vault_search: "Search your vault for files matching the query. Returns file names and content previews. The current note is excluded.",
-      file_read: "Read the full contents of the specified files. You can select which files you want to share with the AI.",
+      vault_search:
+        "Search your vault for files matching the query. Returns file names and content previews. The current note is excluded.",
+      file_read:
+        "Read the full contents of the specified files. You can select which files you want to share with the AI.",
     };
     return purposes[this.toolName] || "Execute a tool operation.";
   }

@@ -65,27 +65,23 @@ export class SearchResultsApprovalModal extends Modal {
     const selectButtonContainer = new Setting(contentEl);
 
     selectButtonContainer.addButton((btn) =>
-      btn
-        .setButtonText("Select All")
-        .onClick(() => {
-          this.results.forEach(result => this.resultSelections.set(result.path, true));
-          // Refresh modal
-          const { contentEl } = this;
-          contentEl.empty();
-          this.onOpen();
-        })
+      btn.setButtonText("Select All").onClick(() => {
+        this.results.forEach((result) => this.resultSelections.set(result.path, true));
+        // Refresh modal
+        const { contentEl } = this;
+        contentEl.empty();
+        this.onOpen();
+      })
     );
 
     selectButtonContainer.addButton((btn) =>
-      btn
-        .setButtonText("Deselect All")
-        .onClick(() => {
-          this.results.forEach(result => this.resultSelections.set(result.path, false));
-          // Refresh modal
-          const { contentEl } = this;
-          contentEl.empty();
-          this.onOpen();
-        })
+      btn.setButtonText("Deselect All").onClick(() => {
+        this.results.forEach((result) => this.resultSelections.set(result.path, false));
+        // Refresh modal
+        const { contentEl } = this;
+        contentEl.empty();
+        this.onOpen();
+      })
     );
 
     // Privacy warning
@@ -112,16 +108,14 @@ export class SearchResultsApprovalModal extends Modal {
     );
 
     buttonContainer.addButton((btn) =>
-      btn
-        .setButtonText("Cancel")
-        .onClick(() => {
-          this.result = {
-            approved: false,
-            approvedResults: [],
-          };
-          this.resolveModalPromise(this.result);
-          this.close();
-        })
+      btn.setButtonText("Cancel").onClick(() => {
+        this.result = {
+          approved: false,
+          approvedResults: [],
+        };
+        this.resolveModalPromise(this.result);
+        this.close();
+      })
     );
   }
 
@@ -129,15 +123,13 @@ export class SearchResultsApprovalModal extends Modal {
    * Get the approved search results
    */
   private getApprovedResults(): VaultSearchResult[] {
-    const approved = this.results.filter(result =>
-      this.resultSelections.get(result.path) === true
-    );
+    const approved = this.results.filter((result) => this.resultSelections.get(result.path) === true);
 
-    console.log('[ChatGPT MD] Search results approval:', {
+    console.log("[ChatGPT MD] Search results approval:", {
       query: this.query,
       totalResults: this.results.length,
       approvedCount: approved.length,
-      approvedPaths: approved.map(r => r.path),
+      approvedPaths: approved.map((r) => r.path),
     });
 
     return approved;

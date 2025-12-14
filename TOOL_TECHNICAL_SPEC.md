@@ -86,11 +86,20 @@ export interface FileReadResult {
 **Tool Name**: `vault_search`
 
 **Zod Schema**:
+
 ```typescript
 z.object({
-  query: z.string().describe('The search query to find files. Can be keywords, topics, or phrases to search for in file names and content.'),
-  limit: z.number().optional().default(10).describe('Maximum number of search results to return. Default is 10, maximum is 50.'),
-})
+  query: z
+    .string()
+    .describe(
+      "The search query to find files. Can be keywords, topics, or phrases to search for in file names and content."
+    ),
+  limit: z
+    .number()
+    .optional()
+    .default(10)
+    .describe("Maximum number of search results to return. Default is 10, maximum is 50."),
+});
 ```
 
 **Description**:
@@ -103,16 +112,18 @@ z.object({
 | limit | number | No | 10 | Max results (max 50) |
 
 **Output Format**:
+
 ```typescript
 Array<{
-  path: string;         // Full path: "folder/file.md"
-  basename: string;     // Filename without extension
-  matches: number;      // Number of matches (currently always 1)
-  preview: string;      // 200 char preview or context around match
-}>
+  path: string; // Full path: "folder/file.md"
+  basename: string; // Filename without extension
+  matches: number; // Number of matches (currently always 1)
+  preview: string; // 200 char preview or context around match
+}>;
 ```
 
 **Execution Logic**:
+
 1. Get all markdown files via `app.vault.getMarkdownFiles()`
 2. For each file:
    - Check if basename contains query (case-insensitive)
@@ -122,6 +133,7 @@ Array<{
 4. Return results array
 
 **Example Usage**:
+
 ```typescript
 // Input
 { query: "typescript", limit: 5 }
@@ -145,10 +157,11 @@ Array<{
 **Tool Name**: `file_read`
 
 **Zod Schema**:
+
 ```typescript
 z.object({
-  filePaths: z.array(z.string()).describe('Array of file paths to read. Use the paths returned from vault_search.'),
-})
+  filePaths: z.array(z.string()).describe("Array of file paths to read. Use the paths returned from vault_search."),
+});
 ```
 
 **Description**:
@@ -160,15 +173,17 @@ z.object({
 | filePaths | string[] | Yes | Array of file paths to read |
 
 **Output Format**:
+
 ```typescript
 Array<{
-  path: string;      // Full path of file
-  content: string;   // Full file contents
-  size: number;      // File size in bytes
-}>
+  path: string; // Full path of file
+  content: string; // Full file contents
+  size: number; // File size in bytes
+}>;
 ```
 
 **Execution Logic**:
+
 1. User approves/selects files via modal
 2. For each approved file path:
    - Get file via `app.vault.getAbstractFileByPath(path)`
@@ -178,9 +193,12 @@ Array<{
 4. Return results array
 
 **Example Usage**:
+
 ```typescript
 // Input
-{ filePaths: ["Notes/React.md", "Notes/Vue.md"] }
+{
+  filePaths: ["Notes/React.md", "Notes/Vue.md"];
+}
 
 // User selects only React.md in modal
 
@@ -189,9 +207,9 @@ Array<{
   {
     path: "Notes/React.md",
     content: "# React\n\nReact is a JavaScript library...",
-    size: 1024
-  }
-]
+    size: 1024,
+  },
+];
 ```
 
 ---
@@ -203,12 +221,14 @@ Array<{
 **File**: `src/Services/VaultTools.ts`
 
 **Dependencies**:
+
 - Obsidian `App`
 - `FileService`
 
 **Public Methods**:
 
 #### searchVault()
+
 ```typescript
 async searchVault(
   args: { query: string; limit?: number },
@@ -217,6 +237,7 @@ async searchVault(
 ```
 
 **Behavior**:
+
 - Searches file names first, then content
 - Case-insensitive search
 - Returns preview (200 chars or context around match)
@@ -225,6 +246,7 @@ async searchVault(
 - Logs search activity
 
 #### readFiles()
+
 ```typescript
 async readFiles(
   args: { filePaths: string[] },
@@ -233,6 +255,7 @@ async readFiles(
 ```
 
 **Behavior**:
+
 - Reads each file by path
 - Returns content, size
 - Handles file not found errors
@@ -240,6 +263,7 @@ async readFiles(
 - Logs read activity
 
 #### extractPreview() (Private)
+
 ```typescript
 private extractPreview(
   content: string,
@@ -249,6 +273,7 @@ private extractPreview(
 ```
 
 **Behavior**:
+
 - Finds query in content
 - Extracts context around match
 - Adds "..." if truncated
@@ -261,12 +286,14 @@ private extractPreview(
 **File**: `src/Services/ToolRegistry.ts`
 
 **Dependencies**:
+
 - Obsidian `App`
 - `VaultTools`
 - AI SDK `tool`, `CoreTool`
 - Zod
 
 **Private Fields**:
+
 ```typescript
 private tools: Map<string, CoreTool>
 ```
@@ -274,26 +301,31 @@ private tools: Map<string, CoreTool>
 **Public Methods**:
 
 #### registerTool()
+
 ```typescript
 registerTool(name: string, tool: CoreTool): void
 ```
 
 #### getTool()
+
 ```typescript
 getTool(name: string): CoreTool | undefined
 ```
 
 #### getAllTools()
+
 ```typescript
 getAllTools(): Record<string, CoreTool>
 ```
 
 #### getEnabledTools()
+
 ```typescript
 getEnabledTools(settings: ChatGPT_MDSettings): Record<string, CoreTool> | undefined
 ```
 
 **Behavior**:
+
 - Returns `undefined` if `enableToolCalling` is false
 - Returns all registered tools if enabled
 - Used by ToolService to get tools for AI SDK
@@ -305,6 +337,7 @@ getEnabledTools(settings: ChatGPT_MDSettings): Record<string, CoreTool> | undefi
 **File**: `src/Services/ToolExecutor.ts`
 
 **Dependencies**:
+
 - Obsidian `App`
 - `ToolRegistry`
 - `NotificationService`
@@ -313,6 +346,7 @@ getEnabledTools(settings: ChatGPT_MDSettings): Record<string, CoreTool> | undefi
 **Public Methods**:
 
 #### requestApproval()
+
 ```typescript
 async requestApproval(
   request: ToolApprovalRequest
@@ -320,12 +354,14 @@ async requestApproval(
 ```
 
 **Behavior**:
+
 - Opens ToolApprovalModal
 - Waits for user decision
 - Shows notification if cancelled
 - Logs approval status
 
 #### executeWithApproval()
+
 ```typescript
 async executeWithApproval(
   request: ToolApprovalRequest,
@@ -334,6 +370,7 @@ async executeWithApproval(
 ```
 
 **Behavior**:
+
 - Requests approval
 - If cancelled, returns error object
 - If approved, executes tool
@@ -348,6 +385,7 @@ async executeWithApproval(
 **File**: `src/Services/ToolService.ts`
 
 **Dependencies**:
+
 - Obsidian `App`
 - `ToolRegistry`
 - `ToolExecutor`
@@ -355,6 +393,7 @@ async executeWithApproval(
 **Public Methods**:
 
 #### getToolsForRequest()
+
 ```typescript
 getToolsForRequest(
   settings: ChatGPT_MDSettings
@@ -362,11 +401,13 @@ getToolsForRequest(
 ```
 
 **Behavior**:
+
 - Delegates to ToolRegistry
 - Returns tools if enabled in settings
 - Returns undefined if disabled
 
 #### handleToolApprovalRequests()
+
 ```typescript
 async handleToolApprovalRequests(
   toolCalls: any[],
@@ -375,6 +416,7 @@ async handleToolApprovalRequests(
 ```
 
 **Behavior**:
+
 - Processes tool calls sequentially
 - For each call, executes with approval
 - Returns array of tool results
@@ -391,6 +433,7 @@ async handleToolApprovalRequests(
 **Extends**: Obsidian `Modal`
 
 **Constructor**:
+
 ```typescript
 constructor(
   app: App,
@@ -400,6 +443,7 @@ constructor(
 ```
 
 **Private Fields**:
+
 ```typescript
 private result: ToolApprovalDecision | null = null;
 private modalPromise: Promise<ToolApprovalDecision>;
@@ -410,6 +454,7 @@ private fileSelections: Map<string, boolean> = new Map();
 **Public Methods**:
 
 #### waitForResult()
+
 ```typescript
 waitForResult(): Promise<ToolApprovalDecision>
 ```
@@ -454,6 +499,7 @@ waitForResult(): Promise<ToolApprovalDecision>
 ```
 
 **Behavior**:
+
 - Blocks until user decides
 - Special rendering for file_read tool
 - Select/Deselect All buttons
@@ -469,6 +515,7 @@ waitForResult(): Promise<ToolApprovalDecision>
 **Location**: `src/Models/Config.ts`
 
 **Add to ChatBehaviorSettings** (line ~60):
+
 ```typescript
 export interface ChatBehaviorSettings {
   stream: boolean;
@@ -480,6 +527,7 @@ export interface ChatBehaviorSettings {
 ```
 
 **Add to DEFAULT_SETTINGS** (line ~200):
+
 ```typescript
 enableToolCalling: false, // ADD THIS
 ```
@@ -491,6 +539,7 @@ enableToolCalling: false, // ADD THIS
 **Location**: `src/Views/ChatGPT_MDSettingsTab.ts`
 
 **Add to settingsSchema** (line ~100):
+
 ```typescript
 {
   id: "enableToolCalling",
@@ -511,6 +560,7 @@ enableToolCalling: false, // ADD THIS
 **Location**: `src/core/ServiceLocator.ts`
 
 **Add Imports**:
+
 ```typescript
 import { VaultTools } from "src/Services/VaultTools";
 import { ToolRegistry } from "src/Services/ToolRegistry";
@@ -519,6 +569,7 @@ import { ToolService } from "src/Services/ToolService";
 ```
 
 **Add Fields** (line ~20):
+
 ```typescript
 private vaultTools: VaultTools;
 private toolRegistry: ToolRegistry;
@@ -527,23 +578,17 @@ private toolService: ToolService;
 ```
 
 **Add to initializeServices()** (line ~80):
+
 ```typescript
 // Tool services
 this.vaultTools = new VaultTools(this.app, this.fileService);
 this.toolRegistry = new ToolRegistry(this.app, this.vaultTools);
-this.toolExecutor = new ToolExecutor(
-  this.app,
-  this.toolRegistry,
-  this.notificationService
-);
-this.toolService = new ToolService(
-  this.app,
-  this.toolRegistry,
-  this.toolExecutor
-);
+this.toolExecutor = new ToolExecutor(this.app, this.toolRegistry, this.notificationService);
+this.toolService = new ToolService(this.app, this.toolRegistry, this.toolExecutor);
 ```
 
 **Add Getters** (line ~140):
+
 ```typescript
 getToolService(): ToolService {
   return this.toolService;
@@ -572,9 +617,7 @@ getToolExecutor(): ToolExecutor {
 
 ```typescript
 // Get tool service if tools are enabled
-const toolService = settings.enableToolCalling
-  ? this.serviceLocator.getToolService()
-  : undefined;
+const toolService = settings.enableToolCalling ? this.serviceLocator.getToolService() : undefined;
 
 // ... later in callAIAPI ...
 
@@ -786,9 +829,10 @@ Returns array of tool results
 **Detection**: `ToolApprovalDecision.approved === false`
 
 **Response**:
+
 ```typescript
 {
-  error: "User cancelled tool execution"
+  error: "User cancelled tool execution";
 }
 ```
 
@@ -801,9 +845,10 @@ Returns array of tool results
 **Detection**: `toolRegistry.getTool(name)` returns undefined
 
 **Response**:
+
 ```typescript
 {
-  error: "Unknown tool: [toolName]"
+  error: "Unknown tool: [toolName]";
 }
 ```
 
@@ -816,9 +861,10 @@ Returns array of tool results
 **Detection**: Tool execute() throws exception
 
 **Response**:
+
 ```typescript
 {
-  error: String(error)
+  error: String(error);
 }
 ```
 
@@ -833,6 +879,7 @@ Returns array of tool results
 **Detection**: `app.vault.getAbstractFileByPath()` returns null
 
 **Response**:
+
 ```typescript
 {
   path: "[path]",
@@ -850,6 +897,7 @@ Returns array of tool results
 **Detection**: `app.vault.read()` throws exception
 
 **Response**:
+
 ```typescript
 {
   path: "[path]",

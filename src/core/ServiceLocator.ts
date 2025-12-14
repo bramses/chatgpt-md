@@ -101,16 +101,8 @@ export class ServiceLocator {
     // Initialize tool services
     this.vaultTools = new VaultTools(this.app, this.fileService);
     this.toolRegistry = new ToolRegistry(this.app, this.vaultTools);
-    this.toolExecutor = new ToolExecutor(
-      this.app,
-      this.toolRegistry,
-      this.notificationService
-    );
-    this.toolService = new ToolService(
-      this.app,
-      this.toolRegistry,
-      this.toolExecutor
-    );
+    this.toolExecutor = new ToolExecutor(this.app, this.toolRegistry, this.notificationService);
+    this.toolService = new ToolService(this.app, this.toolRegistry, this.toolExecutor);
   }
 
   /**

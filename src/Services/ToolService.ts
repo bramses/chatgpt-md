@@ -35,10 +35,7 @@ export class ToolService {
   /**
    * Request user approval for search results before showing to LLM
    */
-  async requestSearchResultsApproval(
-    query: string,
-    results: VaultSearchResult[]
-  ): Promise<VaultSearchResult[]> {
+  async requestSearchResultsApproval(query: string, results: VaultSearchResult[]): Promise<VaultSearchResult[]> {
     console.log(`[ChatGPT MD] Requesting approval for search results: "${query}" (${results.length} results)`);
 
     const modal = new SearchResultsApprovalModal(this.app, query, results);
@@ -51,9 +48,7 @@ export class ToolService {
       return [];
     }
 
-    console.log(
-      `[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} search results`
-    );
+    console.log(`[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} search results`);
     return decision.approvedResults;
   }
 
@@ -91,7 +86,9 @@ export class ToolService {
             content: content,
           });
         } else {
-          console.log(`[ChatGPT MD] File is not TFile instance. Type: ${typeof file}, Constructor: ${file?.constructor?.name}`);
+          console.log(
+            `[ChatGPT MD] File is not TFile instance. Type: ${typeof file}, Constructor: ${file?.constructor?.name}`
+          );
         }
       } catch (error) {
         console.error(`[ChatGPT MD] Error reading file ${searchResult.path}:`, error);
@@ -109,12 +106,12 @@ export class ToolService {
     const results = [];
 
     for (const toolCall of toolCalls) {
-      console.log('[ChatGPT MD] Tool call structure:', JSON.stringify(toolCall, null, 2));
+      console.log("[ChatGPT MD] Tool call structure:", JSON.stringify(toolCall, null, 2));
 
       // Extract tool info - handle different possible structures
       const toolName = toolCall.toolName || toolCall.name || toolCall.tool;
       const toolArgs = toolCall.args || toolCall.input || toolCall.arguments || {};
-      const toolCallId = toolCall.toolCallId || toolCall.id || 'unknown';
+      const toolCallId = toolCall.toolCallId || toolCall.id || "unknown";
 
       // Request user approval for this tool call
       const approved = await this.toolExecutor.requestApproval({
@@ -126,7 +123,7 @@ export class ToolService {
       if (!approved.approved) {
         results.push({
           toolCallId: toolCallId,
-          result: { error: 'User declined tool execution' },
+          result: { error: "User declined tool execution" },
         });
         continue;
       }
@@ -137,7 +134,7 @@ export class ToolService {
         if (!tool || !tool.execute) {
           results.push({
             toolCallId: toolCallId,
-            result: { error: 'Tool not found or has no execute function' },
+            result: { error: "Tool not found or has no execute function" },
           });
           continue;
         }

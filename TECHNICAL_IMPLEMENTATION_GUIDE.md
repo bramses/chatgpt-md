@@ -78,6 +78,7 @@ export interface FileReadResult {
 ```
 
 **Key Points**:
+
 - All interfaces exported for use across the codebase
 - `ToolExecutionContext` includes Obsidian `App` for vault access
 - `ToolApprovalDecision` allows modifying args (e.g., filtering files)
@@ -161,10 +162,7 @@ export class VaultTools {
   /**
    * Read contents of specified files
    */
-  async readFiles(
-    args: { filePaths: string[] },
-    context: ToolExecutionContext
-  ): Promise<FileReadResult[]> {
+  async readFiles(args: { filePaths: string[] }, context: ToolExecutionContext): Promise<FileReadResult[]> {
     const { filePaths } = args;
     const results: FileReadResult[] = [];
 
@@ -223,10 +221,10 @@ export class VaultTools {
     let preview = content.substring(start, end);
 
     if (start > 0) {
-      preview = '...' + preview;
+      preview = "..." + preview;
     }
     if (end < content.length) {
-      preview = preview + '...';
+      preview = preview + "...";
     }
 
     return preview;
@@ -235,6 +233,7 @@ export class VaultTools {
 ```
 
 **Key Points**:
+
 - `searchVault()` searches both filename and content
 - Respects `limit` parameter (max 50 for safety)
 - Checks `abortSignal` for cancellation support
@@ -275,33 +274,45 @@ export class ToolRegistry {
    */
   private registerDefaultTools(): void {
     // Vault search tool
-    this.registerTool("vault_search", tool({
-      description: 'Search the Obsidian vault for files by name or content. Returns file paths, names, and content previews. Use this to find relevant notes before reading them.',
-      parameters: z.object({
-        query: z.string().describe('The search query to find files. Can be keywords, topics, or phrases to search for in file names and content.'),
-        limit: z.number().optional().default(10).describe('Maximum number of search results to return. Default is 10, maximum is 50.'),
-      }),
-      execute: async (args, { toolCallId, messages, abortSignal }) => {
-        return await this.vaultTools.searchVault(
-          args,
-          { app: this.app, toolCallId, messages, abortSignal }
-        );
-      },
-    }));
+    this.registerTool(
+      "vault_search",
+      tool({
+        description:
+          "Search the Obsidian vault for files by name or content. Returns file paths, names, and content previews. Use this to find relevant notes before reading them.",
+        parameters: z.object({
+          query: z
+            .string()
+            .describe(
+              "The search query to find files. Can be keywords, topics, or phrases to search for in file names and content."
+            ),
+          limit: z
+            .number()
+            .optional()
+            .default(10)
+            .describe("Maximum number of search results to return. Default is 10, maximum is 50."),
+        }),
+        execute: async (args, { toolCallId, messages, abortSignal }) => {
+          return await this.vaultTools.searchVault(args, { app: this.app, toolCallId, messages, abortSignal });
+        },
+      })
+    );
 
     // File read tool
-    this.registerTool("file_read", tool({
-      description: 'Read the full contents of specific files from the vault. User will be asked to approve which files to share. Use this after searching to get complete file contents.',
-      parameters: z.object({
-        filePaths: z.array(z.string()).describe('Array of file paths to read. Use the paths returned from vault_search.'),
-      }),
-      execute: async (args, { toolCallId, messages, abortSignal }) => {
-        return await this.vaultTools.readFiles(
-          args,
-          { app: this.app, toolCallId, messages, abortSignal }
-        );
-      },
-    }));
+    this.registerTool(
+      "file_read",
+      tool({
+        description:
+          "Read the full contents of specific files from the vault. User will be asked to approve which files to share. Use this after searching to get complete file contents.",
+        parameters: z.object({
+          filePaths: z
+            .array(z.string())
+            .describe("Array of file paths to read. Use the paths returned from vault_search."),
+        }),
+        execute: async (args, { toolCallId, messages, abortSignal }) => {
+          return await this.vaultTools.readFiles(args, { app: this.app, toolCallId, messages, abortSignal });
+        },
+      })
+    );
   }
 
   /**
@@ -344,6 +355,7 @@ export class ToolRegistry {
 ```
 
 **Key Points**:
+
 - Uses `tool()` helper from AI SDK
 - Zod `.describe()` provides guidance to AI
 - Descriptive tool descriptions help AI choose correctly
@@ -409,9 +421,10 @@ export class ToolApprovalModal extends Modal {
 
     const argsList = argsContainer.createEl("ul");
     for (const [key, value] of Object.entries(this.args)) {
-      const displayValue = Array.isArray(value) && value.length > 3
-        ? `[${value.slice(0, 3).join(', ')}... (${value.length} total)]`
-        : JSON.stringify(value);
+      const displayValue =
+        Array.isArray(value) && value.length > 3
+          ? `[${value.slice(0, 3).join(", ")}... (${value.length} total)]`
+          : JSON.stringify(value);
       argsList.createEl("li", { text: `${key}: ${displayValue}` });
     }
 
@@ -445,16 +458,14 @@ export class ToolApprovalModal extends Modal {
     );
 
     buttonContainer.addButton((btn) =>
-      btn
-        .setButtonText("Cancel")
-        .onClick(() => {
-          this.result = {
-            approvalId: this.toolName,
-            approved: false,
-          };
-          this.resolveModalPromise(this.result);
-          this.close();
-        })
+      btn.setButtonText("Cancel").onClick(() => {
+        this.result = {
+          approvalId: this.toolName,
+          approved: false,
+        };
+        this.resolveModalPromise(this.result);
+        this.close();
+      })
     );
   }
 
@@ -470,7 +481,7 @@ export class ToolApprovalModal extends Modal {
     for (const path of filePaths) {
       this.fileSelections.set(path, true);
 
-      const fileName = path.split('/').pop() || path;
+      const fileName = path.split("/").pop() || path;
 
       new Setting(fileListContainer)
         .setName(fileName)
@@ -486,25 +497,21 @@ export class ToolApprovalModal extends Modal {
     const selectButtonContainer = new Setting(container);
 
     selectButtonContainer.addButton((btn) =>
-      btn
-        .setButtonText("Select All")
-        .onClick(() => {
-          filePaths.forEach(path => this.fileSelections.set(path, true));
-          // Refresh modal
-          contentEl.empty();
-          this.onOpen();
-        })
+      btn.setButtonText("Select All").onClick(() => {
+        filePaths.forEach((path) => this.fileSelections.set(path, true));
+        // Refresh modal
+        contentEl.empty();
+        this.onOpen();
+      })
     );
 
     selectButtonContainer.addButton((btn) =>
-      btn
-        .setButtonText("Deselect All")
-        .onClick(() => {
-          filePaths.forEach(path => this.fileSelections.set(path, false));
-          // Refresh modal
-          contentEl.empty();
-          this.onOpen();
-        })
+      btn.setButtonText("Deselect All").onClick(() => {
+        filePaths.forEach((path) => this.fileSelections.set(path, false));
+        // Refresh modal
+        contentEl.empty();
+        this.onOpen();
+      })
     );
   }
 
@@ -572,6 +579,7 @@ export class ToolApprovalModal extends Modal {
 ```
 
 **Key Points**:
+
 - Promise pattern for async user input
 - Special handling for `file_read` with checkboxes
 - Select All/Deselect All buttons for convenience
@@ -628,10 +636,7 @@ export class ToolExecutor {
   /**
    * Execute a tool with user approval
    */
-  async executeWithApproval(
-    request: ToolApprovalRequest,
-    context: ToolExecutionContext
-  ): Promise<any> {
+  async executeWithApproval(request: ToolApprovalRequest, context: ToolExecutionContext): Promise<any> {
     // Request approval from user
     const decision = await this.requestApproval(request);
 
@@ -674,6 +679,7 @@ export class ToolExecutor {
 ```
 
 **Key Points**:
+
 - Separates approval request from execution
 - Shows notifications for user feedback
 - Comprehensive error handling
@@ -716,10 +722,7 @@ export class ToolService {
   /**
    * Handle tool approval requests from AI SDK
    */
-  async handleToolApprovalRequests(
-    toolCalls: any[],
-    context: ToolExecutionContext
-  ): Promise<any[]> {
+  async handleToolApprovalRequests(toolCalls: any[], context: ToolExecutionContext): Promise<any[]> {
     console.log(`[ChatGPT MD] Handling ${toolCalls.length} tool call(s)`);
 
     const toolResults = [];
@@ -747,6 +750,7 @@ export class ToolService {
 ```
 
 **Key Points**:
+
 - Simple orchestration layer
 - Delegates to ToolExecutor for approval/execution
 - Returns results in format AI SDK expects
@@ -788,6 +792,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 ```
 
 **Key Points**:
+
 - Default is `false` for safety/privacy
 - Part of `ChatBehaviorSettings` group
 - Boolean type for simple toggle
@@ -820,6 +825,7 @@ const settingsSchema: SettingDefinition[] = [
 ```
 
 **Key Points**:
+
 - Clear warning about vault data access
 - Emphasizes approval requirement
 - Marked as "Experimental"
@@ -836,6 +842,7 @@ const settingsSchema: SettingDefinition[] = [
 #### Change 1: Update imports (top of file)
 
 Add:
+
 ```typescript
 import { ToolService } from "./ToolService";
 import { CoreTool } from "ai";
@@ -1026,6 +1033,7 @@ protected async callAiSdkStreamText(
 ```
 
 **Key Points**:
+
 - Tools parameter is optional
 - Only add tools if provided and non-empty
 - Handle tool calls after generation/streaming
@@ -1037,6 +1045,7 @@ protected async callAiSdkStreamText(
 ### Step 10: Modify Service Implementations
 
 Need to update 4 service files with same pattern:
+
 - `src/Services/OpenAiService.ts`
 - `src/Services/AnthropicService.ts`
 - `src/Services/GeminiService.ts`
@@ -1149,6 +1158,7 @@ protected async callNonStreamingAPI(
 ```
 
 **Key Points**:
+
 - Same changes for ALL four services
 - Optional toolService parameter throughout
 - Get tools via `toolService?.getToolsForRequest(settings)`
@@ -1225,6 +1235,7 @@ getToolExecutor(): ToolExecutor {
 ```
 
 **Key Points**:
+
 - Initialize in correct order (VaultTools first, ToolService last)
 - All tool services managed by ServiceLocator
 - Getters provide access to services
@@ -1286,6 +1297,7 @@ private registerChatCommand(): void {
 ```
 
 **Key Points**:
+
 - Only get toolService if setting is enabled
 - Pass to callAIAPI as last parameter
 - Respects per-note frontmatter overrides (if implemented)
@@ -1344,15 +1356,19 @@ Should complete with no TypeScript errors.
 ### Common Issues & Solutions
 
 **Issue**: TypeScript error "Cannot find module 'ai'"
+
 - **Solution**: Ensure `ai` package is imported correctly: `import { tool, CoreTool } from "ai";`
 
 **Issue**: Modal doesn't appear
+
 - **Solution**: Check console for errors, verify `toolService` is passed correctly
 
 **Issue**: Tool execution fails
+
 - **Solution**: Check console logs, verify Vault API access
 
 **Issue**: Files not found in search
+
 - **Solution**: Verify `app.vault.getMarkdownFiles()` is working
 
 ---
