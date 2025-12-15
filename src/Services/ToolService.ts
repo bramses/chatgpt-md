@@ -100,6 +100,82 @@ export class ToolService {
   }
 
   /**
+   * Process tool call results: filter, approve, and convert to context messages
+   */
+  async processToolResults(
+    toolCalls: any[],
+    toolResults: any[]
+  ): Promise<{
+    filteredResults: any[];
+    contextMessages: Array<{ role: 'user'; content: string }>;
+  }> {
+    const contextMessages: Array<{ role: 'user'; content: string }> = [];
+    const filteredResults: any[] = [];
+
+    for (const tr of toolResults) {
+      const correspondingToolCall = toolCalls.find((tc: any) => {
+        const tcId = tc.toolCallId || tc.id || 'unknown';
+        return tcId === tr.toolCallId;
+      });
+
+      const toolName = correspondingToolCall?.toolName;
+      const result = tr.result;
+
+      // Handle vault_search results - need approval
+      if (toolName === 'vault_search' && Array.isArray(result)) {
+        if (result.length > 0) {
+          const query = (correspondingToolCall?.input as any)?.query || 'unknown';
+          const approvedResults = await this.requestSearchResultsApproval(query, result);
+
+          filteredResults.push({ ...tr, result: approvedResults });
+
+          if (approvedResults.length > 0) {
+            // Read file contents for approved results
+            const fileContents = await this.readFilesFromSearchResults(approvedResults);
+            for (const fc of fileContents) {
+              contextMessages.push({
+                role: 'user',
+                content: `[vault_search result]\n\nFile: ${fc.path}\n\n${fc.content}`,
+              });
+            }
+          } else {
+            contextMessages.push({
+              role: 'user',
+              content: `[vault_search result - no files found]\n\nThe search for "${query}" returned no results. Try searching with different keywords or single words.`,
+            });
+          }
+        } else {
+          // Empty results
+          const query = (correspondingToolCall?.input as any)?.query || 'unknown';
+          filteredResults.push(tr);
+          contextMessages.push({
+            role: 'user',
+            content: `[vault_search result - no files found]\n\nThe search for "${query}" returned no results. Try searching with different keywords or single words.`,
+          });
+        }
+      }
+      // Handle file_read results
+      else if (toolName === 'file_read' && Array.isArray(result) && result.length > 0) {
+        filteredResults.push(tr);
+        for (const fileResult of result) {
+          if (fileResult.content && typeof fileResult.content === 'string') {
+            contextMessages.push({
+              role: 'user',
+              content: `[file_read result]\n\nFile: ${fileResult.path}\n\n${fileResult.content}`,
+            });
+          }
+        }
+      }
+      // Other tools
+      else {
+        filteredResults.push(tr);
+      }
+    }
+
+    return { filteredResults, contextMessages };
+  }
+
+  /**
    * Handle tool calls by requesting user approval and executing if approved
    */
   async handleToolCalls(toolCalls: any[]): Promise<any[]> {
