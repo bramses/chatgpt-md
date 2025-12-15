@@ -166,6 +166,24 @@ export interface ServiceUrlSettings {
 }
 
 /**
+ * Web search settings
+ */
+export interface WebSearchSettings {
+  /** Enable/disable web search tool */
+  enableWebSearch: boolean;
+  /** Search provider ('brave' | 'custom') */
+  webSearchProvider: 'brave' | 'custom';
+  /** API key for providers that require it */
+  webSearchApiKey?: string;
+  /** Custom search API endpoint */
+  webSearchApiUrl?: string;
+  /** Fetch full page content for results */
+  fetchFullContent: boolean;
+  /** Maximum results to return */
+  maxWebSearchResults: number;
+}
+
+/**
  * Combined settings interface
  */
 export interface ChatGPT_MDSettings
@@ -176,6 +194,7 @@ export interface ChatGPT_MDSettings
     FormattingSettings,
     TemplateSettings,
     ServiceUrlSettings,
+    WebSearchSettings,
     OpenAIFrontmatterSettings,
     AnthropicFrontmatterSettings,
     GeminiFrontmatterSettings,
@@ -211,6 +230,14 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   autoInferTitle: false,
   enableToolCalling: false,
   pluginSystemMessage: PLUGIN_SYSTEM_MESSAGE,
+
+  // Web Search
+  enableWebSearch: false,
+  webSearchProvider: 'brave',
+  webSearchApiKey: '',
+  webSearchApiUrl: '',
+  fetchFullContent: false,
+  maxWebSearchResults: 5,
 
   // Formatting
   dateFormat: DEFAULT_DATE_FORMAT,

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { tool, zodSchema } from "ai";
 import { VaultTools } from "./VaultTools";
 import { ChatGPT_MDSettings } from "src/Models/Config";
+import { WebSearchService } from "./WebSearchService";
+import { SettingsService } from "./SettingsService";
 
 /**
  * Registry for managing AI tools
@@ -12,7 +14,9 @@ export class ToolRegistry {
 
   constructor(
     private app: App,
-    private vaultTools: VaultTools
+    private vaultTools: VaultTools,
+    private webSearchService: WebSearchService,
+    private settingsService: SettingsService
   ) {
     this.registerDefaultTools();
   }
@@ -77,6 +81,35 @@ export class ToolRegistry {
       },
     });
     this.registerTool("file_read", fileReadTool);
+
+    // Web search tool - approval handled manually before execution
+    const webSearchTool = tool({
+      description:
+        "Search the web for information on a topic. Returns titles, URLs, and snippets from search results. User will be asked to approve which results to share.",
+      inputSchema: zodSchema(
+        z.object({
+          query: z
+            .string()
+            .describe("The search query to look up on the web"),
+          limit: z
+            .number()
+            .optional()
+            .default(5)
+            .describe("Maximum number of search results to return. Default is 5, maximum is 10."),
+        })
+      ),
+      execute: async (args: { query: string; limit?: number }) => {
+        // Tool execution - approval is handled by the caller via ToolService
+        const settings = this.settingsService.getSettings();
+        return await this.webSearchService.searchWeb(
+          args,
+          settings.webSearchProvider,
+          settings.webSearchApiKey,
+          settings.webSearchApiUrl
+        );
+      },
+    });
+    this.registerTool("web_search", webSearchTool);
   }
 
   /**
@@ -113,6 +146,17 @@ export class ToolRegistry {
       return undefined;
     }
 
-    return this.getAllTools();
+    const enabledTools: Record<string, any> = {};
+
+    // Vault tools
+    enabledTools.vault_search = this.tools.get("vault_search");
+    enabledTools.file_read = this.tools.get("file_read");
+
+    // Web search tool (check setting)
+    if (settings.enableWebSearch) {
+      enabledTools.web_search = this.tools.get("web_search");
+    }
+
+    return Object.keys(enabledTools).length > 0 ? enabledTools : undefined;
   }
 }

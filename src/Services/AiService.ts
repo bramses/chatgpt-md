@@ -532,26 +532,50 @@ export abstract class BaseAiService implements IAiApiService {
       let currentCursor = setAtCursor ? cursorPositions.initialCursor : cursorPositions.newCursor;
 
       // Iterate over the text stream
-      for await (const textPart of textStream) {
-        // Check if streaming was aborted
-        if (this.apiService.wasAborted()) {
-          break;
+      // Use flush timer for batched cursor updates during streaming
+      let flushTimer: NodeJS.Timeout | null = null;
+      let bufferedText = "";
+
+      const flushBuffer = () => {
+        if (bufferedText.length === 0) return;
+
+        if (setAtCursor) {
+          editor.replaceSelection(bufferedText);
+        } else {
+          editor.replaceRange(bufferedText, currentCursor);
+          const currentOffset = editor.posToOffset(currentCursor);
+          const newOffset = currentOffset + bufferedText.length;
+          currentCursor = editor.offsetToPos(newOffset);
+          // Update visible cursor position for real-time feedback
+          editor.setCursor(currentCursor);
         }
 
-        fullText += textPart;
+        bufferedText = "";
+      };
 
-        // Update the editor with the new text
-        if (setAtCursor) {
-          editor.replaceSelection(textPart);
-        } else {
-          // Insert at tracked cursor position
-          editor.replaceRange(textPart, currentCursor);
+      const startFlushTimer = () => {
+        if (!flushTimer) {
+          flushTimer = setInterval(flushBuffer, 50); // Flush every 50ms
+        }
+      };
 
-          // Update cursor position using Obsidian's offset API
-          // This correctly handles multi-line content
-          const currentOffset = editor.posToOffset(currentCursor);
-          const newOffset = currentOffset + textPart.length;
-          currentCursor = editor.offsetToPos(newOffset);
+      startFlushTimer();
+
+      try {
+        for await (const textPart of textStream) {
+          // Check if streaming was aborted
+          if (this.apiService.wasAborted()) {
+            break;
+          }
+
+          fullText += textPart;
+          bufferedText += textPart;
+        }
+      } finally {
+        // Clear timer and flush remaining text
+        if (flushTimer) {
+          clearInterval(flushTimer);
+          flushBuffer();
         }
       }
 
@@ -586,11 +610,33 @@ export abstract class BaseAiService implements IAiApiService {
             messages: updatedMessages,
           });
 
-          for await (const textPart of continuationResult.textStream) {
-            if (this.apiService.wasAborted()) break;
-            fullText += textPart;
-            editor.replaceRange(textPart, currentCursor);
-            currentCursor = editor.offsetToPos(editor.posToOffset(currentCursor) + textPart.length);
+          // Reset buffer for continuation
+          bufferedText = "";
+          let continuationFlushTimer: NodeJS.Timeout | null = null;
+
+          const continuationFlush = () => {
+            if (bufferedText.length === 0) return;
+            editor.replaceRange(bufferedText, currentCursor);
+            currentCursor = editor.offsetToPos(editor.posToOffset(currentCursor) + bufferedText.length);
+            editor.setCursor(currentCursor);
+            bufferedText = "";
+          };
+
+          if (!continuationFlushTimer) {
+            continuationFlushTimer = setInterval(continuationFlush, 50);
+          }
+
+          try {
+            for await (const textPart of continuationResult.textStream) {
+              if (this.apiService.wasAborted()) break;
+              fullText += textPart;
+              bufferedText += textPart;
+            }
+          } finally {
+            if (continuationFlushTimer) {
+              clearInterval(continuationFlushTimer);
+              continuationFlush();
+            }
           }
         }
       }

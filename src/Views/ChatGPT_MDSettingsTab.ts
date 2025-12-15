@@ -121,6 +121,61 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "Chat Behavior",
       },
       {
+        id: "enableWebSearch",
+        name: "Enable Web Search",
+        description:
+          "Allow the AI to search the web for information using Brave Search. " +
+          "Requires tool calling to be enabled. " +
+          "Requires a free Brave Search API key (1,000 queries/month). " +
+          "Get yours at: https://api.search.brave.com/",
+        type: "toggle",
+        group: "Chat Behavior",
+      },
+      {
+        id: "webSearchApiKey",
+        name: "Brave Search API Key",
+        description: "API key for Brave Search. Get a free key at https://api.search.brave.com/",
+        type: "text",
+        placeholder: "your Brave Search API key",
+        group: "Chat Behavior",
+      },
+      {
+        id: "webSearchProvider",
+        name: "Alternative Search Provider",
+        description: "Use a custom search API endpoint instead of Brave Search",
+        type: "dropdown",
+        options: {
+          brave: "Brave Search (Default)",
+          custom: "Custom API Endpoint",
+        },
+        group: "Chat Behavior",
+      },
+      {
+        id: "webSearchApiUrl",
+        name: "Custom Search API URL",
+        description: "URL for custom search API endpoint (only when using Custom provider)",
+        type: "text",
+        placeholder: "https://your-search-api.com/search",
+        group: "Chat Behavior",
+      },
+      {
+        id: "fetchFullContent",
+        name: "Fetch Full Page Content",
+        description:
+          "Fetch complete page content for approved search results. " +
+          "May slow down searches and use more tokens.",
+        type: "toggle",
+        group: "Chat Behavior",
+      },
+      {
+        id: "maxWebSearchResults",
+        name: "Max Web Search Results",
+        description: "Maximum number of search results to return (1-10)",
+        type: "text",
+        placeholder: "5",
+        group: "Chat Behavior",
+      },
+      {
         id: "inferTitleLanguage",
         name: "Infer Title Language",
         description: "Language to use for title inference.",

@@ -3,7 +3,8 @@ import { ToolRegistry } from "./ToolRegistry";
 import { ToolExecutor } from "./ToolExecutor";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { SearchResultsApprovalModal } from "src/Views/SearchResultsApprovalModal";
-import { VaultSearchResult } from "src/Models/Tool";
+import { WebSearchApprovalModal } from "src/Views/WebSearchApprovalModal";
+import { VaultSearchResult, WebSearchResult } from "src/Models/Tool";
 
 /**
  * Service for orchestrating tool calling with AI SDK
@@ -49,6 +50,29 @@ export class ToolService {
     }
 
     console.log(`[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} search results`);
+    return decision.approvedResults;
+  }
+
+  /**
+   * Request user approval for web search results before sharing with LLM
+   */
+  async requestWebSearchResultsApproval(
+    query: string,
+    results: WebSearchResult[]
+  ): Promise<WebSearchResult[]> {
+    console.log(`[ChatGPT MD] Requesting approval for web search results: "${query}" (${results.length} results)`);
+
+    const modal = new WebSearchApprovalModal(this.app, query, results);
+    modal.open();
+
+    const decision = await modal.waitForResult();
+
+    if (!decision.approved) {
+      console.log(`[ChatGPT MD] Web search results approval cancelled by user`);
+      return [];
+    }
+
+    console.log(`[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} web search results`);
     return decision.approvedResults;
   }
 
@@ -164,6 +188,38 @@ export class ToolService {
               content: `[file_read result]\n\nFile: ${fileResult.path}\n\n${fileResult.content}`,
             });
           }
+        }
+      }
+      // Handle web_search results - need approval
+      else if (toolName === 'web_search' && Array.isArray(result)) {
+        if (result.length > 0) {
+          const query = (correspondingToolCall?.input as any)?.query || 'unknown';
+          const approvedResults = await this.requestWebSearchResultsApproval(query, result);
+
+          filteredResults.push({ ...tr, result: approvedResults });
+
+          if (approvedResults.length > 0) {
+            // Format approved results as context messages
+            for (const webResult of approvedResults) {
+              contextMessages.push({
+                role: 'user',
+                content: `[web_search result]\n\nTitle: ${webResult.title}\nURL: ${webResult.url}\n\n${webResult.content || webResult.snippet}`,
+              });
+            }
+          } else {
+            contextMessages.push({
+              role: 'user',
+              content: `[web_search result - no results selected]\n\nThe web search for "${query}" returned results, but none were approved for sharing.`,
+            });
+          }
+        } else {
+          // Empty results
+          const query = (correspondingToolCall?.input as any)?.query || 'unknown';
+          filteredResults.push(tr);
+          contextMessages.push({
+            role: 'user',
+            content: `[web_search result - no results found]\n\nThe web search for "${query}" returned no results. Try different search terms.`,
+          });
         }
       }
       // Other tools

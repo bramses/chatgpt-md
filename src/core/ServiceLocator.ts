@@ -28,6 +28,7 @@ import {
 } from "src/Constants";
 import { SettingsService } from "src/Services/SettingsService";
 import { VaultTools } from "src/Services/VaultTools";
+import { WebSearchService } from "src/Services/WebSearchService";
 import { ToolRegistry } from "src/Services/ToolRegistry";
 import { ToolExecutor } from "src/Services/ToolExecutor";
 import { ToolService } from "src/Services/ToolService";
@@ -68,6 +69,7 @@ export class ServiceLocator {
   private apiResponseParser: ApiResponseParser;
   private settingsService: SettingsService;
   private vaultTools: VaultTools;
+  private webSearchService: WebSearchService;
   private toolRegistry: ToolRegistry;
   private toolExecutor: ToolExecutor;
   private toolService: ToolService;
@@ -112,9 +114,12 @@ export class ServiceLocator {
     // Initialize settings service
     this.settingsService = new SettingsService(this.plugin, this.notificationService, this.errorService);
 
+    // Initialize web search service
+    this.webSearchService = new WebSearchService(this.notificationService);
+
     // Initialize tool services
     this.vaultTools = new VaultTools(this.app, this.fileService);
-    this.toolRegistry = new ToolRegistry(this.app, this.vaultTools);
+    this.toolRegistry = new ToolRegistry(this.app, this.vaultTools, this.webSearchService, this.settingsService);
     this.toolExecutor = new ToolExecutor(this.app, this.toolRegistry, this.notificationService);
     this.toolService = new ToolService(this.app, this.toolRegistry, this.toolExecutor);
   }
@@ -214,5 +219,12 @@ export class ServiceLocator {
    */
   getToolExecutor(): ToolExecutor {
     return this.toolExecutor;
+  }
+
+  /**
+   * Get the web search service
+   */
+  getWebSearchService(): WebSearchService {
+    return this.webSearchService;
   }
 }

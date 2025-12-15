@@ -71,3 +71,29 @@ export interface SearchResultsApprovalDecision {
   approved: boolean;
   approvedResults: VaultSearchResult[]; // Only the approved results
 }
+
+/**
+ * Web search result from search API
+ */
+export interface WebSearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+  content?: string; // Full page content if fetched
+}
+
+/**
+ * Web search approval request
+ */
+export interface WebSearchApprovalRequest {
+  query: string;
+  results: WebSearchResult[];
+}
+
+/**
+ * User's web search approval decision
+ */
+export interface WebSearchApprovalDecision {
+  approved: boolean;
+  approvedResults: WebSearchResult[];
+}
