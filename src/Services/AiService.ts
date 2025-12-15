@@ -341,6 +341,15 @@ export abstract class BaseAiService implements IAiApiService {
   }
 
   /**
+   * Extract model name by removing provider prefix
+   * e.g., "openai@gpt-4" -> "gpt-4"
+   */
+  protected extractModelName(model: string): string {
+    const atIndex = model.indexOf('@');
+    return atIndex !== -1 ? model.slice(atIndex + 1) : model;
+  }
+
+  /**
    * Add plugin system message to messages array
    * This ensures the LLM understands the Obsidian context
    * Each service can specify its preferred role for system messages

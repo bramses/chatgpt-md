@@ -112,7 +112,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     });
 
     // Extract model name (remove provider prefix if present)
-    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
+    const modelName = this.extractModelName(config.model);
 
     // Get tools if enabled
     const tools = toolService?.getToolsForRequest(settings!);
@@ -150,7 +150,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     });
 
     // Extract model name (remove provider prefix if present)
-    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
+    const modelName = this.extractModelName(config.model);
 
     // Get tools if enabled
     const tools = toolService?.getToolsForRequest(settings!);

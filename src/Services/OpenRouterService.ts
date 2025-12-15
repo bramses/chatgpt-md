@@ -128,7 +128,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     });
 
     // Extract model name (remove provider prefix if present)
-    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
+    const modelName = this.extractModelName(config.model);
 
     const tools = toolService?.getToolsForRequest(settings!);
 
@@ -164,7 +164,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     });
 
     // Extract model name (remove provider prefix if present)
-    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
+    const modelName = this.extractModelName(config.model);
 
     const tools = toolService?.getToolsForRequest(settings!);
 
