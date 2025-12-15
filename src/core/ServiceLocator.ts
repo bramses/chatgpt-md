@@ -33,6 +33,20 @@ import { ToolExecutor } from "src/Services/ToolExecutor";
 import { ToolService } from "src/Services/ToolService";
 
 /**
+ * Registry mapping service types to their constructors
+ */
+const AI_SERVICE_REGISTRY: Map<string, new () => IAiApiService> = new Map(
+  [
+    [AI_SERVICE_OPENAI, OpenAiService],
+    [AI_SERVICE_ANTHROPIC, AnthropicService],
+    [AI_SERVICE_GEMINI, GeminiService],
+    [AI_SERVICE_OLLAMA, OllamaService],
+    [AI_SERVICE_LMSTUDIO, LmStudioService],
+    [AI_SERVICE_OPENROUTER, OpenRouterService],
+  ] as [string, new () => IAiApiService][]
+);
+
+/**
  * ServiceLocator is responsible for creating and providing access to services
  * It centralizes service creation and dependency injection
  */
@@ -109,22 +123,13 @@ export class ServiceLocator {
    * Get an AI API service based on the service type
    */
   getAiApiService(serviceType: string): IAiApiService {
-    switch (serviceType) {
-      case AI_SERVICE_OPENAI:
-        return new OpenAiService();
-      case AI_SERVICE_OLLAMA:
-        return new OllamaService();
-      case AI_SERVICE_OPENROUTER:
-        return new OpenRouterService();
-      case AI_SERVICE_LMSTUDIO:
-        return new LmStudioService();
-      case AI_SERVICE_ANTHROPIC:
-        return new AnthropicService();
-      case AI_SERVICE_GEMINI:
-        return new GeminiService();
-      default:
-        throw new Error(`Unknown AI service type: ${serviceType}`);
+    const ServiceClass = AI_SERVICE_REGISTRY.get(serviceType);
+
+    if (!ServiceClass) {
+      throw new Error(`Unknown AI service type: ${serviceType}`);
     }
+
+    return new ServiceClass();
   }
 
   // Getters for all services
