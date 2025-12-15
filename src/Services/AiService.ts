@@ -626,83 +626,46 @@ export interface OllamaModel {
 }
 
 /**
- * Determine the AI provider from a URL or model
+ * Determine the AI provider from a model string
+ * Model prefixes (e.g., "openai@gpt-4") are the canonical way to specify providers
  */
 export const aiProviderFromUrl = (url?: string, model?: string): string | undefined => {
-  // Check model first for service prefixes
-  if (model?.startsWith("openai@")) {
-    return AI_SERVICE_OPENAI;
+  if (!model) {
+    return undefined;
   }
-  if (model?.includes(AI_SERVICE_OPENROUTER)) {
-    return AI_SERVICE_OPENROUTER;
-  }
-  if (model?.startsWith("lmstudio@")) {
-    return AI_SERVICE_LMSTUDIO;
-  }
-  if (model?.startsWith("anthropic@")) {
-    return AI_SERVICE_ANTHROPIC;
-  }
-  if (model?.startsWith("gemini@")) {
-    return AI_SERVICE_GEMINI;
-  }
-  if (model?.startsWith("ollama@")) {
-    return AI_SERVICE_OLLAMA;
-  }
-  if (model?.startsWith("local@")) {
-    // Backward compatibility: local@ prefix points to Ollama
-    return AI_SERVICE_OLLAMA;
-  }
-  if (model?.includes("claude")) {
-    return AI_SERVICE_ANTHROPIC;
-  }
-  if (model?.includes("gemini")) {
-    return AI_SERVICE_GEMINI;
-  }
-  if (model?.includes("local")) {
-    // Check URL to distinguish between Ollama and LM Studio for legacy "local" models
-    if (url?.includes("1234")) {
-      return AI_SERVICE_LMSTUDIO;
+
+  // Canonical: Check explicit provider prefixes
+  const prefixMap: [string, string][] = [
+    ['openai@', AI_SERVICE_OPENAI],
+    ['anthropic@', AI_SERVICE_ANTHROPIC],
+    ['gemini@', AI_SERVICE_GEMINI],
+    ['ollama@', AI_SERVICE_OLLAMA],
+    ['lmstudio@', AI_SERVICE_LMSTUDIO],
+    ['openrouter@', AI_SERVICE_OPENROUTER],
+    ['local@', AI_SERVICE_OLLAMA], // backward compatibility
+  ];
+
+  for (const [prefix, service] of prefixMap) {
+    if (model.startsWith(prefix)) {
+      return service;
     }
-    return AI_SERVICE_OLLAMA;
   }
 
-  // Check for common OpenAI model patterns (backward compatibility)
-  if (model?.includes("gpt") || model?.includes("o1") || model?.includes("o3") || model?.includes("o4")) {
-    return AI_SERVICE_OPENAI;
-  }
+  // Legacy: Infer from model name patterns (backward compatibility)
+  const modelLower = model.toLowerCase();
 
-  // Then check URL patterns
-  // Define URL patterns
-  const OPENROUTER_URL_PATTERN = "openrouter";
-  const ANTHROPIC_URL_PATTERN = "anthropic";
-  const GEMINI_URL_PATTERN = "generativelanguage.googleapis.com";
-  const LOCAL_URL_PATTERNS = ["localhost", "127.0.0.1"];
-  const LMSTUDIO_URL_PATTERN = "1234"; // LM Studio default port
-
-  if (url?.includes(OPENROUTER_URL_PATTERN)) {
-    return AI_SERVICE_OPENROUTER;
-  }
-  if (url?.includes(ANTHROPIC_URL_PATTERN)) {
+  if (modelLower.includes('claude')) {
     return AI_SERVICE_ANTHROPIC;
   }
-  if (url?.includes(GEMINI_URL_PATTERN)) {
+  if (modelLower.includes('gemini')) {
     return AI_SERVICE_GEMINI;
   }
-  if (url?.includes(LMSTUDIO_URL_PATTERN)) {
-    return AI_SERVICE_LMSTUDIO;
-  }
-  if (LOCAL_URL_PATTERNS.some((pattern) => url?.includes(pattern))) {
-    return AI_SERVICE_OLLAMA;
-  }
-
-  // Default to OpenAI for models without explicit service identification
-  // This maintains backward compatibility for existing configurations
-  if (model && !url) {
+  if (modelLower.includes('gpt') || modelLower.startsWith('o1') || modelLower.startsWith('o3') || modelLower.startsWith('o4')) {
     return AI_SERVICE_OPENAI;
   }
 
-  // Return undefined if no provider can be determined
-  return undefined;
+  // Default to OpenAI for unrecognized models (most common case)
+  return AI_SERVICE_OPENAI;
 };
 
 /**
