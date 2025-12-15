@@ -3,11 +3,8 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENROUTER, ROLE_SYSTEM } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { BaseAiService, IAiApiService, StreamingResponse } from "src/Services/AiService";
-import { ErrorService } from "./ErrorService";
-import { NotificationService } from "./NotificationService";
-import { ApiService } from "./ApiService";
 import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
+import { ApiService } from "./ApiService";
 import { createOpenRouter, OpenRouterProvider } from "@openrouter/ai-sdk-provider";
 import { ToolService } from "./ToolService";
 
@@ -86,27 +83,11 @@ export const fetchAvailableOpenRouterModels = async (url: string, apiKey: string
 };
 
 export class OpenRouterService extends BaseAiService implements IAiApiService {
-  protected errorService: ErrorService;
-  protected notificationService: NotificationService;
-  protected apiService: ApiService;
-  protected apiAuthService: ApiAuthService;
+  protected serviceType = AI_SERVICE_OPENROUTER;
   protected provider: OpenRouterProvider;
 
-  protected apiResponseParser: ApiResponseParser;
-  protected serviceType = AI_SERVICE_OPENROUTER;
-
-  constructor(
-    errorService?: ErrorService,
-    notificationService?: NotificationService,
-    apiService?: ApiService,
-    apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser
-  ) {
-    super(errorService, notificationService);
-    this.errorService = errorService || new ErrorService(this.notificationService);
-    this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
-    this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
-    this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+  constructor() {
+    super();
     this.provider = createOpenRouter();
   }
 

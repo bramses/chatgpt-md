@@ -111,53 +111,17 @@ export class ServiceLocator {
   getAiApiService(serviceType: string): IAiApiService {
     switch (serviceType) {
       case AI_SERVICE_OPENAI:
-        return new OpenAiService(
-          this.errorService,
-          this.notificationService,
-          this.apiService,
-          this.apiAuthService,
-          this.apiResponseParser
-        );
+        return new OpenAiService();
       case AI_SERVICE_OLLAMA:
-        return new OllamaService(
-          this.errorService,
-          this.notificationService,
-          this.apiService,
-          this.apiAuthService,
-          this.apiResponseParser
-        );
+        return new OllamaService();
       case AI_SERVICE_OPENROUTER:
-        return new OpenRouterService(
-          this.errorService,
-          this.notificationService,
-          this.apiService,
-          this.apiAuthService,
-          this.apiResponseParser
-        );
+        return new OpenRouterService();
       case AI_SERVICE_LMSTUDIO:
-        return new LmStudioService(
-          this.errorService,
-          this.notificationService,
-          this.apiService,
-          this.apiAuthService,
-          this.apiResponseParser
-        );
+        return new LmStudioService();
       case AI_SERVICE_ANTHROPIC:
-        return new AnthropicService(
-          this.errorService,
-          this.notificationService,
-          this.apiService,
-          this.apiAuthService,
-          this.apiResponseParser
-        );
+        return new AnthropicService();
       case AI_SERVICE_GEMINI:
-        return new GeminiService(
-          this.errorService,
-          this.notificationService,
-          this.apiService,
-          this.apiAuthService,
-          this.apiResponseParser
-        );
+        return new GeminiService();
       default:
         throw new Error(`Unknown AI service type: ${serviceType}`);
     }

@@ -105,9 +105,9 @@ export abstract class BaseAiService implements IAiApiService {
   // Abstract property to specify if the service supports system field in payload
   protected abstract supportsSystemField(): boolean;
 
-  constructor(errorService?: ErrorService, notificationService?: NotificationService) {
-    this.notificationService = notificationService ?? new NotificationService();
-    this.errorService = errorService ?? new ErrorService(this.notificationService);
+  constructor() {
+    this.notificationService = new NotificationService();
+    this.errorService = new ErrorService(this.notificationService);
     this.apiService = new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = new ApiAuthService(this.notificationService);
     this.apiResponseParser = new ApiResponseParser(this.notificationService);

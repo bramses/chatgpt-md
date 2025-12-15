@@ -5,9 +5,6 @@ import { BaseAiService, IAiApiService, OpenAiModel } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ApiService } from "./ApiService";
 import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
-import { ErrorService } from "./ErrorService";
-import { NotificationService } from "./NotificationService";
 import { createOpenAI, OpenAIProvider } from "@ai-sdk/openai";
 import { ToolService } from "./ToolService";
 
@@ -70,26 +67,11 @@ export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) =>
 };
 
 export class OpenAiService extends BaseAiService implements IAiApiService {
-  protected errorService: ErrorService;
-  protected notificationService: NotificationService;
-  protected apiService: ApiService;
-  protected apiAuthService: ApiAuthService;
-  protected apiResponseParser: ApiResponseParser;
   protected serviceType = AI_SERVICE_OPENAI;
   protected provider: OpenAIProvider;
 
-  constructor(
-    errorService?: ErrorService,
-    notificationService?: NotificationService,
-    apiService?: ApiService,
-    apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser
-  ) {
-    super(errorService, notificationService);
-    this.errorService = errorService || new ErrorService(this.notificationService);
-    this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
-    this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
-    this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+  constructor() {
+    super();
   }
 
   getDefaultConfig(): OpenAIConfig {

@@ -3,11 +3,7 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_ANTHROPIC, ROLE_SYSTEM } from "src/Constants";
 import { BaseAiService, IAiApiService } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { ApiService } from "./ApiService";
-import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
-import { ErrorService } from "./ErrorService";
-import { NotificationService } from "./NotificationService";
+import { isValidApiKey } from "./ApiAuthService";
 import { AnthropicProvider, createAnthropic } from "@ai-sdk/anthropic";
 import { ToolService } from "./ToolService";
 
@@ -65,26 +61,11 @@ export const fetchAvailableAnthropicModels = async (url: string, apiKey: string)
 };
 
 export class AnthropicService extends BaseAiService implements IAiApiService {
-  protected errorService: ErrorService;
-  protected notificationService: NotificationService;
-  protected apiService: ApiService;
-  protected apiAuthService: ApiAuthService;
-  protected apiResponseParser: ApiResponseParser;
   protected serviceType = AI_SERVICE_ANTHROPIC;
   protected provider: AnthropicProvider;
 
-  constructor(
-    errorService?: ErrorService,
-    notificationService?: NotificationService,
-    apiService?: ApiService,
-    apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser
-  ) {
-    super(errorService, notificationService);
-    this.errorService = errorService || new ErrorService(this.notificationService);
-    this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
-    this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
-    this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+  constructor() {
+    super();
   }
 
   getDefaultConfig(): AnthropicConfig {
