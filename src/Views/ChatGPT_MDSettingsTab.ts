@@ -400,6 +400,19 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         type: "toggle",
         group: "Tool Calling",
       },
+      {
+        id: "modelsWithoutToolSupport",
+        name: "Models Without Tool Support",
+        description:
+          "Comma-separated list of models that don't support tool calls. " +
+          "These models will automatically skip tool calling. " +
+          "Models are added here automatically when tool calls fail. " +
+          "You can manually edit this list if a model gains tool support in the future. " +
+          "Example: gemma3:4b, llama2:7b",
+        type: "textarea",
+        placeholder: "gemma3:4b, llama2:7b",
+        group: "Tool Calling",
+      },
     ];
 
     // Group settings by category

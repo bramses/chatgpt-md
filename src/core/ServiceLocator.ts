@@ -11,7 +11,7 @@ import { ErrorService } from "src/Services/ErrorService";
 import { ApiService } from "src/Services/ApiService";
 import { ApiAuthService } from "src/Services/ApiAuthService";
 import { ApiResponseParser } from "src/Services/ApiResponseParser";
-import { IAiApiService } from "src/Services/AiService";
+import { IAiApiService, BaseAiService } from "src/Services/AiService";
 import { OpenAiService } from "src/Services/OpenAiService";
 import { OllamaService } from "src/Services/OllamaService";
 import { OpenRouterService } from "src/Services/OpenRouterService";
@@ -113,6 +113,10 @@ export class ServiceLocator {
 
     // Initialize settings service
     this.settingsService = new SettingsService(this.plugin, this.notificationService, this.errorService);
+
+    // Set the save settings callback for AI services
+    // This allows AI services to persist model capability info
+    BaseAiService.setSaveSettingsCallback(this.settingsService.saveSettings.bind(this.settingsService));
 
     // Initialize web search service
     this.webSearchService = new WebSearchService(this.notificationService);

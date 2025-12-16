@@ -119,7 +119,8 @@ export class OllamaService extends BaseAiService implements IAiApiService {
       headingPrefix,
       setAtCursor,
       tools,
-      toolService
+      toolService,
+      settings
     );
   }
 
@@ -139,6 +140,6 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     const tools = toolService?.getToolsForRequest(settings!);
 
     // Use the common AI SDK method from base class
-    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages, tools, toolService);
+    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages, tools, toolService, settings);
   }
 }
