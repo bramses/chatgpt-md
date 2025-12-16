@@ -4,16 +4,17 @@
 
 ![Chatting with links about vacation plans](images/chat-with-link.gif)
 
-## What's New in v2.8.0 🚀
-### 🆕 GPT-5 Model Support
+## What's New in v2.12.0-beta 🚀
+### 🔒 Privacy-First AI Tool Calling
 
-- **Latest OpenAI Models**: Full support for OpenAI's newest GPT-5 family:
-  - `gpt-5` - The flagship model with enhanced reasoning capabilities
-  - `gpt-5-mini` - Optimized for speed and efficiency
-  - `gpt-5-nano` - Ultra-lightweight for quick responses  
-  - `gpt-5-chat-latest` - Always-updated chat model
-- **Smart Token Management**: Enhanced handling of token limit responses for more reliable interactions
-- **Performance Optimizations**: Refined message service architecture and improved API integration
+- **Vault Search**: AI can search your notes—but only shares files YOU approve
+- **Web Search**: AI can search the web via Brave Search API (1,000 free queries/month)
+- **Three-Layer Approval**: Approve execution → Review results → Select what to share
+- **Human-in-the-Loop**: No data reaches the AI without your explicit consent
+- **All Providers Supported**: OpenAI, Anthropic, Gemini, OpenRouter, Ollama, LM Studio
+- **Disabled by Default**: Opt-in feature only—enable in Settings → Tool Calling
+
+⚠️ **Beta Warning**: Test on backup/test vault first. Install via [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) and select version **2.12.0-beta**.
 
 ## A simple and quick Start 🏁
 Get started in just a few simple steps:
