@@ -5,11 +5,11 @@ import { BaseAiService, IAiApiService, OpenAiModel } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ApiService } from "./ApiService";
 import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
-import { ErrorService } from "./ErrorService";
-import { NotificationService } from "./NotificationService";
+import { createOpenAI, OpenAIProvider } from "@ai-sdk/openai";
+import { ToolService } from "./ToolService";
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
+  apiKey: "",
   aiService: AI_SERVICE_OPENAI,
   frequency_penalty: 0,
   max_tokens: 400,
@@ -24,68 +24,13 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   url: "https://api.openai.com",
 };
 
-export const fetchAvailableOpenAiModels = async (url: string, apiKey: string) => {
-  try {
-    const apiAuthService = new ApiAuthService();
-
-    if (!isValidApiKey(apiKey)) {
-      console.error("OpenAI API key is missing. Please add your OpenAI API key in the settings.");
-      return [];
-    }
-
-    // Use ApiService for the API request
-    const apiService = new ApiService();
-    const headers = apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENAI);
-
-    const models = await apiService.makeGetRequest(`${url}/v1/models`, headers, AI_SERVICE_OPENAI);
-
-    return models.data
-      .filter(
-        (model: OpenAiModel) =>
-          (model.id.includes("o3") ||
-            model.id.includes("o4") ||
-            model.id.includes("o1") ||
-            model.id.includes("gpt-4") ||
-            model.id.includes("gpt-5") ||
-            model.id.includes("gpt-3")) &&
-          !model.id.includes("audio") &&
-          !model.id.includes("transcribe") &&
-          !model.id.includes("realtime") &&
-          !model.id.includes("o1-pro") &&
-          !model.id.includes("tts")
-      )
-      .sort((a: OpenAiModel, b: OpenAiModel) => {
-        if (a.id < b.id) return 1;
-        if (a.id > b.id) return -1;
-        return 0;
-      })
-      .map((model: OpenAiModel) => `openai@${model.id}`);
-  } catch (error) {
-    console.error("Error fetching models:", error);
-    return [];
-  }
-};
 
 export class OpenAiService extends BaseAiService implements IAiApiService {
-  protected errorService: ErrorService;
-  protected notificationService: NotificationService;
-  protected apiService: ApiService;
-  protected apiAuthService: ApiAuthService;
-  protected apiResponseParser: ApiResponseParser;
   protected serviceType = AI_SERVICE_OPENAI;
+  protected provider: OpenAIProvider;
 
-  constructor(
-    errorService?: ErrorService,
-    notificationService?: NotificationService,
-    apiService?: ApiService,
-    apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser
-  ) {
-    super(errorService, notificationService);
-    this.errorService = errorService || new ErrorService(this.notificationService);
-    this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
-    this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
-    this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+  constructor() {
+    super();
   }
 
   getDefaultConfig(): OpenAIConfig {
@@ -94,6 +39,43 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
 
   getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
     return this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
+  }
+
+  async fetchAvailableModels(url: string, apiKey?: string): Promise<string[]> {
+    try {
+      if (!apiKey || !isValidApiKey(apiKey)) {
+        console.error("OpenAI API key is missing. Please add your OpenAI API key in the settings.");
+        return [];
+      }
+
+      const headers = this.apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENAI);
+      const models = await this.apiService.makeGetRequest(`${url}/v1/models`, headers, AI_SERVICE_OPENAI);
+
+      return models.data
+        .filter(
+          (model: OpenAiModel) =>
+            (model.id.includes("o3") ||
+              model.id.includes("o4") ||
+              model.id.includes("o1") ||
+              model.id.includes("gpt-4") ||
+              model.id.includes("gpt-5") ||
+              model.id.includes("gpt-3")) &&
+            !model.id.includes("audio") &&
+            !model.id.includes("transcribe") &&
+            !model.id.includes("realtime") &&
+            !model.id.includes("o1-pro") &&
+            !model.id.includes("tts")
+        )
+        .sort((a: OpenAiModel, b: OpenAiModel) => {
+          if (a.id < b.id) return 1;
+          if (a.id > b.id) return -1;
+          return 0;
+        })
+        .map((model: OpenAiModel) => `openai@${model.id}`);
+    } catch (error) {
+      console.error("Error fetching OpenAI models:", error);
+      return [];
+    }
   }
 
   // Implement abstract methods from BaseAiService
@@ -105,60 +87,16 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     return false; // OpenAI uses messages array, not system field
   }
 
-  createPayload(config: OpenAIConfig, messages: Message[]): OpenAIStreamPayload {
-    // Remove the provider prefix if it exists in the model name
-    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
-
-    // Process system commands using the centralized method
-    const processedMessages = this.processSystemCommands(messages, config.system_commands);
-
-    // Create base payload
-    const payload: OpenAIStreamPayload = {
-      model: modelName,
-      messages: processedMessages,
-      max_completion_tokens: config.max_tokens,
-      stream: config.stream,
-    };
-
-    // Only include these parameters if the model supports them
-    // o1, o4, o3, gpt-5, and search models don't support custom temperature and other parameters
-    const isRestrictedModel =
-      modelName.includes("search") ||
-      modelName.includes("o1") ||
-      modelName.includes("o4") ||
-      modelName.includes("o3") ||
-      modelName.includes("gpt-5");
-
-    if (!isRestrictedModel) {
-      payload.temperature = config.temperature;
-      payload.top_p = config.top_p;
-      payload.presence_penalty = config.presence_penalty;
-      payload.frequency_penalty = config.frequency_penalty;
-    }
-
-    return payload;
-  }
-
-  handleAPIError(err: any, config: OpenAIConfig, prefix: string): never {
-    // Use the new ErrorService to handle errors
-    const context = {
-      model: config.model,
-      url: config.url,
-      defaultUrl: DEFAULT_OPENAI_CONFIG.url,
-      aiService: AI_SERVICE_OPENAI,
-    };
-
-    // Special handling for custom URL errors
-    if (err instanceof Object && config.url !== DEFAULT_OPENAI_CONFIG.url) {
-      return this.errorService.handleUrlError(config.url, DEFAULT_OPENAI_CONFIG.url, AI_SERVICE_OPENAI) as never;
-    }
-
-    // Use the centralized error handling
-    return this.errorService.handleApiError(err, AI_SERVICE_OPENAI, {
-      context,
-      showNotification: true,
-      logToConsole: true,
-    }) as never;
+  /**
+   * Initialize the OpenAI provider with the given configuration
+   */
+  private ensureProvider(apiKey: string | undefined, config: OpenAIConfig): void {
+    const customFetch = this.apiService.createFetchAdapter();
+    this.provider = createOpenAI({
+      apiKey: apiKey,
+      baseURL: `${config.url}/v1`,
+      fetch: customFetch,
+    });
   }
 
   protected async callStreamingAPI(
@@ -168,39 +106,54 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean | undefined,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    toolService?: ToolService
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings);
+    this.ensureProvider(apiKey, config);
+
+    // Extract model name (remove provider prefix if present)
+    const modelName = this.extractModelName(config.model);
+
+    // Get tools if enabled
+    const tools = toolService?.getToolsForRequest(settings!);
+
+    // Use the common AI SDK streaming method from base class
+    return this.callAiSdkStreamText(
+      this.provider(modelName),
+      modelName,
+      messages,
+      config,
+      editor,
+      headingPrefix,
+      setAtCursor,
+      tools,
+      toolService
+    );
   }
 
   protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
     config: OpenAIConfig,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    provider?: OpenAIProvider,
+    toolService?: ToolService
   ): Promise<any> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config, settings);
-  }
+    this.ensureProvider(apiKey, config);
 
-  protected showNoTitleInferredNotification(): void {
-    this.notificationService.showWarning("Could not infer title. The file name was not changed.");
-  }
-}
+    // Extract model name (remove provider prefix if present)
+    const modelName = this.extractModelName(config.model);
 
-export interface OpenAIStreamPayload {
-  model: string;
-  messages: Array<Message>;
-  temperature?: number;
-  top_p?: number;
-  presence_penalty?: number;
-  frequency_penalty?: number;
-  max_completion_tokens: number;
-  stream: boolean;
+    // Get tools if enabled
+    const tools = toolService?.getToolsForRequest(settings!);
+
+    // Use the common AI SDK method from base class
+    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages, tools, toolService);
+  }
 }
 
 export interface OpenAIConfig {
+  apiKey: string;
   aiService: string;
   frequency_penalty: number;
   max_tokens: number;

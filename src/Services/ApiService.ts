@@ -30,47 +30,6 @@ export class ApiService {
   }
 
   /**
-   * Make a streaming API request
-   * @param url The API endpoint URL
-   * @param payload The request payload
-   * @param headers The request headers
-   * @param serviceType The AI service type (openai, openrouter, ollama)
-   * @returns A Response object for streaming
-   */
-  async makeStreamingRequest(
-    url: string,
-    payload: any,
-    headers: Record<string, string>,
-    serviceType: string
-  ): Promise<Response> {
-    try {
-      console.log(`[ChatGPT MD] Making streaming request to ${serviceType}`, payload);
-
-      this.abortController = new AbortController();
-
-      const response = await requestStream({
-        url,
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-        signal: this.abortController.signal,
-      });
-
-      if (!response.ok) {
-        throw await this.handleHttpError(response, serviceType, payload, url);
-      }
-
-      if (!response.body) {
-        throw new Error("The response body was empty");
-      }
-
-      return response;
-    } catch (error) {
-      return this.handleRequestError(error, serviceType, payload, url);
-    }
-  }
-
-  /**
    * Make a non-streaming API request
    * @param url The API endpoint URL
    * @param payload The request payload
@@ -178,6 +137,15 @@ export class ApiService {
   }
 
   /**
+   * Set the abort controller for external streaming implementations
+   * This allows AI SDK streaming to use the same abort mechanism
+   */
+  setAbortController(controller: AbortController): void {
+    this.abortController = controller;
+    this.wasStreamingAborted = false;
+  }
+
+  /**
    * Stop any ongoing streaming request
    */
   stopStreaming(): void {
@@ -200,5 +168,41 @@ export class ApiService {
    */
   resetAbortedFlag(): void {
     this.wasStreamingAborted = false;
+  }
+
+  /**
+   * Create a fetch-compatible function that uses requestStream
+   * This allows third-party libraries (like AI SDK) to use Obsidian's requestUrl under the hood
+   * @returns A fetch-compatible function
+   */
+  createFetchAdapter(): typeof fetch {
+    return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+
+      const requestOptions = {
+        url,
+        method: init?.method || "GET",
+        headers: init?.headers
+          ? typeof init.headers === "object" && "forEach" in init.headers
+            ? this.convertHeadersToRecord(init.headers as Headers)
+            : (init.headers as Record<string, string>)
+          : {},
+        body: init?.body ? (typeof init.body === "string" ? init.body : JSON.stringify(init.body)) : undefined,
+        signal: init?.signal || undefined,
+      };
+
+      return requestStream(requestOptions);
+    };
+  }
+
+  /**
+   * Convert Headers object to plain Record
+   */
+  private convertHeadersToRecord(headers: Headers): Record<string, string> {
+    const record: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      record[key] = value;
+    });
+    return record;
   }
 }

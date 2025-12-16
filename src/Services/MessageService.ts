@@ -12,7 +12,7 @@ import {
   ROLE_USER,
   WIKI_LINKS_REGEX,
 } from "src/Constants";
-import { getHeadingPrefix, getHeaderRole } from "../Utilities/TextHelpers";
+import { getHeaderRole, getHeadingPrefix } from "../Utilities/TextHelpers";
 
 /**
  * Service responsible for all message-related operations
@@ -285,9 +285,7 @@ export class MessageService {
     editor.replaceRange(userHeader, cursorBeforeHeader);
 
     // Calculate cursor position after the inserted header
-    const newCursor = editor.offsetToPos(
-      editor.posToOffset(cursorBeforeHeader) + userHeader.length
-    );
+    const newCursor = editor.offsetToPos(editor.posToOffset(cursorBeforeHeader) + userHeader.length);
 
     // Set cursor to end of inserted content
     editor.setCursor(newCursor);
@@ -297,8 +295,15 @@ export class MessageService {
    * Process a standard (non-streaming) response
    */
   private processStandardResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings): void {
-    const responseStr = typeof response === "object" ? response.fullString || response : response;
-    const model = typeof response === "object" ? response.model : undefined;
+    let responseStr: string;
+    let model: string | undefined;
+
+    if (typeof response === "object" && response !== null) {
+      responseStr = response.fullString || JSON.stringify(response.text || response) || "[No response]";
+      model = response.model;
+    } else {
+      responseStr = String(response || "[No response]");
+    }
 
     const headingPrefix = getHeadingPrefix(settings.headingLevel);
     const assistantHeader = getHeaderRole(headingPrefix, ROLE_ASSISTANT, model);
@@ -312,9 +317,7 @@ export class MessageService {
     editor.replaceRange(fullContent, cursorBeforeInsertion);
 
     // Calculate final cursor position using offset API
-    const newCursor = editor.offsetToPos(
-      editor.posToOffset(cursorBeforeInsertion) + fullContent.length
-    );
+    const newCursor = editor.offsetToPos(editor.posToOffset(cursorBeforeInsertion) + fullContent.length);
 
     // Set cursor to end of inserted content
     editor.setCursor(newCursor);

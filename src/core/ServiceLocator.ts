@@ -27,6 +27,25 @@ import {
   AI_SERVICE_OPENROUTER,
 } from "src/Constants";
 import { SettingsService } from "src/Services/SettingsService";
+import { VaultTools } from "src/Services/VaultTools";
+import { WebSearchService } from "src/Services/WebSearchService";
+import { ToolRegistry } from "src/Services/ToolRegistry";
+import { ToolExecutor } from "src/Services/ToolExecutor";
+import { ToolService } from "src/Services/ToolService";
+
+/**
+ * Registry mapping service types to their constructors
+ */
+const AI_SERVICE_REGISTRY: Map<string, new () => IAiApiService> = new Map(
+  [
+    [AI_SERVICE_OPENAI, OpenAiService],
+    [AI_SERVICE_ANTHROPIC, AnthropicService],
+    [AI_SERVICE_GEMINI, GeminiService],
+    [AI_SERVICE_OLLAMA, OllamaService],
+    [AI_SERVICE_LMSTUDIO, LmStudioService],
+    [AI_SERVICE_OPENROUTER, OpenRouterService],
+  ] as [string, new () => IAiApiService][]
+);
 
 /**
  * ServiceLocator is responsible for creating and providing access to services
@@ -49,6 +68,11 @@ export class ServiceLocator {
   private apiAuthService: ApiAuthService;
   private apiResponseParser: ApiResponseParser;
   private settingsService: SettingsService;
+  private vaultTools: VaultTools;
+  private webSearchService: WebSearchService;
+  private toolRegistry: ToolRegistry;
+  private toolExecutor: ToolExecutor;
+  private toolService: ToolService;
 
   constructor(app: App, plugin: Plugin) {
     this.app = app;
@@ -89,64 +113,28 @@ export class ServiceLocator {
 
     // Initialize settings service
     this.settingsService = new SettingsService(this.plugin, this.notificationService, this.errorService);
+
+    // Initialize web search service
+    this.webSearchService = new WebSearchService(this.notificationService);
+
+    // Initialize tool services
+    this.vaultTools = new VaultTools(this.app, this.fileService);
+    this.toolRegistry = new ToolRegistry(this.app, this.vaultTools, this.webSearchService, this.settingsService);
+    this.toolExecutor = new ToolExecutor(this.app, this.toolRegistry, this.notificationService);
+    this.toolService = new ToolService(this.app, this.toolRegistry, this.toolExecutor);
   }
 
   /**
    * Get an AI API service based on the service type
    */
   getAiApiService(serviceType: string): IAiApiService {
-    switch (serviceType) {
-      case AI_SERVICE_OPENAI:
-        return new OpenAiService(
-          this.errorService,
-          this.notificationService,
-          this.apiService,
-          this.apiAuthService,
-          this.apiResponseParser
-        );
-      case AI_SERVICE_OLLAMA:
-        return new OllamaService(
-          this.errorService,
-          this.notificationService,
-          this.apiService,
-          this.apiAuthService,
-          this.apiResponseParser
-        );
-      case AI_SERVICE_OPENROUTER:
-        return new OpenRouterService(
-          this.errorService,
-          this.notificationService,
-          this.apiService,
-          this.apiAuthService,
-          this.apiResponseParser
-        );
-      case AI_SERVICE_LMSTUDIO:
-        return new LmStudioService(
-          this.errorService,
-          this.notificationService,
-          this.apiService,
-          this.apiAuthService,
-          this.apiResponseParser
-        );
-      case AI_SERVICE_ANTHROPIC:
-        return new AnthropicService(
-          this.errorService,
-          this.notificationService,
-          this.apiService,
-          this.apiAuthService,
-          this.apiResponseParser
-        );
-      case AI_SERVICE_GEMINI:
-        return new GeminiService(
-          this.errorService,
-          this.notificationService,
-          this.apiService,
-          this.apiAuthService,
-          this.apiResponseParser
-        );
-      default:
-        throw new Error(`Unknown AI service type: ${serviceType}`);
+    const ServiceClass = AI_SERVICE_REGISTRY.get(serviceType);
+
+    if (!ServiceClass) {
+      throw new Error(`Unknown AI service type: ${serviceType}`);
     }
+
+    return new ServiceClass();
   }
 
   // Getters for all services
@@ -203,5 +191,40 @@ export class ServiceLocator {
    */
   getSettingsService(): SettingsService {
     return this.settingsService;
+  }
+
+  /**
+   * Get the tool service for AI tool calling
+   */
+  getToolService(): ToolService {
+    return this.toolService;
+  }
+
+  /**
+   * Get the tool registry
+   */
+  getToolRegistry(): ToolRegistry {
+    return this.toolRegistry;
+  }
+
+  /**
+   * Get the vault tools
+   */
+  getVaultTools(): VaultTools {
+    return this.vaultTools;
+  }
+
+  /**
+   * Get the tool executor
+   */
+  getToolExecutor(): ToolExecutor {
+    return this.toolExecutor;
+  }
+
+  /**
+   * Get the web search service
+   */
+  getWebSearchService(): WebSearchService {
+    return this.webSearchService;
   }
 }

@@ -1,0 +1,50 @@
+.chatgpt-md-websearch-approval-modal {
+  max-width: 600px;
+}
+
+.websearch-query-info {
+  margin-bottom: 10px;
+  padding: 8px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+}
+
+.websearch-button-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.websearch-results-container {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.websearch-result-item {
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding: 8px 0;
+}
+
+.websearch-result-url {
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+.websearch-result-snippet {
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+.websearch-privacy-warning {
+  background: var(--background-modifier-warning);
+  padding: 8px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.websearch-action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

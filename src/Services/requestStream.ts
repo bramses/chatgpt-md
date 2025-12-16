@@ -3,23 +3,22 @@ let httpRequest: any;
 let httpsRequest: any;
 let URL: any;
 
-// Initialize Node.js modules asynchronously
-(async () => {
-  try {
-    const http = await import("http");
-    const https = await import("https");
-    const url = await import("url");
+// Try to load Node.js modules using require
+try {
+  const nodeRequire = (globalThis as any).require;
+  const http = nodeRequire("http");
+  const https = nodeRequire("https");
+  const url = nodeRequire("url");
 
-    httpRequest = http.request;
-    httpsRequest = https.request;
-    URL = url.URL;
-  } catch (_error) {
-    // Node.js modules not available (mobile environment)
-    httpRequest = null;
-    httpsRequest = null;
-    URL = globalThis.URL; // Use Web API URL instead
-  }
-})();
+  httpRequest = http.request;
+  httpsRequest = https.request;
+  URL = url.URL;
+} catch (_error) {
+  // Node.js modules not available (mobile environment)
+  httpRequest = null;
+  httpsRequest = null;
+  URL = globalThis.URL; // Use Web API URL instead
+}
 
 /**
  * Options for streaming HTTP requests (similar to Obsidian's RequestUrlParam)
@@ -193,12 +192,17 @@ async function requestStreamNodeHttp(options: RequestStreamParam): Promise<Respo
  * Fetch implementation (mobile fallback)
  */
 async function requestStreamFetch(options: RequestStreamParam): Promise<Response> {
+  // Only add Content-Type if not already present in options.headers
+  const headers: Record<string, string> = {
+    ...(options.headers && !options.headers["Content-Type"] && !options.headers["content-type"]
+      ? { "Content-Type": "application/json" }
+      : {}),
+    ...options.headers,
+  };
+
   const fetchOptions: RequestInit = {
     method: options.method || "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+    headers,
     signal: options.signal,
   };
 

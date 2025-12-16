@@ -4,6 +4,7 @@ import { ChatGPT_MDSettingsTab } from "../Views/ChatGPT_MDSettingsTab";
 import { NotificationService } from "./NotificationService";
 import { ErrorService } from "./ErrorService";
 import { SettingsMigrationService } from "./SettingsMigration";
+import { Logger } from "src/Utilities/Logger";
 
 /**
  * Manages plugin settings with persistence
@@ -55,6 +56,8 @@ export class SettingsService {
   async loadSettings(): Promise<ChatGPT_MDSettings> {
     const loadedData = await this.plugin.loadData();
     Object.assign(this.settings, DEFAULT_SETTINGS, loadedData);
+    // Initialize logger with current debug setting
+    Logger.setDebugEnabled(this.settings.debugMode);
     return this.settings;
   }
 
@@ -63,6 +66,8 @@ export class SettingsService {
    */
   async saveSettings(): Promise<void> {
     await this.plugin.saveData(this.settings);
+    // Update logger with current debug setting
+    Logger.setDebugEnabled(this.settings.debugMode);
   }
 
   /**

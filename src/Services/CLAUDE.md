@@ -9,10 +9,12 @@ All service implementations following single responsibility principle.
 **BaseAiService** (AiService.ts) - Abstract base for all AI services
 
 Implements `IAiApiService` interface:
+
 - `callAIAPI()` - Main API call method
 - `inferTitle()` - Generate title from conversation
 
 Subclasses must implement:
+
 - `serviceType` - Service identifier
 - `getSystemMessageRole()` - Role for system messages
 - `supportsSystemField()` - Whether API supports system field
@@ -26,6 +28,7 @@ Each service has `DEFAULT_*_CONFIG` with defaults for model, temperature, max_to
 **Core message parsing and manipulation**
 
 Key methods:
+
 - `splitMessages(text)` - Split by `<hr class="__chatgpt_plugin">`
 - `extractRoleAndMessage(message)` - Parse `role::assistant` format
 - `findLinksInMessage(message)` - Find `[[Wiki]]` and `[Markdown](links)`
@@ -33,6 +36,7 @@ Key methods:
 - `removeCommentsFromMessages(message)` - Filter `=begin-chatgpt-md-comment` blocks
 
 Link detection:
+
 - Matches `[[Title]]` and `[Text](path)`
 - Skips http:// and https:// URLs
 - Returns unique links only
@@ -46,6 +50,7 @@ Link detection:
 Dependencies: FileService, EditorContentService, MessageService, TemplateService, FrontmatterService
 
 Main responsibilities:
+
 - `getMessagesFromEditor()` - Extract and parse messages
 - `processResponse()` - Insert AI response into editor
 - `getFrontmatter()` - Get merged frontmatter + settings
@@ -62,6 +67,7 @@ Main responsibilities:
 **HTTP request handling**
 
 Methods:
+
 - `streamSSE()` - Streaming Server-Sent Events
 - `makeApiRequest()` - Non-streaming requests
 - Uses `requestStream()` on desktop (Node.js http/https)
@@ -74,6 +80,7 @@ Handles abort signals and error states.
 **API key management**
 
 `getApiKey(settings, serviceType)` - Returns appropriate key:
+
 - `AI_SERVICE_OPENAI` → settings.apiKey
 - `AI_SERVICE_OPENROUTER` → settings.openrouterApiKey
 - `AI_SERVICE_ANTHROPIC` → settings.anthropicApiKey
@@ -86,6 +93,7 @@ Handles abort signals and error states.
 **Parse API responses**
 
 Handles different formats per service:
+
 - OpenAI: `choices[0].delta.content`
 - Ollama: `message.content`
 - OpenRouter: Similar to OpenAI
@@ -99,12 +107,14 @@ Detects truncation: `finish_reason: 'length'`
 **Custom streaming for desktop**
 
 Desktop:
+
 - Dynamic imports: `http`, `https`, `url` modules
 - Creates Node.js HTTP request directly
 - Bypasses CORS restrictions
 - Converts to Web Streams API
 
 Mobile:
+
 - Falls back to `fetch()`
 - Subject to CORS policies
 
@@ -117,12 +127,14 @@ Why: Enables local services (Ollama, LM Studio) on desktop without CORS issues.
 **YAML frontmatter handling**
 
 Responsibilities:
+
 - Parse note frontmatter
 - Merge with global settings (frontmatter takes precedence)
 - Support service-specific URLs: `openaiUrl`, `openrouterUrl`, `ollamaUrl`, `lmstudioUrl`, `anthropicUrl`, `geminiUrl`
 - Extract model and determine AI service from model prefix
 
 Model prefix parsing:
+
 - `ollama@model` → AI_SERVICE_OLLAMA
 - `openrouter@model` → AI_SERVICE_OPENROUTER
 - `lmstudio@model` → AI_SERVICE_LMSTUDIO
@@ -135,6 +147,7 @@ Model prefix parsing:
 **Plugin settings management**
 
 Methods:
+
 - `loadSettings()` - Load from Obsidian data
 - `saveSettings()` - Persist to disk
 - `migrateSettings()` - Uses SettingsMigration.ts
@@ -144,31 +157,37 @@ Methods:
 ## AI Service Implementations
 
 ### OpenAiService.ts
+
 - Supports OpenAI API (`/v1/chat/completions`)
 - System messages via `role: "system"`
 - Default model: `gpt-5-mini`
 
 ### OllamaService.ts
+
 - Local Ollama (`/api/chat`)
 - Default URL: `http://localhost:11434`
 - No API key required
 
 ### OpenRouterService.ts
+
 - OpenRouter proxy (`/api/v1/chat/completions`)
 - Access to multiple providers
 - Requires OpenRouter API key
 
 ### LmStudioService.ts
+
 - Local LM Studio (`/v1/chat/completions`)
 - Default URL: `http://localhost:1234`
 - No API key required
 
 ### AnthropicService.ts
+
 - Direct Anthropic API (`/v1/messages`)
 - Different message format (system field)
 - Requires Anthropic API key
 
 ### GeminiService.ts
+
 - Google Gemini API
 - Different request/response structure
 - Requires Gemini API key
@@ -176,21 +195,25 @@ Methods:
 ## Utility Services
 
 ### FileService.ts
+
 - Read file contents
 - Get files by path or title
 - Folder navigation
 
 ### TemplateService.ts
+
 - Load chat templates
 - Apply to new notes
 - Merge frontmatter
 
 ### NotificationService.ts
+
 - Show Obsidian notices
 - Error/warning/info messages
 - Platform-aware
 
 ### ErrorService.ts
+
 - Process API errors
 - Map HTTP codes to messages
 - User-friendly error display

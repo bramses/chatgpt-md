@@ -335,7 +335,71 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "Formatting",
       },
 
-      // Templates
+      // Tool Calling
+      {
+        id: "enableToolCalling",
+        name: "Enable AI Tool Calling (Experimental, read only)",
+        description:
+          "Privacy Focus: All tool calls require your explicit approval before the LLM sees the data. "+
+          "Allow the AI to use tools: Search files, Read file contents, Web Search (Privacy focused Brave Search API). " ,
+        type: "toggle",
+        group: "Tool Calling",
+      },
+
+      // Web Search (requires tool calling)
+      {
+        id: "enableWebSearch",
+        name: "Enable Web Search",
+        description:
+          "Allow the AI to search the web for information using Brave Search. " +
+          "Requires tool calling to be enabled. " +
+          "Requires a free Brave Search API key (1,000 queries/month). " +
+          "Get yours at: https://api.search.brave.com/",
+        type: "toggle",
+        group: "Tool Calling",
+      },
+      {
+        id: "webSearchApiKey",
+        name: "Brave Search API Key",
+        description: "API key for Brave Search.",
+        type: "text",
+        placeholder: "your Brave Search API key",
+        group: "Tool Calling",
+      },
+      {
+        id: "webSearchProvider",
+        name: "Alternative Search Provider",
+        description: "Use a custom search API endpoint instead of Brave Search",
+        type: "dropdown",
+        options: {
+          brave: "Brave Search (Default)",
+          custom: "Custom API Endpoint",
+        },
+        group: "Tool Calling",
+      },
+      {
+        id: "webSearchApiUrl",
+        name: "Custom Search API URL",
+        description: "URL for custom search API endpoint (only when using Custom provider)",
+        type: "text",
+        placeholder: "https://your-search-api.com/search",
+        group: "Tool Calling",
+      },
+      {
+        id: "maxWebSearchResults",
+        name: "Max Web Search Results",
+        description: "Maximum number of search results to return (1-10)",
+        type: "text",
+        placeholder: "5",
+        group: "Tool Calling",
+      },
+      {
+        id: "debugMode",
+        name: "Debug Mode",
+        description: "Enable detailed logging for debugging tool operations. Messages will appear in the console.",
+        type: "toggle",
+        group: "Tool Calling",
+      },
     ];
 
     // Group settings by category

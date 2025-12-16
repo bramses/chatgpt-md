@@ -5,9 +5,8 @@ import { BaseAiService, IAiApiService, OpenAiModel } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ApiService } from "./ApiService";
 import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
-import { ErrorService } from "./ErrorService";
-import { NotificationService } from "./NotificationService";
+import { createOpenAICompatible, OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
+import { ToolService } from "./ToolService";
 
 export const DEFAULT_LMSTUDIO_CONFIG: LmStudioConfig = {
   aiService: AI_SERVICE_LMSTUDIO,
@@ -24,61 +23,16 @@ export const DEFAULT_LMSTUDIO_CONFIG: LmStudioConfig = {
   url: "http://localhost:1234",
 };
 
-export const fetchAvailableLmStudioModels = async (url: string, apiKey?: string) => {
-  try {
-    const apiAuthService = new ApiAuthService();
-
-    // LM Studio might not require an API key, but we'll try with one if provided
-    const headers =
-      apiKey && isValidApiKey(apiKey)
-        ? apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_LMSTUDIO)
-        : { "Content-Type": "application/json" };
-
-    // Use ApiService for the API request
-    const apiService = new ApiService();
-    const models = await apiService.makeGetRequest(`${url}/v1/models`, headers, AI_SERVICE_LMSTUDIO);
-
-    return models.data
-      .filter(
-        (model: OpenAiModel) =>
-          // Filter out any system models or non-chat models
-          !model.id.includes("embedding") &&
-          !model.id.includes("audio") &&
-          !model.id.includes("transcribe") &&
-          !model.id.includes("tts")
-      )
-      .sort((a: OpenAiModel, b: OpenAiModel) => {
-        if (a.id < b.id) return 1;
-        if (a.id > b.id) return -1;
-        return 0;
-      })
-      .map((model: OpenAiModel) => `lmstudio@${model.id}`);
-  } catch (error) {
-    console.error("Error fetching LM Studio models:", error);
-    return [];
-  }
-};
-
 export class LmStudioService extends BaseAiService implements IAiApiService {
-  protected errorService: ErrorService;
-  protected notificationService: NotificationService;
-  protected apiService: ApiService;
-  protected apiAuthService: ApiAuthService;
-  protected apiResponseParser: ApiResponseParser;
   protected serviceType = AI_SERVICE_LMSTUDIO;
+  protected provider: OpenAICompatibleProvider;
 
-  constructor(
-    errorService?: ErrorService,
-    notificationService?: NotificationService,
-    apiService?: ApiService,
-    apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser
-  ) {
-    super(errorService, notificationService);
-    this.errorService = errorService || new ErrorService(this.notificationService);
-    this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
-    this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
-    this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+  constructor() {
+    super();
+    this.provider = createOpenAICompatible({
+      name: "lmstudio",
+      baseURL: DEFAULT_LMSTUDIO_CONFIG.url,
+    });
   }
 
   getDefaultConfig(): LmStudioConfig {
@@ -87,6 +41,35 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
 
   getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
     return this.apiAuthService.getApiKey(settings, AI_SERVICE_LMSTUDIO);
+  }
+
+  async fetchAvailableModels(url: string, apiKey?: string): Promise<string[]> {
+    try {
+      const headers =
+        apiKey && isValidApiKey(apiKey)
+          ? this.apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_LMSTUDIO)
+          : { "Content-Type": "application/json" };
+
+      const models = await this.apiService.makeGetRequest(`${url}/v1/models`, headers, AI_SERVICE_LMSTUDIO);
+
+      return models.data
+        .filter(
+          (model: OpenAiModel) =>
+            !model.id.includes("embedding") &&
+            !model.id.includes("audio") &&
+            !model.id.includes("transcribe") &&
+            !model.id.includes("tts")
+        )
+        .sort((a: OpenAiModel, b: OpenAiModel) => {
+          if (a.id < b.id) return 1;
+          if (a.id > b.id) return -1;
+          return 0;
+        })
+        .map((model: OpenAiModel) => `lmstudio@${model.id}`);
+    } catch (error) {
+      console.error("Error fetching LM Studio models:", error);
+      return [];
+    }
   }
 
   // Implement abstract methods from BaseAiService
@@ -98,48 +81,17 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
     return false; // LmStudio uses messages array, not system field
   }
 
-  createPayload(config: LmStudioConfig, messages: Message[]): LmStudioStreamPayload {
-    // Remove the provider prefix if it exists in the model name
-    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
-
-    // Process system commands using the centralized method
-    const processedMessages = this.processSystemCommands(messages, config.system_commands);
-
-    // Create base payload
-    const payload: LmStudioStreamPayload = {
-      model: modelName,
-      messages: processedMessages,
-      max_completion_tokens: config.max_tokens,
-      stream: config.stream,
-      temperature: config.temperature,
-      top_p: config.top_p,
-      presence_penalty: config.presence_penalty,
-      frequency_penalty: config.frequency_penalty,
-    };
-
-    return payload;
-  }
-
-  handleAPIError(err: any, config: LmStudioConfig, prefix: string): never {
-    // Use the new ErrorService to handle errors
-    const context = {
-      model: config.model,
-      url: config.url,
-      defaultUrl: DEFAULT_LMSTUDIO_CONFIG.url,
-      aiService: AI_SERVICE_LMSTUDIO,
-    };
-
-    // Special handling for custom URL errors
-    if (err instanceof Object && config.url !== DEFAULT_LMSTUDIO_CONFIG.url) {
-      return this.errorService.handleUrlError(config.url, DEFAULT_LMSTUDIO_CONFIG.url, AI_SERVICE_LMSTUDIO) as never;
-    }
-
-    // Use the centralized error handling
-    return this.errorService.handleApiError(err, AI_SERVICE_LMSTUDIO, {
-      context,
-      showNotification: true,
-      logToConsole: true,
-    }) as never;
+  /**
+   * Initialize the LM Studio provider (OpenAI-compatible) with the given configuration
+   */
+  private ensureProvider(apiKey: string | undefined, config: LmStudioConfig): void {
+    const customFetch = this.apiService.createFetchAdapter();
+    this.provider = createOpenAICompatible({
+      name: "lmstudio",
+      apiKey: apiKey || "lmstudio", // LM Studio doesn't require real key
+      baseURL: `${config.url}/v1`,
+      fetch: customFetch,
+    });
   }
 
   protected async callStreamingAPI(
@@ -149,39 +101,52 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean | undefined,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    toolService?: ToolService
   ): Promise<{ fullString: string; mode: "streaming"; wasAborted?: boolean }> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings);
+    this.ensureProvider(apiKey, config);
+
+    // Extract model name (remove provider prefix if present)
+    const modelName = this.extractModelName(config.model);
+
+    const tools = toolService?.getToolsForRequest(settings!);
+
+    // Use the common AI SDK streaming method from base class
+    return this.callAiSdkStreamText(
+      this.provider(modelName),
+      modelName,
+      messages,
+      config,
+      editor,
+      headingPrefix,
+      setAtCursor,
+      tools,
+      toolService
+    );
   }
 
   protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
     config: LmStudioConfig,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    provider?: OpenAICompatibleProvider,
+    toolService?: ToolService
   ): Promise<any> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config, settings);
-  }
+    this.ensureProvider(apiKey, config);
 
-  protected showNoTitleInferredNotification(): void {
-    this.notificationService.showWarning("Could not infer title. The file name was not changed.");
-  }
-}
+    // Extract model name (remove provider prefix if present)
+    const modelName = this.extractModelName(config.model);
 
-export interface LmStudioStreamPayload {
-  model: string;
-  messages: Array<Message>;
-  temperature: number;
-  top_p: number;
-  presence_penalty: number;
-  frequency_penalty: number;
-  max_completion_tokens: number;
-  stream: boolean;
+    const tools = toolService?.getToolsForRequest(settings!);
+
+    // Use the common AI SDK method from base class
+    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages, tools, toolService);
+  }
 }
 
 export interface LmStudioConfig {
+  apiKey?: string;
   aiService: string;
   frequency_penalty: number;
   max_tokens: number;

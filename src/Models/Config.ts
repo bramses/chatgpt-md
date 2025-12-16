@@ -60,6 +60,10 @@ export interface ChatBehaviorSettings {
   generateAtCursor: boolean;
   /** Whether to automatically infer title after 4 messages have been exchanged */
   autoInferTitle: boolean;
+  /** Whether to enable AI tool calling (vault search, file read) */
+  enableToolCalling: boolean;
+  /** Enable debug mode for detailed logging */
+  debugMode: boolean;
   /** System message that provides context about the Obsidian/ChatGPT MD plugin environment */
   pluginSystemMessage: string;
 }
@@ -164,15 +168,33 @@ export interface ServiceUrlSettings {
 }
 
 /**
+ * Web search settings
+ */
+export interface WebSearchSettings {
+  /** Enable/disable web search tool */
+  enableWebSearch: boolean;
+  /** Search provider ('brave' | 'custom') */
+  webSearchProvider: 'brave' | 'custom';
+  /** API key for providers that require it */
+  webSearchApiKey?: string;
+  /** Custom search API endpoint */
+  webSearchApiUrl?: string;
+  /** Maximum results to return */
+  maxWebSearchResults: number;
+}
+
+/**
  * Combined settings interface
  */
 export interface ChatGPT_MDSettings
-  extends ApiKeySettings,
+  extends
+    ApiKeySettings,
     FolderSettings,
     ChatBehaviorSettings,
     FormattingSettings,
     TemplateSettings,
     ServiceUrlSettings,
+    WebSearchSettings,
     OpenAIFrontmatterSettings,
     AnthropicFrontmatterSettings,
     GeminiFrontmatterSettings,
@@ -206,7 +228,16 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   stream: true,
   generateAtCursor: false,
   autoInferTitle: false,
+  enableToolCalling: false,
+  debugMode: false,
   pluginSystemMessage: PLUGIN_SYSTEM_MESSAGE,
+
+  // Web Search
+  enableWebSearch: false,
+  webSearchProvider: 'brave',
+  webSearchApiKey: '',
+  webSearchApiUrl: '',
+  maxWebSearchResults: 5,
 
   // Formatting
   dateFormat: DEFAULT_DATE_FORMAT,

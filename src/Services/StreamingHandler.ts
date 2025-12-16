@@ -1,0 +1,111 @@
+import { Editor, EditorPosition } from "obsidian";
+
+/**
+ * StreamingHandler manages text streaming with buffering and cursor positioning
+ * Handles both direct cursor positioning and insertion at current selection
+ */
+export class StreamingHandler {
+  private editor: Editor;
+  private currentCursor: EditorPosition;
+  private flushTimer: NodeJS.Timeout | null = null;
+  private bufferedText = "";
+  private flushInterval: number;
+  private setAtCursor: boolean;
+
+  constructor(
+    editor: Editor,
+    initialCursor: EditorPosition,
+    setAtCursor: boolean = false,
+    flushInterval: number = 50
+  ) {
+    this.editor = editor;
+    this.currentCursor = initialCursor;
+    this.setAtCursor = setAtCursor;
+    this.flushInterval = flushInterval;
+  }
+
+  /**
+   * Start the buffering mechanism with periodic flushes
+   */
+  public startBuffering(): void {
+    if (!this.flushTimer) {
+      this.flushTimer = setInterval(() => this.flush(), this.flushInterval);
+    }
+  }
+
+  /**
+   * Append text to the buffer
+   */
+  public appendText(text: string): void {
+    this.bufferedText += text;
+  }
+
+  /**
+   * Flush buffered text to the editor
+   */
+  public flush(): void {
+    if (this.bufferedText.length === 0) return;
+
+    if (this.setAtCursor) {
+      this.editor.replaceSelection(this.bufferedText);
+    } else {
+      this.editor.replaceRange(this.bufferedText, this.currentCursor);
+      const currentOffset = this.editor.posToOffset(this.currentCursor);
+      const newOffset = currentOffset + this.bufferedText.length;
+      this.currentCursor = this.editor.offsetToPos(newOffset);
+      // Update visible cursor position for real-time feedback
+      this.editor.setCursor(this.currentCursor);
+    }
+
+    this.bufferedText = "";
+  }
+
+  /**
+   * Stop buffering and flush any remaining text
+   */
+  public stopBuffering(): void {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = null;
+    }
+    this.flush();
+  }
+
+  /**
+   * Get the current cursor position
+   */
+  public getCursor(): EditorPosition {
+    return this.currentCursor;
+  }
+
+  /**
+   * Set the cursor position
+   */
+  public setCursor(cursor: EditorPosition): void {
+    this.currentCursor = cursor;
+  }
+
+  /**
+   * Update cursor position after inserting text at a specific position
+   */
+  public updateCursorAfterInsert(text: string, insertPosition: EditorPosition): void {
+    const offset = this.editor.posToOffset(insertPosition);
+    const newOffset = offset + text.length;
+    this.currentCursor = this.editor.offsetToPos(newOffset);
+  }
+
+  /**
+   * Get the buffered text (for debugging)
+   */
+  public getBufferedText(): string {
+    return this.bufferedText;
+  }
+
+  /**
+   * Reset the buffer and cursor
+   */
+  public reset(cursor: EditorPosition): void {
+    this.bufferedText = "";
+    this.currentCursor = cursor;
+  }
+}
