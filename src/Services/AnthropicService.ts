@@ -6,6 +6,8 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { isValidApiKey } from "./ApiAuthService";
 import { AnthropicProvider, createAnthropic } from "@ai-sdk/anthropic";
 import { ToolService } from "./ToolService";
+import { ServiceLocator } from "src/core/ServiceLocator";
+import { CommandRegistry } from "src/core/CommandRegistry";
 
 export const DEFAULT_ANTHROPIC_CONFIG: AnthropicConfig = {
   apiKey: "",
@@ -58,10 +60,26 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
 
       const data = response.json;
 
+      // Get capabilities cache from ServiceLocator
+      const serviceLocator = ServiceLocator.getInstance();
+      const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
+      const capabilitiesCache = commandRegistry?.getModelCapabilities();
+
       if (data.data && Array.isArray(data.data)) {
         return data.data
           .filter((model: any) => model.type === "model" && model.id)
-          .map((model: any) => `anthropic@${model.id}`)
+          .map((model: any) => {
+            const fullId = `anthropic@${model.id}`;
+
+            // Pattern-based detection: Claude 3+ models support tools
+            const supportsTools = model.id.startsWith("claude-3");
+            if (capabilitiesCache) {
+              capabilitiesCache.setSupportsTools(fullId, supportsTools);
+              console.log(`[Anthropic] Cached: ${fullId} -> Tools: ${supportsTools}`);
+            }
+
+            return fullId;
+          })
           .sort();
       }
 
@@ -117,14 +135,15 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     // Use the common AI SDK streaming method from base class
     return this.callAiSdkStreamText(
       this.provider(modelName),
-      modelName,
+      config.model,
       messages,
       config,
       editor,
       headingPrefix,
       setAtCursor,
       tools,
-      toolService
+      toolService,
+      settings
     );
   }
 
@@ -144,7 +163,7 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     const tools = toolService?.getToolsForRequest(settings!);
 
     // Use the common AI SDK method from base class
-    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages, tools, toolService);
+    return this.callAiSdkGenerateText(this.provider(modelName), config.model, messages, tools, toolService, settings);
   }
 }
 

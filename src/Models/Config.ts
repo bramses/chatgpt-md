@@ -66,8 +66,6 @@ export interface ChatBehaviorSettings {
   debugMode: boolean;
   /** System message that provides context about the Obsidian/ChatGPT MD plugin environment */
   pluginSystemMessage: string;
-  /** Comma-separated list of models that don't support tool calls (e.g., "gemma3:4b,llama2:7b") */
-  modelsWithoutToolSupport: string;
 }
 
 /**
@@ -233,7 +231,6 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   enableToolCalling: false,
   debugMode: false,
   pluginSystemMessage: PLUGIN_SYSTEM_MESSAGE,
-  modelsWithoutToolSupport: "",
 
   // Web Search
   enableWebSearch: false,

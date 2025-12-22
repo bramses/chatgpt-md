@@ -52,6 +52,7 @@ const AI_SERVICE_REGISTRY: Map<string, new () => IAiApiService> = new Map(
  * It centralizes service creation and dependency injection
  */
 export class ServiceLocator {
+  private static instance: ServiceLocator;
   private readonly app: App;
   private readonly plugin: Plugin;
 
@@ -73,11 +74,34 @@ export class ServiceLocator {
   private toolRegistry: ToolRegistry;
   private toolExecutor: ToolExecutor;
   private toolService: ToolService;
+  private commandRegistry: any; // Avoid circular dependency
 
   constructor(app: App, plugin: Plugin) {
     this.app = app;
     this.plugin = plugin;
+    ServiceLocator.instance = this;
     this.initializeServices();
+  }
+
+  /**
+   * Get the current ServiceLocator instance
+   */
+  static getInstance(): ServiceLocator | undefined {
+    return ServiceLocator.instance;
+  }
+
+  /**
+   * Register the command registry (called after it's created to avoid circular dependency)
+   */
+  public setCommandRegistry(registry: any): void {
+    this.commandRegistry = registry;
+  }
+
+  /**
+   * Get the command registry
+   */
+  public getCommandRegistry(): any {
+    return this.commandRegistry;
   }
 
   /**

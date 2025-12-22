@@ -20,6 +20,8 @@ export default class ChatGPT_MD extends Plugin {
 
     // Initialize command registry with services
     this.commandRegistry = new CommandRegistry(this, this.serviceLocator, settingsService);
+    // Register it with ServiceLocator so other services can access it
+    this.serviceLocator.setCommandRegistry(this.commandRegistry);
     this.commandRegistry.registerCommands();
 
     // Initialize available models after registry is created, but don't block startup

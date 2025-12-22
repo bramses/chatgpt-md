@@ -6,6 +6,8 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ApiService } from "./ApiService";
 import { createOpenAICompatible, OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
 import { ToolService } from "./ToolService";
+import { ServiceLocator } from "src/core/ServiceLocator";
+import { CommandRegistry } from "src/core/CommandRegistry";
 
 export interface OllamaModel {
   name: string;
@@ -57,17 +59,50 @@ export class OllamaService extends BaseAiService implements IAiApiService {
       const json = await this.apiService.makeGetRequest(`${url}/api/tags`, headers, AI_SERVICE_OLLAMA);
       const models = json.models;
 
+      // Get capabilities cache from ServiceLocator
+      const serviceLocator = ServiceLocator.getInstance();
+      const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
+      const capabilitiesCache = commandRegistry?.getModelCapabilities();
+
+      // Lookup table of families that support tools
+      const familiesWithTools = new Set(['llama', 'qwen', 'mistral', 'mixtral', 'gemma']);
+
       return models
         .sort((a: OllamaModel, b: OllamaModel) => {
           if (a.name < b.name) return 1;
           if (a.name > b.name) return -1;
           return 0;
         })
-        .map((model: OllamaModel) => `ollama@${model.name}`);
+        .map((model: OllamaModel) => {
+          const fullId = `ollama@${model.name}`;
+
+          // Family-based detection for Ollama
+          const family = model.details?.family || this.inferFamily(model.name);
+          const supportsTools = familiesWithTools.has(family);
+          if (capabilitiesCache) {
+            capabilitiesCache.setSupportsTools(fullId, supportsTools);
+            console.log(`[Ollama] Cached: ${fullId} -> Tools: ${supportsTools}`);
+          }
+
+          return fullId;
+        });
     } catch (error) {
       console.error("Error fetching Ollama models:", error);
       return [];
     }
+  }
+
+  /**
+   * Infer model family from model name
+   */
+  private inferFamily(modelName: string): string {
+    const name = modelName.toLowerCase();
+    if (name.includes('llama')) return 'llama';
+    if (name.includes('mistral')) return 'mistral';
+    if (name.includes('mixtral')) return 'mixtral';
+    if (name.includes('qwen')) return 'qwen';
+    if (name.includes('gemma')) return 'gemma';
+    return 'unknown';
   }
 
   // Implement abstract methods from BaseAiService
@@ -112,7 +147,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     // Use the common AI SDK streaming method from base class
     return this.callAiSdkStreamText(
       this.provider(modelName),
-      modelName,
+      config.model,
       messages,
       config,
       editor,
@@ -140,6 +175,6 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     const tools = toolService?.getToolsForRequest(settings!);
 
     // Use the common AI SDK method from base class
-    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages, tools, toolService, settings);
+    return this.callAiSdkGenerateText(this.provider(modelName), config.model, messages, tools, toolService, settings);
   }
 }

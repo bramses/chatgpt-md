@@ -33,6 +33,7 @@ import {
 } from "src/Constants";
 import { getHeadingPrefix, isTitleTimestampFormat } from "src/Utilities/TextHelpers";
 import { ApiAuthService, isValidApiKey } from "../Services/ApiAuthService";
+import { ModelCapabilitiesCache } from "../Models/ModelCapabilities";
 
 /**
  * Registers and manages commands for the plugin
@@ -44,6 +45,7 @@ export class CommandRegistry {
   private aiService: IAiApiService | null = null;
   private statusBarItemEl: HTMLElement;
   private apiAuthService: ApiAuthService;
+  private modelCapabilities = new ModelCapabilitiesCache();
   public availableModels: string[] = [];
 
   constructor(plugin: Plugin, serviceLocator: ServiceLocator, settingsService: SettingsService) {
@@ -52,6 +54,13 @@ export class CommandRegistry {
     this.settingsService = settingsService;
     this.statusBarItemEl = plugin.addStatusBarItem();
     this.apiAuthService = new ApiAuthService();
+  }
+
+  /**
+   * Get the model capabilities cache
+   */
+  public getModelCapabilities(): ModelCapabilitiesCache {
+    return this.modelCapabilities;
   }
 
   /**
@@ -195,7 +204,9 @@ export class CommandRegistry {
           this.plugin.app,
           editor,
           editorService,
-          this.availableModels // Use potentially stale but instantly available models
+          this.availableModels, // Use potentially stale but instantly available models
+          settings,
+          this.modelCapabilities
         );
         initialModal.open();
 
@@ -234,7 +245,14 @@ export class CommandRegistry {
 
               // Close the initial modal and open a new one with fresh data
               initialModal.close();
-              new AiModelSuggestModal(this.plugin.app, editor, editorService, this.availableModels).open();
+              new AiModelSuggestModal(
+                this.plugin.app,
+                editor,
+                editorService,
+                this.availableModels,
+                settings,
+                this.modelCapabilities
+              ).open();
             }
           } catch (e) {
             // Don't close the initial modal here, as it might still be useful

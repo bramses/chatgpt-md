@@ -6,6 +6,8 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { isValidApiKey } from "./ApiAuthService";
 import { createGoogleGenerativeAI, GoogleGenerativeAIProvider } from "@ai-sdk/google";
 import { ToolService } from "./ToolService";
+import { ServiceLocator } from "src/core/ServiceLocator";
+import { CommandRegistry } from "src/core/CommandRegistry";
 
 export const DEFAULT_GEMINI_CONFIG: GeminiConfig = {
   apiKey: "",
@@ -61,6 +63,11 @@ export class GeminiService extends BaseAiService implements IAiApiService {
 
       const data = response.json;
 
+      // Get capabilities cache from ServiceLocator
+      const serviceLocator = ServiceLocator.getInstance();
+      const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
+      const capabilitiesCache = commandRegistry?.getModelCapabilities();
+
       if (data.models && Array.isArray(data.models)) {
         return data.models
           .filter((model: any) => {
@@ -73,7 +80,16 @@ export class GeminiService extends BaseAiService implements IAiApiService {
           })
           .map((model: any) => {
             const modelName = model.name.replace("models/", "");
-            return `gemini@${modelName}`;
+            const fullId = `gemini@${modelName}`;
+
+            // Pattern-based detection for Gemini
+            const supportsTools = model.name.includes("gemini-2") || model.name.includes("gemini-pro");
+            if (capabilitiesCache) {
+              capabilitiesCache.setSupportsTools(fullId, supportsTools);
+              console.log(`[Gemini] Cached: ${fullId} -> Tools: ${supportsTools}`);
+            }
+
+            return fullId;
           })
           .sort();
       }
@@ -127,14 +143,15 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     // Use the common AI SDK streaming method from base class
     return this.callAiSdkStreamText(
       this.provider(modelName),
-      modelName,
+      config.model,
       messages,
       config,
       editor,
       headingPrefix,
       setAtCursor,
       tools,
-      toolService
+      toolService,
+      settings
     );
   }
 
@@ -154,7 +171,7 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     const tools = toolService?.getToolsForRequest(settings!);
 
     // Use the common AI SDK method from base class
-    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages, tools, toolService);
+    return this.callAiSdkGenerateText(this.provider(modelName), config.model, messages, tools, toolService, settings);
   }
 }
 

@@ -28,6 +28,8 @@ import { OpenRouterProvider } from "@openrouter/ai-sdk-provider";
 import { generateText, LanguageModel, streamText } from "ai";
 import { ToolService } from "./ToolService";
 import { StreamingHandler } from "./StreamingHandler";
+import { ServiceLocator } from "src/core/ServiceLocator";
+import { CommandRegistry } from "src/core/CommandRegistry";
 
 /**
  * Interface defining the contract for AI service implementations
@@ -131,52 +133,17 @@ export abstract class BaseAiService implements IAiApiService {
   }
 
   /**
-   * Parse comma-separated models list from settings
-   */
-  private parseModelsWithoutToolSupport(settings: ChatGPT_MDSettings): Set<string> {
-    const modelsString = settings.modelsWithoutToolSupport || "";
-    return new Set(
-      modelsString
-        .split(',')
-        .map(m => m.trim())
-        .filter(m => m.length > 0)
-    );
-  }
-
-  /**
-   * Save models without tool support back to settings
-   */
-  private async saveModelsWithoutToolSupport(models: Set<string>, settings: ChatGPT_MDSettings): Promise<void> {
-    const modelsString = Array.from(models).join(', ');
-    settings.modelsWithoutToolSupport = modelsString;
-
-    console.log(`[ChatGPT MD] Updated modelsWithoutToolSupport: ${modelsString}`);
-
-    // Persist settings to disk
-    if (BaseAiService.saveSettingsCallback) {
-      await BaseAiService.saveSettingsCallback();
-      console.log(`[ChatGPT MD] Settings saved to disk`);
-    } else {
-      console.warn(`[ChatGPT MD] saveSettingsCallback not set, settings not persisted`);
-    }
-  }
-
-  /**
-   * Check if a model is known to not support tools
+   * Check if a model is known to support tools (from cache only)
    */
   protected modelSupportsTools(modelName: string, settings: ChatGPT_MDSettings): boolean {
-    const modelsWithoutSupport = this.parseModelsWithoutToolSupport(settings);
-    return !modelsWithoutSupport.has(modelName);
-  }
+    // Only use cache as source of truth - default to false if not in cache
+    const serviceLocator = ServiceLocator.getInstance();
+    const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
+    const capabilities = commandRegistry?.getModelCapabilities();
+    const cachedSupport = capabilities?.supportsTools(modelName);
 
-  /**
-   * Mark a model as not supporting tools and save to settings
-   */
-  protected async markModelWithoutToolSupport(modelName: string, settings: ChatGPT_MDSettings): Promise<void> {
-    console.log(`[ChatGPT MD] Marking model ${modelName} as not supporting tools`);
-    const modelsWithoutSupport = this.parseModelsWithoutToolSupport(settings);
-    modelsWithoutSupport.add(modelName);
-    await this.saveModelsWithoutToolSupport(modelsWithoutSupport, settings);
+    console.log(`[ChatGPT MD] modelSupportsTools - model: ${modelName}, cached: ${cachedSupport}`);
+    return cachedSupport === true; // Default to false if undefined
   }
 
   /**
@@ -526,37 +493,14 @@ export abstract class BaseAiService implements IAiApiService {
       console.log(`[ChatGPT MD] Model ${modelName} is known to not support tools, skipping tools`);
     }
 
-    // Call AI SDK generateText - if tools were used and it fails, retry without tools
+    // Call AI SDK generateText
     let response;
     try {
       response = await generateText(request);
     } catch (err: any) {
       console.log(`[ChatGPT MD] Error during generateText:`, err);
-
-      // If tools were used, retry without them (generic approach - don't parse error)
-      if (shouldUseTool && settings) {
-        console.warn(`[ChatGPT MD] Request failed with tools. Retrying without tools.`);
-
-        // Remember this model doesn't support tools
-        await this.markModelWithoutToolSupport(modelName, settings);
-
-        // Feed the error back to the LLM - let it decide how to respond
-        const errorMessage = err?.message || String(err);
-        const errorFeedbackMessage = {
-          role: 'system' as const,
-          content: `System note: An error occurred while processing the previous request: "${errorMessage}". Please respond to the user's request taking this limitation into account.`
-        };
-
-        // Retry without tools, with error feedback
-        const retryRequest: any = {
-          model,
-          messages: [errorFeedbackMessage, ...aiSdkMessages],
-        };
-        response = await generateText(retryRequest);
-      } else {
-        // Re-throw other errors to be handled by the calling code
-        throw err;
-      }
+      // Don't retry - cache is the only source of truth
+      throw err;
     }
 
     // Handle tool calls if present
@@ -728,47 +672,14 @@ export abstract class BaseAiService implements IAiApiService {
         }
       }
 
-      // If retry needed, mark model and retry without tools
-      if (needsRetryWithoutTools && settings) {
-        // Remember this model doesn't support tools
-        await this.markModelWithoutToolSupport(modelName, settings);
-
-        // Reset handler for retry
-        handler.reset(initialCursor);
-        handler.startBuffering();
-        fullText = "";
-
-        // Feed the error back to the LLM - let it decide how to respond
-        const errorFeedbackMessage = {
-          role: 'system' as const,
-          content: `System note: An error occurred while processing the previous request: "${retryErrorMessage}". Please respond to the user's request taking this limitation into account.`
-        };
-
-        // Retry without tools, with error feedback
-        const retryRequest: any = {
-          model,
-          messages: [errorFeedbackMessage, ...aiSdkMessages],
-          abortSignal: abortController.signal,
-        };
-
-        console.log(`[ChatGPT MD] Retrying without tools, feeding error to LLM: "${retryErrorMessage}"`);
-        result = streamText(retryRequest);
-
-        try {
-          for await (const textPart of result.textStream) {
-            if (this.apiService.wasAborted()) break;
-            fullText += textPart;
-            handler?.appendText(textPart);
-          }
-        } finally {
-          handler?.stopBuffering();
-        }
-
-        finalResult = await result;
+      // If error occurred with tools, don't retry - cache is the only source of truth
+      if (needsRetryWithoutTools) {
+        console.error(`[ChatGPT MD] Error with tools for ${modelName}:`, retryErrorMessage);
+        throw new Error(`Tool calling failed for ${modelName}: ${retryErrorMessage}`);
       }
 
-      // Handle tool calls after streaming completes (skip if we retried without tools)
-      if (!needsRetryWithoutTools && toolService && finalResult && finalResult.toolCalls) {
+      // Handle tool calls after streaming completes
+      if (toolService && finalResult && finalResult.toolCalls) {
         const toolCalls = await finalResult.toolCalls;
         if (toolCalls && toolCalls.length > 0) {
           console.log(`[ChatGPT MD] AI requested ${toolCalls.length} tool call(s)`);

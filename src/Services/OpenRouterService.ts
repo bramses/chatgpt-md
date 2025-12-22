@@ -7,6 +7,8 @@ import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
 import { ApiService } from "./ApiService";
 import { createOpenRouter, OpenRouterProvider } from "@openrouter/ai-sdk-provider";
 import { ToolService } from "./ToolService";
+import { ServiceLocator } from "src/core/ServiceLocator";
+import { CommandRegistry } from "src/core/CommandRegistry";
 
 // Define a constant for OpenRouter service
 export interface OpenRouterModel {
@@ -17,6 +19,7 @@ export interface OpenRouterModel {
     prompt: number;
     completion: number;
   };
+  supported_parameters?: string[];
 }
 
 export interface OpenRouterConfig {
@@ -80,13 +83,31 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       const headers = this.apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENROUTER);
       const models = await this.apiService.makeGetRequest(`${url}/api/v1/models`, headers, AI_SERVICE_OPENROUTER);
 
+      // Get capabilities cache from ServiceLocator
+      const serviceLocator = ServiceLocator.getInstance();
+      const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
+      const capabilitiesCache = commandRegistry?.getModelCapabilities();
+
       return models.data
         .sort((a: OpenRouterModel, b: OpenRouterModel) => {
           if (a.id < b.id) return 1;
           if (a.id > b.id) return -1;
           return 0;
         })
-        .map((model: OpenRouterModel) => `${AI_SERVICE_OPENROUTER}@${model.id}`);
+        .map((model: OpenRouterModel) => {
+          const fullId = `${AI_SERVICE_OPENROUTER}@${model.id}`;
+
+          // Extract tool support from API response and store in cache
+          if (capabilitiesCache && Array.isArray(model.supported_parameters)) {
+            const supportsTools = model.supported_parameters.includes('tools');
+            capabilitiesCache.setSupportsTools(fullId, supportsTools);
+            console.log(`[OpenRouter] Cached: ${fullId} -> Tools: ${supportsTools}`);
+          } else {
+            console.log(`[OpenRouter] No cache or no supported_parameters for ${fullId}`);
+          }
+
+          return fullId;
+        });
     } catch (error) {
       console.error("Error fetching OpenRouter models:", error);
       return [];
@@ -133,7 +154,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     // Use the common AI SDK streaming method from base class
     return this.callAiSdkStreamText(
       this.provider(modelName),
-      modelName,
+      config.model,
       messages,
       config,
       editor,
@@ -160,6 +181,6 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     const tools = toolService?.getToolsForRequest(settings!);
 
     // Use the common AI SDK method from base class
-    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages, tools, toolService);
+    return this.callAiSdkGenerateText(this.provider(modelName), config.model, messages, tools, toolService);
   }
 }

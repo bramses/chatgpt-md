@@ -7,6 +7,8 @@ import { ApiService } from "./ApiService";
 import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
 import { createOpenAI, OpenAIProvider } from "@ai-sdk/openai";
 import { ToolService } from "./ToolService";
+import { ServiceLocator } from "src/core/ServiceLocator";
+import { CommandRegistry } from "src/core/CommandRegistry";
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   apiKey: "",
@@ -51,6 +53,11 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
       const headers = this.apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENAI);
       const models = await this.apiService.makeGetRequest(`${url}/v1/models`, headers, AI_SERVICE_OPENAI);
 
+      // Get capabilities cache from ServiceLocator
+      const serviceLocator = ServiceLocator.getInstance();
+      const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
+      const capabilitiesCache = commandRegistry?.getModelCapabilities();
+
       return models.data
         .filter(
           (model: OpenAiModel) =>
@@ -71,7 +78,18 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
           if (a.id > b.id) return -1;
           return 0;
         })
-        .map((model: OpenAiModel) => `openai@${model.id}`);
+        .map((model: OpenAiModel) => {
+          const fullId = `openai@${model.id}`;
+
+          // Pattern-based detection for OpenAI
+          const supportsTools = model.id.startsWith("gpt-4") || model.id.startsWith("gpt-5") || model.id.startsWith("o1");
+          if (capabilitiesCache) {
+            capabilitiesCache.setSupportsTools(fullId, supportsTools);
+            console.log(`[OpenAI] Cached: ${fullId} -> Tools: ${supportsTools}`);
+          }
+
+          return fullId;
+        });
     } catch (error) {
       console.error("Error fetching OpenAI models:", error);
       return [];
@@ -120,14 +138,15 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     // Use the common AI SDK streaming method from base class
     return this.callAiSdkStreamText(
       this.provider(modelName),
-      modelName,
+      config.model,
       messages,
       config,
       editor,
       headingPrefix,
       setAtCursor,
       tools,
-      toolService
+      toolService,
+      settings
     );
   }
 
@@ -148,7 +167,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     const tools = toolService?.getToolsForRequest(settings!);
 
     // Use the common AI SDK method from base class
-    return this.callAiSdkGenerateText(this.provider(modelName), modelName, messages, tools, toolService);
+    return this.callAiSdkGenerateText(this.provider(modelName), config.model, messages, tools, toolService, settings);
   }
 }
 
