@@ -33,7 +33,6 @@ import {
 } from "src/Constants";
 import { getHeadingPrefix, isTitleTimestampFormat } from "src/Utilities/TextHelpers";
 import { ApiAuthService, isValidApiKey } from "../Services/ApiAuthService";
-import { ModelCapabilitiesCache } from "../Models/ModelCapabilities";
 
 /**
  * Registers and manages commands for the plugin
@@ -45,7 +44,6 @@ export class CommandRegistry {
   private aiService: IAiApiService | null = null;
   private statusBarItemEl: HTMLElement;
   private apiAuthService: ApiAuthService;
-  private modelCapabilities = new ModelCapabilitiesCache();
   public availableModels: string[] = [];
 
   constructor(plugin: Plugin, serviceLocator: ServiceLocator, settingsService: SettingsService) {
@@ -54,13 +52,6 @@ export class CommandRegistry {
     this.settingsService = settingsService;
     this.statusBarItemEl = plugin.addStatusBarItem();
     this.apiAuthService = new ApiAuthService();
-  }
-
-  /**
-   * Get the model capabilities cache
-   */
-  public getModelCapabilities(): ModelCapabilitiesCache {
-    return this.modelCapabilities;
   }
 
   /**
@@ -206,7 +197,7 @@ export class CommandRegistry {
           editorService,
           this.availableModels, // Use potentially stale but instantly available models
           settings,
-          this.modelCapabilities
+          this.serviceLocator.getModelCapabilities()
         );
         initialModal.open();
 
@@ -251,7 +242,7 @@ export class CommandRegistry {
                 editorService,
                 this.availableModels,
                 settings,
-                this.modelCapabilities
+                this.serviceLocator.getModelCapabilities()
               ).open();
             }
           } catch (e) {
@@ -497,10 +488,14 @@ export class CommandRegistry {
       const geminiService = this.serviceLocator.getAiApiService(AI_SERVICE_GEMINI);
 
       // Add Ollama promise (always fetched)
-      promises.push(withTimeout(ollamaService.fetchAvailableModels(urls[AI_SERVICE_OLLAMA]), FETCH_MODELS_TIMEOUT_MS, []));
+      promises.push(
+        withTimeout(ollamaService.fetchAvailableModels(urls[AI_SERVICE_OLLAMA]), FETCH_MODELS_TIMEOUT_MS, [])
+      );
 
       // Add LM Studio promise (always fetched, no API key required)
-      promises.push(withTimeout(lmstudioService.fetchAvailableModels(urls[AI_SERVICE_LMSTUDIO]), FETCH_MODELS_TIMEOUT_MS, []));
+      promises.push(
+        withTimeout(lmstudioService.fetchAvailableModels(urls[AI_SERVICE_LMSTUDIO]), FETCH_MODELS_TIMEOUT_MS, [])
+      );
 
       // Conditionally add OpenAI promise
       if (isValidApiKey(apiKey)) {
@@ -536,7 +531,11 @@ export class CommandRegistry {
       const geminiApiKey = this.apiAuthService.getApiKey(this.settingsService.getSettings(), AI_SERVICE_GEMINI);
       if (isValidApiKey(geminiApiKey)) {
         promises.push(
-          withTimeout(geminiService.fetchAvailableModels(urls[AI_SERVICE_GEMINI], geminiApiKey), FETCH_MODELS_TIMEOUT_MS, [])
+          withTimeout(
+            geminiService.fetchAvailableModels(urls[AI_SERVICE_GEMINI], geminiApiKey),
+            FETCH_MODELS_TIMEOUT_MS,
+            []
+          )
         );
       }
 

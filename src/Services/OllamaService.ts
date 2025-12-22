@@ -3,11 +3,10 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_OLLAMA, ROLE_SYSTEM } from "src/Constants";
 import { BaseAiService, IAiApiService, StreamingResponse } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { ApiService } from "./ApiService";
 import { createOpenAICompatible, OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
 import { ToolService } from "./ToolService";
-import { ServiceLocator } from "src/core/ServiceLocator";
-import { CommandRegistry } from "src/core/CommandRegistry";
+import { detectToolSupport } from "./ToolSupportDetector";
+import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 export interface OllamaModel {
   name: string;
@@ -37,8 +36,8 @@ export class OllamaService extends BaseAiService implements IAiApiService {
   protected serviceType = AI_SERVICE_OLLAMA;
   protected provider: OpenAICompatibleProvider;
 
-  constructor() {
-    super();
+  constructor(capabilitiesCache?: ModelCapabilitiesCache) {
+    super(capabilitiesCache);
     this.provider = createOpenAICompatible({
       name: "ollama",
       baseURL: DEFAULT_OLLAMA_CONFIG.url,
@@ -59,14 +58,6 @@ export class OllamaService extends BaseAiService implements IAiApiService {
       const json = await this.apiService.makeGetRequest(`${url}/api/tags`, headers, AI_SERVICE_OLLAMA);
       const models = json.models;
 
-      // Get capabilities cache from ServiceLocator
-      const serviceLocator = ServiceLocator.getInstance();
-      const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
-      const capabilitiesCache = commandRegistry?.getModelCapabilities();
-
-      // Lookup table of families that support tools
-      const familiesWithTools = new Set(['llama', 'qwen', 'mistral', 'mixtral', 'gemma']);
-
       return models
         .sort((a: OllamaModel, b: OllamaModel) => {
           if (a.name < b.name) return 1;
@@ -76,11 +67,10 @@ export class OllamaService extends BaseAiService implements IAiApiService {
         .map((model: OllamaModel) => {
           const fullId = `ollama@${model.name}`;
 
-          // Family-based detection for Ollama
-          const family = model.details?.family || this.inferFamily(model.name);
-          const supportsTools = familiesWithTools.has(family);
-          if (capabilitiesCache) {
-            capabilitiesCache.setSupportsTools(fullId, supportsTools);
+          // Pattern-based detection for Ollama
+          const supportsTools = detectToolSupport("ollama", model.name);
+          if (this.capabilitiesCache) {
+            this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
             console.log(`[Ollama] Cached: ${fullId} -> Tools: ${supportsTools}`);
           }
 
@@ -90,19 +80,6 @@ export class OllamaService extends BaseAiService implements IAiApiService {
       console.error("Error fetching Ollama models:", error);
       return [];
     }
-  }
-
-  /**
-   * Infer model family from model name
-   */
-  private inferFamily(modelName: string): string {
-    const name = modelName.toLowerCase();
-    if (name.includes('llama')) return 'llama';
-    if (name.includes('mistral')) return 'mistral';
-    if (name.includes('mixtral')) return 'mixtral';
-    if (name.includes('qwen')) return 'qwen';
-    if (name.includes('gemma')) return 'gemma';
-    return 'unknown';
   }
 
   // Implement abstract methods from BaseAiService

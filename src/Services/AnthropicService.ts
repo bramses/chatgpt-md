@@ -6,8 +6,8 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { isValidApiKey } from "./ApiAuthService";
 import { AnthropicProvider, createAnthropic } from "@ai-sdk/anthropic";
 import { ToolService } from "./ToolService";
-import { ServiceLocator } from "src/core/ServiceLocator";
-import { CommandRegistry } from "src/core/CommandRegistry";
+import { detectToolSupport } from "./ToolSupportDetector";
+import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 export const DEFAULT_ANTHROPIC_CONFIG: AnthropicConfig = {
   apiKey: "",
@@ -26,8 +26,8 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
   protected serviceType = AI_SERVICE_ANTHROPIC;
   protected provider: AnthropicProvider;
 
-  constructor() {
-    super();
+  constructor(capabilitiesCache?: ModelCapabilitiesCache) {
+    super(capabilitiesCache);
   }
 
   getDefaultConfig(): AnthropicConfig {
@@ -60,11 +60,6 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
 
       const data = response.json;
 
-      // Get capabilities cache from ServiceLocator
-      const serviceLocator = ServiceLocator.getInstance();
-      const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
-      const capabilitiesCache = commandRegistry?.getModelCapabilities();
-
       if (data.data && Array.isArray(data.data)) {
         return data.data
           .filter((model: any) => model.type === "model" && model.id)
@@ -72,9 +67,9 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
             const fullId = `anthropic@${model.id}`;
 
             // Pattern-based detection: Claude 3+ models support tools
-            const supportsTools = model.id.startsWith("claude-3");
-            if (capabilitiesCache) {
-              capabilitiesCache.setSupportsTools(fullId, supportsTools);
+            const supportsTools = detectToolSupport("anthropic", model.id);
+            if (this.capabilitiesCache) {
+              this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
               console.log(`[Anthropic] Cached: ${fullId} -> Tools: ${supportsTools}`);
             }
 

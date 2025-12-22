@@ -1,4 +1,4 @@
-import { App, Editor, Notice, SuggestModal, setIcon } from "obsidian";
+import { App, Editor, Notice, setIcon, SuggestModal } from "obsidian";
 import { EditorService } from "../Services/EditorService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";

@@ -3,12 +3,11 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENAI, ROLE_DEVELOPER } from "src/Constants";
 import { BaseAiService, IAiApiService, OpenAiModel } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { ApiService } from "./ApiService";
-import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
+import { isValidApiKey } from "./ApiAuthService";
 import { createOpenAI, OpenAIProvider } from "@ai-sdk/openai";
 import { ToolService } from "./ToolService";
-import { ServiceLocator } from "src/core/ServiceLocator";
-import { CommandRegistry } from "src/core/CommandRegistry";
+import { detectToolSupport } from "./ToolSupportDetector";
+import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   apiKey: "",
@@ -26,13 +25,12 @@ export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
   url: "https://api.openai.com",
 };
 
-
 export class OpenAiService extends BaseAiService implements IAiApiService {
   protected serviceType = AI_SERVICE_OPENAI;
   protected provider: OpenAIProvider;
 
-  constructor() {
-    super();
+  constructor(capabilitiesCache?: ModelCapabilitiesCache) {
+    super(capabilitiesCache);
   }
 
   getDefaultConfig(): OpenAIConfig {
@@ -53,10 +51,32 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
       const headers = this.apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENAI);
       const models = await this.apiService.makeGetRequest(`${url}/v1/models`, headers, AI_SERVICE_OPENAI);
 
-      // Get capabilities cache from ServiceLocator
-      const serviceLocator = ServiceLocator.getInstance();
-      const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
-      const capabilitiesCache = commandRegistry?.getModelCapabilities();
+      // Log raw API response for debugging and analysis
+      console.log(`[OpenAI] Raw models response - Total models: ${models.data?.length || 0}`);
+      console.log(`[OpenAI] Sample model structure:`, JSON.stringify(models.data?.[0], null, 2));
+
+      // Log all model IDs to see what's available
+      const allModelIds = models.data?.map((m: OpenAiModel) => m.id) || [];
+      console.log(`[OpenAI] All available models from API:`, allModelIds);
+
+      // Log models that match our filter criteria
+      const filteredIds = models.data
+        ?.filter(
+          (model: OpenAiModel) =>
+            (model.id.includes("o3") ||
+              model.id.includes("o4") ||
+              model.id.includes("o1") ||
+              model.id.includes("gpt-4") ||
+              model.id.includes("gpt-5") ||
+              model.id.includes("gpt-3")) &&
+            !model.id.includes("audio") &&
+            !model.id.includes("transcribe") &&
+            !model.id.includes("realtime") &&
+            !model.id.includes("o1-pro") &&
+            !model.id.includes("tts")
+        )
+        ?.map((m: OpenAiModel) => m.id) || [];
+      console.log(`[OpenAI] Models after filter (${filteredIds.length}):`, filteredIds);
 
       return models.data
         .filter(
@@ -81,10 +101,10 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
         .map((model: OpenAiModel) => {
           const fullId = `openai@${model.id}`;
 
-          // Pattern-based detection for OpenAI
-          const supportsTools = model.id.startsWith("gpt-4") || model.id.startsWith("gpt-5") || model.id.startsWith("o1");
-          if (capabilitiesCache) {
-            capabilitiesCache.setSupportsTools(fullId, supportsTools);
+          // Detect tool support using centralized detector
+          const supportsTools = detectToolSupport(AI_SERVICE_OPENAI, model.id);
+          if (this.capabilitiesCache) {
+            this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
             console.log(`[OpenAI] Cached: ${fullId} -> Tools: ${supportsTools}`);
           }
 

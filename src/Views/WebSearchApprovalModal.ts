@@ -1,5 +1,5 @@
 import { App, Modal } from "obsidian";
-import { WebSearchResult, WebSearchApprovalDecision } from "src/Models/Tool";
+import { WebSearchApprovalDecision, WebSearchResult } from "src/Models/Tool";
 
 /**
  * Modal for approving web search results before sharing with the LLM

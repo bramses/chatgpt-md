@@ -28,8 +28,7 @@ import { OpenRouterProvider } from "@openrouter/ai-sdk-provider";
 import { generateText, LanguageModel, streamText } from "ai";
 import { ToolService } from "./ToolService";
 import { StreamingHandler } from "./StreamingHandler";
-import { ServiceLocator } from "src/core/ServiceLocator";
-import { CommandRegistry } from "src/core/CommandRegistry";
+import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 /**
  * Interface defining the contract for AI service implementations
@@ -100,6 +99,7 @@ export abstract class BaseAiService implements IAiApiService {
   protected apiResponseParser: ApiResponseParser;
   protected readonly errorService: ErrorService;
   protected readonly notificationService: NotificationService;
+  protected capabilitiesCache?: ModelCapabilitiesCache;
 
   // Abstract property that subclasses must implement to specify their provider
   protected abstract provider: AiProvider;
@@ -124,12 +124,13 @@ export abstract class BaseAiService implements IAiApiService {
     BaseAiService.saveSettingsCallback = callback;
   }
 
-  constructor() {
+  constructor(capabilitiesCache?: ModelCapabilitiesCache) {
     this.notificationService = new NotificationService();
     this.errorService = new ErrorService(this.notificationService);
     this.apiService = new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = new ApiAuthService(this.notificationService);
     this.apiResponseParser = new ApiResponseParser(this.notificationService);
+    this.capabilitiesCache = capabilitiesCache;
   }
 
   /**
@@ -137,10 +138,7 @@ export abstract class BaseAiService implements IAiApiService {
    */
   protected modelSupportsTools(modelName: string, settings: ChatGPT_MDSettings): boolean {
     // Only use cache as source of truth - default to false if not in cache
-    const serviceLocator = ServiceLocator.getInstance();
-    const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
-    const capabilities = commandRegistry?.getModelCapabilities();
-    const cachedSupport = capabilities?.supportsTools(modelName);
+    const cachedSupport = this.capabilitiesCache?.supportsTools(modelName);
 
     console.log(`[ChatGPT MD] modelSupportsTools - model: ${modelName}, cached: ${cachedSupport}`);
     return cachedSupport === true; // Default to false if undefined
@@ -386,7 +384,7 @@ export abstract class BaseAiService implements IAiApiService {
    * e.g., "openai@gpt-4" -> "gpt-4"
    */
   protected extractModelName(model: string): string {
-    const atIndex = model.indexOf('@');
+    const atIndex = model.indexOf("@");
     return atIndex !== -1 ? model.slice(atIndex + 1) : model;
   }
 
@@ -511,17 +509,13 @@ export abstract class BaseAiService implements IAiApiService {
       const toolResults = await toolService.handleToolCalls(response.toolCalls, modelName);
 
       // Process results (filter, approve, get context)
-      const { contextMessages } = await toolService.processToolResults(
-        response.toolCalls,
-        toolResults,
-        modelName
-      );
+      const { contextMessages } = await toolService.processToolResults(response.toolCalls, toolResults, modelName);
 
       // Build continuation messages
       const updatedMessages = [...aiSdkMessages];
 
       if (response.text?.trim()) {
-        updatedMessages.push({ role: 'assistant', content: response.text });
+        updatedMessages.push({ role: "assistant", content: response.text });
       }
 
       updatedMessages.push(...contextMessages);
@@ -633,7 +627,7 @@ export abstract class BaseAiService implements IAiApiService {
 
         // Try to await finishReason if it's a promise (it might contain errors)
         let actualFinishReason = finalResult?.finishReason;
-        if (actualFinishReason && typeof actualFinishReason.then === 'function') {
+        if (actualFinishReason && typeof actualFinishReason.then === "function") {
           try {
             actualFinishReason = await actualFinishReason;
           } catch (finishErr: any) {
@@ -648,7 +642,7 @@ export abstract class BaseAiService implements IAiApiService {
 
         console.log(`[ChatGPT MD] Final result:`, {
           textLength: finalResult?.text?.length || 0,
-          finishReason: actualFinishReason
+          finishReason: actualFinishReason,
         });
 
         // Check if we got no output despite "success" - if tools were used, retry without them
@@ -657,7 +651,6 @@ export abstract class BaseAiService implements IAiApiService {
           retryErrorMessage = "The request produced no output.";
           needsRetryWithoutTools = true;
         }
-
       } catch (err: any) {
         handler?.stopBuffering();
 
@@ -685,7 +678,7 @@ export abstract class BaseAiService implements IAiApiService {
           console.log(`[ChatGPT MD] AI requested ${toolCalls.length} tool call(s)`);
 
           // Show indicator
-          const toolNotice = '\n\n_[Tool approval required...]_\n';
+          const toolNotice = "\n\n_[Tool approval required...]_\n";
           const indicatorCursor = handler.getCursor();
           editor.replaceRange(toolNotice, indicatorCursor);
           handler.updateCursorAfterInsert(toolNotice, indicatorCursor);
@@ -696,12 +689,12 @@ export abstract class BaseAiService implements IAiApiService {
 
           // Clear indicator
           const toolCursor = handler.getCursor();
-          editor.replaceRange('', { line: toolCursor.line - 1, ch: 0 }, toolCursor);
+          editor.replaceRange("", { line: toolCursor.line - 1, ch: 0 }, toolCursor);
           handler.setCursor({ line: toolCursor.line - 1, ch: 0 });
 
           // Build continuation messages
           const updatedMessages = [...aiSdkMessages];
-          updatedMessages.push({ role: 'assistant', content: fullText });
+          updatedMessages.push({ role: "assistant", content: fullText });
           updatedMessages.push(...contextMessages);
 
           // Continue streaming
@@ -774,13 +767,13 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
 
   // Canonical: Check explicit provider prefixes
   const prefixMap: [string, string][] = [
-    ['openai@', AI_SERVICE_OPENAI],
-    ['anthropic@', AI_SERVICE_ANTHROPIC],
-    ['gemini@', AI_SERVICE_GEMINI],
-    ['ollama@', AI_SERVICE_OLLAMA],
-    ['lmstudio@', AI_SERVICE_LMSTUDIO],
-    ['openrouter@', AI_SERVICE_OPENROUTER],
-    ['local@', AI_SERVICE_OLLAMA], // backward compatibility
+    ["openai@", AI_SERVICE_OPENAI],
+    ["anthropic@", AI_SERVICE_ANTHROPIC],
+    ["gemini@", AI_SERVICE_GEMINI],
+    ["ollama@", AI_SERVICE_OLLAMA],
+    ["lmstudio@", AI_SERVICE_LMSTUDIO],
+    ["openrouter@", AI_SERVICE_OPENROUTER],
+    ["local@", AI_SERVICE_OLLAMA], // backward compatibility
   ];
 
   for (const [prefix, service] of prefixMap) {
@@ -792,13 +785,18 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
   // Legacy: Infer from model name patterns (backward compatibility)
   const modelLower = model.toLowerCase();
 
-  if (modelLower.includes('claude')) {
+  if (modelLower.includes("claude")) {
     return AI_SERVICE_ANTHROPIC;
   }
-  if (modelLower.includes('gemini')) {
+  if (modelLower.includes("gemini")) {
     return AI_SERVICE_GEMINI;
   }
-  if (modelLower.includes('gpt') || modelLower.startsWith('o1') || modelLower.startsWith('o3') || modelLower.startsWith('o4')) {
+  if (
+    modelLower.includes("gpt") ||
+    modelLower.startsWith("o1") ||
+    modelLower.startsWith("o3") ||
+    modelLower.startsWith("o4")
+  ) {
     return AI_SERVICE_OPENAI;
   }
 

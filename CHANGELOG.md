@@ -98,6 +98,7 @@
 ### 🚀 Future Roadmap
 
 Potential future enhancements:
+
 - Additional tools: calendar integration, task management, graph analysis
 - Configurable auto-approval rules for trusted tools
 - Tool usage analytics (local only, privacy-focused)

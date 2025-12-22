@@ -12,12 +12,7 @@ export class StreamingHandler {
   private flushInterval: number;
   private setAtCursor: boolean;
 
-  constructor(
-    editor: Editor,
-    initialCursor: EditorPosition,
-    setAtCursor: boolean = false,
-    flushInterval: number = 50
-  ) {
+  constructor(editor: Editor, initialCursor: EditorPosition, setAtCursor: boolean = false, flushInterval: number = 50) {
     this.editor = editor;
     this.currentCursor = initialCursor;
     this.setAtCursor = setAtCursor;

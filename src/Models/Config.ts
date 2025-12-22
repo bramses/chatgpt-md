@@ -174,7 +174,7 @@ export interface WebSearchSettings {
   /** Enable/disable web search tool */
   enableWebSearch: boolean;
   /** Search provider ('brave' | 'custom') */
-  webSearchProvider: 'brave' | 'custom';
+  webSearchProvider: "brave" | "custom";
   /** API key for providers that require it */
   webSearchApiKey?: string;
   /** Custom search API endpoint */
@@ -234,9 +234,9 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 
   // Web Search
   enableWebSearch: false,
-  webSearchProvider: 'brave',
-  webSearchApiKey: '',
-  webSearchApiUrl: '',
+  webSearchProvider: "brave",
+  webSearchApiKey: "",
+  webSearchApiUrl: "",
   maxWebSearchResults: 5,
 
   // Formatting

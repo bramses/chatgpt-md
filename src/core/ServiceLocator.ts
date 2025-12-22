@@ -11,7 +11,7 @@ import { ErrorService } from "src/Services/ErrorService";
 import { ApiService } from "src/Services/ApiService";
 import { ApiAuthService } from "src/Services/ApiAuthService";
 import { ApiResponseParser } from "src/Services/ApiResponseParser";
-import { IAiApiService, BaseAiService } from "src/Services/AiService";
+import { BaseAiService, IAiApiService } from "src/Services/AiService";
 import { OpenAiService } from "src/Services/OpenAiService";
 import { OllamaService } from "src/Services/OllamaService";
 import { OpenRouterService } from "src/Services/OpenRouterService";
@@ -32,27 +32,25 @@ import { WebSearchService } from "src/Services/WebSearchService";
 import { ToolRegistry } from "src/Services/ToolRegistry";
 import { ToolExecutor } from "src/Services/ToolExecutor";
 import { ToolService } from "src/Services/ToolService";
+import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 /**
  * Registry mapping service types to their constructors
  */
-const AI_SERVICE_REGISTRY: Map<string, new () => IAiApiService> = new Map(
-  [
-    [AI_SERVICE_OPENAI, OpenAiService],
-    [AI_SERVICE_ANTHROPIC, AnthropicService],
-    [AI_SERVICE_GEMINI, GeminiService],
-    [AI_SERVICE_OLLAMA, OllamaService],
-    [AI_SERVICE_LMSTUDIO, LmStudioService],
-    [AI_SERVICE_OPENROUTER, OpenRouterService],
-  ] as [string, new () => IAiApiService][]
-);
+const AI_SERVICE_REGISTRY: Map<string, new (cache?: ModelCapabilitiesCache) => IAiApiService> = new Map([
+  [AI_SERVICE_OPENAI, OpenAiService],
+  [AI_SERVICE_ANTHROPIC, AnthropicService],
+  [AI_SERVICE_GEMINI, GeminiService],
+  [AI_SERVICE_OLLAMA, OllamaService],
+  [AI_SERVICE_LMSTUDIO, LmStudioService],
+  [AI_SERVICE_OPENROUTER, OpenRouterService],
+] as [string, new (cache?: ModelCapabilitiesCache) => IAiApiService][]);
 
 /**
  * ServiceLocator is responsible for creating and providing access to services
  * It centralizes service creation and dependency injection
  */
 export class ServiceLocator {
-  private static instance: ServiceLocator;
   private readonly app: App;
   private readonly plugin: Plugin;
 
@@ -74,34 +72,13 @@ export class ServiceLocator {
   private toolRegistry: ToolRegistry;
   private toolExecutor: ToolExecutor;
   private toolService: ToolService;
-  private commandRegistry: any; // Avoid circular dependency
+  private modelCapabilities: ModelCapabilitiesCache;
 
   constructor(app: App, plugin: Plugin) {
     this.app = app;
     this.plugin = plugin;
-    ServiceLocator.instance = this;
+    this.modelCapabilities = new ModelCapabilitiesCache();
     this.initializeServices();
-  }
-
-  /**
-   * Get the current ServiceLocator instance
-   */
-  static getInstance(): ServiceLocator | undefined {
-    return ServiceLocator.instance;
-  }
-
-  /**
-   * Register the command registry (called after it's created to avoid circular dependency)
-   */
-  public setCommandRegistry(registry: any): void {
-    this.commandRegistry = registry;
-  }
-
-  /**
-   * Get the command registry
-   */
-  public getCommandRegistry(): any {
-    return this.commandRegistry;
   }
 
   /**
@@ -162,7 +139,7 @@ export class ServiceLocator {
       throw new Error(`Unknown AI service type: ${serviceType}`);
     }
 
-    return new ServiceClass();
+    return new ServiceClass(this.modelCapabilities);
   }
 
   // Getters for all services
@@ -254,5 +231,12 @@ export class ServiceLocator {
    */
   getWebSearchService(): WebSearchService {
     return this.webSearchService;
+  }
+
+  /**
+   * Get the model capabilities cache
+   */
+  getModelCapabilities(): ModelCapabilitiesCache {
+    return this.modelCapabilities;
   }
 }

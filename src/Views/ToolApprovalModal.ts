@@ -1,4 +1,4 @@
-import { App, Modal, Setting } from "obsidian";
+import { App, Modal } from "obsidian";
 import { ToolApprovalDecision } from "src/Models/Tool";
 
 /**
@@ -243,9 +243,7 @@ export class ToolApprovalModal extends Modal {
         break;
       case "file_read":
         introEl.appendChild(
-          document.createTextNode(
-            ` requests to read ${files?.length || 0} file${files?.length !== 1 ? "s" : ""}:`
-          )
+          document.createTextNode(` requests to read ${files?.length || 0} file${files?.length !== 1 ? "s" : ""}:`)
         );
         break;
       case "web_search":

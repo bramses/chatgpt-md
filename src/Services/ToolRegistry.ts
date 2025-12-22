@@ -88,9 +88,7 @@ export class ToolRegistry {
         "Search the web for information on a topic. Returns titles, URLs, and snippets from search results. User will be asked to approve which results to share.",
       inputSchema: zodSchema(
         z.object({
-          query: z
-            .string()
-            .describe("The search query to look up on the web"),
+          query: z.string().describe("The search query to look up on the web"),
           limit: z
             .number()
             .optional()

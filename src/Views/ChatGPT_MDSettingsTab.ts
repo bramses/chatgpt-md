@@ -340,8 +340,8 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         id: "enableToolCalling",
         name: "Enable AI Tool Calling (Experimental, read only)",
         description:
-          "Privacy Focus: All tool calls require your explicit approval before the LLM sees the data. "+
-          "Allow the AI to use tools: Search files, Read file contents, Web Search (Privacy focused Brave Search API). " ,
+          "Privacy Focus: All tool calls require your explicit approval before the LLM sees the data. " +
+          "Allow the AI to use tools: Search files, Read file contents, Web Search (Privacy focused Brave Search API). ",
         type: "toggle",
         group: "Tool Calling",
       },

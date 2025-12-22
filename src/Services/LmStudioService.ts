@@ -3,12 +3,11 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_LMSTUDIO, ROLE_SYSTEM } from "src/Constants";
 import { BaseAiService, IAiApiService, OpenAiModel } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { ApiService } from "./ApiService";
-import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
+import { isValidApiKey } from "./ApiAuthService";
 import { createOpenAICompatible, OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
 import { ToolService } from "./ToolService";
-import { ServiceLocator } from "src/core/ServiceLocator";
-import { CommandRegistry } from "src/core/CommandRegistry";
+import { detectToolSupport } from "./ToolSupportDetector";
+import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 export const DEFAULT_LMSTUDIO_CONFIG: LmStudioConfig = {
   aiService: AI_SERVICE_LMSTUDIO,
@@ -29,8 +28,8 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
   protected serviceType = AI_SERVICE_LMSTUDIO;
   protected provider: OpenAICompatibleProvider;
 
-  constructor() {
-    super();
+  constructor(capabilitiesCache?: ModelCapabilitiesCache) {
+    super(capabilitiesCache);
     this.provider = createOpenAICompatible({
       name: "lmstudio",
       baseURL: DEFAULT_LMSTUDIO_CONFIG.url,
@@ -54,11 +53,6 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
 
       const models = await this.apiService.makeGetRequest(`${url}/v1/models`, headers, AI_SERVICE_LMSTUDIO);
 
-      // Get capabilities cache from ServiceLocator
-      const serviceLocator = ServiceLocator.getInstance();
-      const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
-      const capabilitiesCache = commandRegistry?.getModelCapabilities();
-
       return models.data
         .filter(
           (model: OpenAiModel) =>
@@ -76,9 +70,9 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
           const fullId = `lmstudio@${model.id}`;
 
           // Conservative: assume tools for common model names
-          const supportsTools = model.id.includes("llama-3") || model.id.includes("mistral");
-          if (capabilitiesCache) {
-            capabilitiesCache.setSupportsTools(fullId, supportsTools);
+          const supportsTools = detectToolSupport("lmstudio", model.id);
+          if (this.capabilitiesCache) {
+            this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
             console.log(`[LM Studio] Cached: ${fullId} -> Tools: ${supportsTools}`);
           }
 

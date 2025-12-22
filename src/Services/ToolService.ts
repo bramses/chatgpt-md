@@ -14,7 +14,7 @@ type ToolResultHandler = (
   result: any,
   toolCall: any,
   filteredResults: any[],
-  contextMessages: Array<{ role: 'user'; content: string }>,
+  contextMessages: Array<{ role: "user"; content: string }>,
   modelName?: string
 ) => Promise<void>;
 
@@ -134,9 +134,7 @@ export class ToolService {
             content: content,
           });
         } else {
-          Logger.debug(
-            `File is not TFile instance. Type: ${typeof file}, Constructor: ${file?.constructor?.name}`
-          );
+          Logger.debug(`File is not TFile instance. Type: ${typeof file}, Constructor: ${file?.constructor?.name}`);
         }
       } catch (error) {
         Logger.error(`Error reading file ${searchResult.path}:`, error);
@@ -154,7 +152,7 @@ export class ToolService {
     toolResult: any,
     toolCall: any,
     filteredResults: any[],
-    contextMessages: Array<{ role: 'user'; content: string }>,
+    contextMessages: Array<{ role: "user"; content: string }>,
     modelName?: string
   ): Promise<void> {
     const result = toolResult.result;
@@ -164,7 +162,7 @@ export class ToolService {
       return;
     }
 
-    const query = (toolCall?.input as any)?.query || 'unknown';
+    const query = (toolCall?.input as any)?.query || "unknown";
 
     if (result.length > 0) {
       const approvedResults = await this.requestSearchResultsApproval(query, result, modelName);
@@ -175,13 +173,13 @@ export class ToolService {
         const fileContents = await this.readFilesFromSearchResults(approvedResults);
         for (const fc of fileContents) {
           contextMessages.push({
-            role: 'user',
+            role: "user",
             content: `[vault_search result]\n\nFile: ${fc.path}\n\n${fc.content}`,
           });
         }
       } else {
         contextMessages.push({
-          role: 'user',
+          role: "user",
           content: `[vault_search result - no files found]\n\nThe search for "${query}" returned no results. Try searching with different keywords or single words.`,
         });
       }
@@ -189,7 +187,7 @@ export class ToolService {
       // Empty results
       filteredResults.push(toolResult);
       contextMessages.push({
-        role: 'user',
+        role: "user",
         content: `[vault_search result - no files found]\n\nThe search for "${query}" returned no results. Try searching with different keywords or single words.`,
       });
     }
@@ -202,7 +200,7 @@ export class ToolService {
     toolResult: any,
     toolCall: any,
     filteredResults: any[],
-    contextMessages: Array<{ role: 'user'; content: string }>,
+    contextMessages: Array<{ role: "user"; content: string }>,
     modelName?: string
   ): Promise<void> {
     const result = toolResult.result;
@@ -213,9 +211,9 @@ export class ToolService {
 
     filteredResults.push(toolResult);
     for (const fileResult of result) {
-      if (fileResult.content && typeof fileResult.content === 'string') {
+      if (fileResult.content && typeof fileResult.content === "string") {
         contextMessages.push({
-          role: 'user',
+          role: "user",
           content: `[file_read result]\n\nFile: ${fileResult.path}\n\n${fileResult.content}`,
         });
       }
@@ -229,7 +227,7 @@ export class ToolService {
     toolResult: any,
     toolCall: any,
     filteredResults: any[],
-    contextMessages: Array<{ role: 'user'; content: string }>,
+    contextMessages: Array<{ role: "user"; content: string }>,
     modelName?: string
   ): Promise<void> {
     const result = toolResult.result;
@@ -239,7 +237,7 @@ export class ToolService {
       return;
     }
 
-    const query = (toolCall?.input as any)?.query || 'unknown';
+    const query = (toolCall?.input as any)?.query || "unknown";
 
     if (result.length > 0) {
       const approvedResults = await this.requestWebSearchResultsApproval(query, result, modelName);
@@ -249,13 +247,13 @@ export class ToolService {
         // Format approved results as context messages
         for (const webResult of approvedResults) {
           contextMessages.push({
-            role: 'user',
+            role: "user",
             content: `[web_search result]\n\nTitle: ${webResult.title}\nURL: ${webResult.url}\n\n${webResult.content || webResult.snippet}`,
           });
         }
       } else {
         contextMessages.push({
-          role: 'user',
+          role: "user",
           content: `[web_search result - no results selected]\n\nThe web search for "${query}" returned results, but none were approved for sharing.`,
         });
       }
@@ -263,7 +261,7 @@ export class ToolService {
       // Empty results
       filteredResults.push(toolResult);
       contextMessages.push({
-        role: 'user',
+        role: "user",
         content: `[web_search result - no results found]\n\nThe web search for "${query}" returned no results. Try different search terms.`,
       });
     }
@@ -278,14 +276,14 @@ export class ToolService {
     modelName?: string
   ): Promise<{
     filteredResults: any[];
-    contextMessages: Array<{ role: 'user'; content: string }>;
+    contextMessages: Array<{ role: "user"; content: string }>;
   }> {
-    const contextMessages: Array<{ role: 'user'; content: string }> = [];
+    const contextMessages: Array<{ role: "user"; content: string }> = [];
     const filteredResults: any[] = [];
 
     for (const toolResult of toolResults) {
       const toolCall = toolCalls.find((tc: any) => {
-        const tcId = tc.toolCallId || tc.id || 'unknown';
+        const tcId = tc.toolCallId || tc.id || "unknown";
         return tcId === toolResult.toolCallId;
       });
 

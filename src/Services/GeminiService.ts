@@ -6,8 +6,8 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { isValidApiKey } from "./ApiAuthService";
 import { createGoogleGenerativeAI, GoogleGenerativeAIProvider } from "@ai-sdk/google";
 import { ToolService } from "./ToolService";
-import { ServiceLocator } from "src/core/ServiceLocator";
-import { CommandRegistry } from "src/core/CommandRegistry";
+import { detectToolSupport } from "./ToolSupportDetector";
+import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 export const DEFAULT_GEMINI_CONFIG: GeminiConfig = {
   apiKey: "",
@@ -27,8 +27,8 @@ export class GeminiService extends BaseAiService implements IAiApiService {
   protected serviceType = AI_SERVICE_GEMINI;
   protected provider: GoogleGenerativeAIProvider;
 
-  constructor() {
-    super();
+  constructor(capabilitiesCache?: ModelCapabilitiesCache) {
+    super(capabilitiesCache);
     // Use the dedicated Google Generative AI provider from @ai-sdk/google
     this.provider = createGoogleGenerativeAI({
       apiKey: "", // Will be set per request via headers
@@ -63,11 +63,6 @@ export class GeminiService extends BaseAiService implements IAiApiService {
 
       const data = response.json;
 
-      // Get capabilities cache from ServiceLocator
-      const serviceLocator = ServiceLocator.getInstance();
-      const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
-      const capabilitiesCache = commandRegistry?.getModelCapabilities();
-
       if (data.models && Array.isArray(data.models)) {
         return data.models
           .filter((model: any) => {
@@ -83,9 +78,9 @@ export class GeminiService extends BaseAiService implements IAiApiService {
             const fullId = `gemini@${modelName}`;
 
             // Pattern-based detection for Gemini
-            const supportsTools = model.name.includes("gemini-2") || model.name.includes("gemini-pro");
-            if (capabilitiesCache) {
-              capabilitiesCache.setSupportsTools(fullId, supportsTools);
+            const supportsTools = detectToolSupport("gemini", model.name);
+            if (this.capabilitiesCache) {
+              this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
               console.log(`[Gemini] Cached: ${fullId} -> Tools: ${supportsTools}`);
             }
 

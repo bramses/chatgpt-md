@@ -3,12 +3,11 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENROUTER, ROLE_SYSTEM } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { BaseAiService, IAiApiService, StreamingResponse } from "src/Services/AiService";
-import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
-import { ApiService } from "./ApiService";
+import { isValidApiKey } from "./ApiAuthService";
 import { createOpenRouter, OpenRouterProvider } from "@openrouter/ai-sdk-provider";
 import { ToolService } from "./ToolService";
-import { ServiceLocator } from "src/core/ServiceLocator";
-import { CommandRegistry } from "src/core/CommandRegistry";
+import { detectToolSupport } from "./ToolSupportDetector";
+import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 // Define a constant for OpenRouter service
 export interface OpenRouterModel {
@@ -60,8 +59,8 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
   protected serviceType = AI_SERVICE_OPENROUTER;
   protected provider: OpenRouterProvider;
 
-  constructor() {
-    super();
+  constructor(capabilitiesCache?: ModelCapabilitiesCache) {
+    super(capabilitiesCache);
     this.provider = createOpenRouter();
   }
 
@@ -83,11 +82,6 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
       const headers = this.apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENROUTER);
       const models = await this.apiService.makeGetRequest(`${url}/api/v1/models`, headers, AI_SERVICE_OPENROUTER);
 
-      // Get capabilities cache from ServiceLocator
-      const serviceLocator = ServiceLocator.getInstance();
-      const commandRegistry = serviceLocator?.getCommandRegistry() as CommandRegistry | undefined;
-      const capabilitiesCache = commandRegistry?.getModelCapabilities();
-
       return models.data
         .sort((a: OpenRouterModel, b: OpenRouterModel) => {
           if (a.id < b.id) return 1;
@@ -97,13 +91,11 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
         .map((model: OpenRouterModel) => {
           const fullId = `${AI_SERVICE_OPENROUTER}@${model.id}`;
 
-          // Extract tool support from API response and store in cache
-          if (capabilitiesCache && Array.isArray(model.supported_parameters)) {
-            const supportsTools = model.supported_parameters.includes('tools');
-            capabilitiesCache.setSupportsTools(fullId, supportsTools);
+          // Use centralized detection with API metadata
+          const supportsTools = detectToolSupport("openrouter", model.id, model);
+          if (this.capabilitiesCache) {
+            this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
             console.log(`[OpenRouter] Cached: ${fullId} -> Tools: ${supportsTools}`);
-          } else {
-            console.log(`[OpenRouter] No cache or no supported_parameters for ${fullId}`);
           }
 
           return fullId;
