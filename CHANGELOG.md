@@ -1,5 +1,126 @@
 # ChatGPT MD Changelog
 
+## v3.0.0 (December 2025) - Privacy-First AI Tool Calling
+
+### 🎯 Major Features
+
+- **Privacy-First Tool Calling System**: AI assistants can now search your vault, read files, and search the web—with explicit human approval at every step
+  - Three-layer approval architecture: approve execution → review results → approve sharing
+  - No data reaches the LLM without your explicit consent
+  - All tools disabled by default (opt-in feature)
+- **Vault Search Tool**: AI can discover relevant notes in your vault
+  - Multi-word OR search (matches ANY query word)
+  - Searches both filenames and file content
+  - Interactive results review: you select which files to share
+  - Automatically excludes current file from search results
+- **File Read Tool**: AI can request access to specific files
+  - Granular file selection in approval modal
+  - Full content reading with user consent
+  - Batch reading support for multiple files
+- **Web Search Tool (Experimental)**: AI can search the web using privacy-focused Brave Search API
+  - 1,000 free queries/month with Brave Search API
+  - Review and filter web results before sharing
+  - Custom search provider support for self-hosted solutions
+  - Optional full page content fetching
+
+### 🔒 Privacy & Control
+
+- **Human-in-the-Loop Architecture**: Every tool call requires explicit user approval before execution and before data sharing
+- **Multi-Stage Approval Process**:
+  1. Tool execution approval: see what the AI wants to do
+  2. Results review: see what the tool found
+  3. Selective sharing: choose exactly which results to share with AI
+- **Data Minimization**: Share only the specific results you approve—nothing more
+- **Full Transparency**: All tool requests displayed with clear descriptions of what will happen
+- **Audit Trail**: Debug mode logs all tool calls and decisions for troubleshooting
+- **Local Storage**: All API keys stored locally in Obsidian settings
+
+### 🏗️ Technical Architecture
+
+- **New Service Layer**:
+  - `ToolService`: Orchestrates tool calling with approval workflow
+  - `ToolRegistry`: Manages available tools and their configurations
+  - `ToolExecutor`: Executes approved tools with security checks
+  - `VaultTools`: Vault-specific tool implementations
+  - `WebSearchService`: Web search integration with Brave Search API
+  - `StreamingHandler`: Refactored streaming response processor
+  - `Logger`: Comprehensive debug logging utility
+- **Type-Safe Tool System**: Complete TypeScript interfaces for tools, approvals, and results
+- **AI Service Refactoring**: All 6 AI services updated to support tool calling
+  - OpenAI, Anthropic, Gemini, OpenRouter, Ollama, LM Studio
+  - Consistent tool interface across all providers
+  - Improved streaming response handling
+  - Better error handling and user feedback
+
+### 🎨 User Interface
+
+- **ToolApprovalModal**: Interactive modal for approving tool execution requests
+  - Shows tool name, parameters, and description
+  - File selection UI for file_read tool
+  - Clear approve/cancel actions
+- **SearchResultsApprovalModal**: Review and filter vault search results
+  - Preview of found files with metadata
+  - Multi-select interface for granular control
+  - Shows file paths, names, and match counts
+- **WebSearchApprovalModal**: Review and filter web search results
+  - Displays titles, URLs, and snippets
+  - Multi-select interface for result filtering
+  - Preview of web content before sharing
+
+### ⚙️ Configuration & Settings
+
+- **New Settings Section**: "Tool Calling" with comprehensive configuration options
+  - Enable/disable tool calling (disabled by default)
+  - Enable/disable web search
+  - Brave Search API key configuration
+  - Custom search provider support
+  - Maximum web search results (1-10)
+  - Debug mode for detailed logging
+- **Frontmatter Support**: Per-note tool calling configuration (coming soon)
+- **Provider Flexibility**: Use Brave Search (default) or custom search endpoints
+
+### 📦 Under the Hood
+
+- **40 Files Changed**: 3,632 insertions, 2,176 deletions
+- **Major Refactoring**: AI service implementations streamlined for tool support
+- **Enhanced Streaming**: Better real-time response processing with tool call handling
+- **Improved Error Handling**: Comprehensive error messages for tool failures
+- **Performance Optimizations**: Efficient vault search with configurable limits
+- **Code Quality**: Comprehensive TypeScript types for all tool-related functionality
+
+### 🔧 Developer Experience
+
+- **Debug Mode**: Detailed console logging for troubleshooting tool operations
+- **Extensible Architecture**: Easy to add new tools in the future
+- **Clear Interfaces**: Well-documented TypeScript interfaces for tool development
+- **Service Locator Pattern**: Consistent dependency injection for tool services
+
+### 🚀 Future Roadmap
+
+Potential future enhancements:
+
+- Additional tools: calendar integration, task management, graph analysis
+- Configurable auto-approval rules for trusted tools
+- Tool usage analytics (local only, privacy-focused)
+- Batch file operations with granular control
+- Advanced search operators and filters
+
+### 📚 Knowledge Management Benefits
+
+- **Context-Aware AI**: AI can discover relevant information from your vault
+- **Research Augmentation**: Combine vault knowledge with web search results
+- **Note Discovery**: Find connections between notes you might have missed
+- **Enhanced Productivity**: AI with access to your knowledge base (with your permission)
+- **Privacy-Preserved**: Full control over what information AI sees
+
+### 🎓 Use Cases
+
+- **Research Assistant**: "Search my vault for notes about quantum computing and find recent papers on the topic"
+- **Knowledge Synthesis**: "Find all my meeting notes from Q3 and summarize the key decisions"
+- **Cross-Reference**: "Search for notes mentioning both machine learning and productivity"
+- **Web-Enhanced Writing**: "Search the web for the latest statistics on climate change and incorporate them"
+- **Information Retrieval**: "Find my notes on project X and tell me the current status"
+
 ## v2.8.1-beta (August 2025) - CORS-Free Streaming & Network Improvements
 
 ### 🚀 Major Network Improvements

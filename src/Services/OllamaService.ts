@@ -1,21 +1,20 @@
 import { Editor } from "obsidian";
 import { Message } from "src/Models/Message";
 import { AI_SERVICE_OLLAMA, ROLE_SYSTEM } from "src/Constants";
+import { BaseAiService, IAiApiService, StreamingResponse } from "./AiService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { BaseAiService, IAiApiService, OllamaModel, StreamingResponse } from "src/Services/AiService";
-import { ErrorService } from "./ErrorService";
-import { NotificationService } from "./NotificationService";
-import { ApiService } from "./ApiService";
-import { ApiAuthService } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
+import { createOpenAICompatible, OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
+import { ToolService } from "./ToolService";
+import { detectToolSupport } from "./ToolSupportDetector";
+import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
-export interface OllamaStreamPayload {
-  model: string;
-  messages: Message[];
-  stream?: boolean;
+export interface OllamaModel {
+  name: string;
+  [key: string]: any;
 }
 
 export interface OllamaConfig {
+  apiKey?: string;
   aiService: string;
   model: string;
   url: string;
@@ -33,48 +32,16 @@ export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
   system_commands: null,
 };
 
-export const fetchAvailableOllamaModels = async (url: string) => {
-  try {
-    // Use ApiService for the API request
-    const apiService = new ApiService();
-    const headers = { "Content-Type": "application/json" };
-
-    const json = await apiService.makeGetRequest(`${url}/api/tags`, headers, AI_SERVICE_OLLAMA);
-    const models = json.models;
-
-    return models
-      .sort((a: OllamaModel, b: OllamaModel) => {
-        if (a.name < b.name) return 1;
-        if (a.name > b.name) return -1;
-        return 0;
-      })
-      .map((model: OllamaModel) => `ollama@${model.name}`);
-  } catch (error) {
-    console.error("Error fetching models:", error);
-    return [];
-  }
-};
-
 export class OllamaService extends BaseAiService implements IAiApiService {
-  protected errorService: ErrorService;
-  protected notificationService: NotificationService;
-  protected apiService: ApiService;
-  protected apiAuthService: ApiAuthService;
-  protected apiResponseParser: ApiResponseParser;
   protected serviceType = AI_SERVICE_OLLAMA;
+  protected provider: OpenAICompatibleProvider;
 
-  constructor(
-    errorService?: ErrorService,
-    notificationService?: NotificationService,
-    apiService?: ApiService,
-    apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser
-  ) {
-    super(errorService, notificationService);
-    this.errorService = errorService || new ErrorService(this.notificationService);
-    this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
-    this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
-    this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+  constructor(capabilitiesCache?: ModelCapabilitiesCache) {
+    super(capabilitiesCache);
+    this.provider = createOpenAICompatible({
+      name: "ollama",
+      baseURL: DEFAULT_OLLAMA_CONFIG.url,
+    });
   }
 
   getDefaultConfig(): OllamaConfig {
@@ -83,6 +50,37 @@ export class OllamaService extends BaseAiService implements IAiApiService {
 
   getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
     return this.apiAuthService.getApiKey(settings, AI_SERVICE_OLLAMA);
+  }
+
+  async fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]> {
+    try {
+      const headers = { "Content-Type": "application/json" };
+      const json = await this.apiService.makeGetRequest(`${url}/api/tags`, headers, AI_SERVICE_OLLAMA);
+      const models = json.models;
+
+      return models
+        .sort((a: OllamaModel, b: OllamaModel) => {
+          if (a.name < b.name) return 1;
+          if (a.name > b.name) return -1;
+          return 0;
+        })
+        .map((model: OllamaModel) => {
+          const fullId = `ollama@${model.name}`;
+
+          // Pattern-based detection for Ollama
+          const whitelist = settings?.toolEnabledModels || "";
+          const supportsTools = detectToolSupport("ollama", model.name, whitelist);
+          if (this.capabilitiesCache) {
+            this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
+            console.log(`[Ollama] Cached: ${fullId} -> Tools: ${supportsTools}`);
+          }
+
+          return fullId;
+        });
+    } catch (error) {
+      console.error("Error fetching Ollama models:", error);
+      return [];
+    }
   }
 
   // Implement abstract methods from BaseAiService
@@ -94,40 +92,17 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     return false; // Ollama uses messages array, not system field
   }
 
-  createPayload(config: OllamaConfig, messages: Message[]): OllamaStreamPayload {
-    // Remove the provider prefix if it exists in the model name
-    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
-
-    // Process system commands using the centralized method
-    const processedMessages = this.processSystemCommands(messages, config.system_commands);
-
-    return {
-      model: modelName,
-      messages: processedMessages,
-      stream: config.stream,
-    };
-  }
-
-  handleAPIError(err: any, config: OllamaConfig, prefix: string): never {
-    // Use the new ErrorService to handle errors
-    const context = {
-      model: config.model,
-      url: config.url,
-      defaultUrl: DEFAULT_OLLAMA_CONFIG.url,
-      aiService: AI_SERVICE_OLLAMA,
-    };
-
-    // Special handling for custom URL errors
-    if (err instanceof Object && config.url !== DEFAULT_OLLAMA_CONFIG.url) {
-      return this.errorService.handleUrlError(config.url, DEFAULT_OLLAMA_CONFIG.url, AI_SERVICE_OLLAMA) as never;
-    }
-
-    // Use the centralized error handling
-    return this.errorService.handleApiError(err, AI_SERVICE_OLLAMA, {
-      context,
-      showNotification: true,
-      logToConsole: true,
-    }) as never;
+  /**
+   * Initialize the Ollama provider (OpenAI-compatible) with the given configuration
+   */
+  private ensureProvider(apiKey: string | undefined, config: OllamaConfig): void {
+    const customFetch = this.apiService.createFetchAdapter();
+    this.provider = createOpenAICompatible({
+      name: "ollama",
+      apiKey: apiKey || "ollama", // Ollama doesn't require real key
+      baseURL: `${config.url}/v1`,
+      fetch: customFetch,
+    });
   }
 
   protected async callStreamingAPI(
@@ -137,23 +112,47 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean | undefined,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    toolService?: ToolService
   ): Promise<StreamingResponse> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings);
+    this.ensureProvider(apiKey, config);
+
+    // Extract model name (remove provider prefix if present)
+    const modelName = this.extractModelName(config.model);
+
+    const tools = toolService?.getToolsForRequest(settings!);
+
+    // Use the common AI SDK streaming method from base class
+    return this.callAiSdkStreamText(
+      this.provider(modelName),
+      config.model,
+      messages,
+      config,
+      editor,
+      headingPrefix,
+      setAtCursor,
+      tools,
+      toolService,
+      settings
+    );
   }
 
   protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
     config: OllamaConfig,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    provider?: OpenAICompatibleProvider,
+    toolService?: ToolService
   ): Promise<any> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config, settings);
-  }
+    this.ensureProvider(apiKey, config);
 
-  protected showNoTitleInferredNotification(): void {
-    this.notificationService.showWarning("Could not infer title. The file name was not changed.");
+    // Extract model name (remove provider prefix if present)
+    const modelName = this.extractModelName(config.model);
+
+    const tools = toolService?.getToolsForRequest(settings!);
+
+    // Use the common AI SDK method from base class
+    return this.callAiSdkGenerateText(this.provider(modelName), config.model, messages, tools, toolService, settings);
   }
 }

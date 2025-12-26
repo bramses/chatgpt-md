@@ -3,12 +3,12 @@ import { ServiceLocator } from "./ServiceLocator";
 import { SettingsService } from "../Services/SettingsService";
 import { IAiApiService } from "src/Services/AiService";
 import { AiModelSuggestModal } from "src/Views/AiModelSuggestModel";
-import { DEFAULT_OPENAI_CONFIG, fetchAvailableOpenAiModels } from "src/Services/OpenAiService";
-import { DEFAULT_OLLAMA_CONFIG, fetchAvailableOllamaModels } from "src/Services/OllamaService";
-import { DEFAULT_OPENROUTER_CONFIG, fetchAvailableOpenRouterModels } from "src/Services/OpenRouterService";
-import { DEFAULT_LMSTUDIO_CONFIG, fetchAvailableLmStudioModels } from "src/Services/LmStudioService";
-import { DEFAULT_ANTHROPIC_CONFIG, fetchAvailableAnthropicModels } from "src/Services/AnthropicService";
-import { DEFAULT_GEMINI_CONFIG, fetchAvailableGeminiModels } from "src/Services/GeminiService";
+import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
+import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
+import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
+import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
+import { DEFAULT_ANTHROPIC_CONFIG } from "src/Services/AnthropicService";
+import { DEFAULT_GEMINI_CONFIG } from "src/Services/GeminiService";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
@@ -105,6 +105,9 @@ export class CommandRegistry {
           // Get the appropriate API key for the service
           const apiKeyToUse = this.apiAuthService.getApiKey(settings, frontmatter.aiService);
 
+          // Get tool service if tools are enabled
+          const toolService = settings.enableToolCalling ? this.serviceLocator.getToolService() : undefined;
+
           const response = await this.aiService.callAIAPI(
             messagesWithRoleAndMessage,
             frontmatter,
@@ -113,7 +116,8 @@ export class CommandRegistry {
             editor,
             settings.generateAtCursor,
             apiKeyToUse,
-            settings
+            settings,
+            toolService
           );
 
           editorService.processResponse(editor, response, settings);
@@ -191,7 +195,9 @@ export class CommandRegistry {
           this.plugin.app,
           editor,
           editorService,
-          this.availableModels // Use potentially stale but instantly available models
+          this.availableModels, // Use potentially stale but instantly available models
+          settings,
+          this.serviceLocator.getModelCapabilities()
         );
         initialModal.open();
 
@@ -213,7 +219,7 @@ export class CommandRegistry {
               [AI_SERVICE_GEMINI]: frontmatter.geminiUrl || settings.geminiUrl || DEFAULT_GEMINI_CONFIG.url,
             };
 
-            const freshModels = await this.fetchAvailableModels(currentUrls, openAiKey, openRouterKey);
+            const freshModels = await this.fetchAvailableModels(currentUrls, openAiKey, openRouterKey, settings);
 
             // --- Step 3: Compare and potentially update modal ---
             // Basic comparison: Check if lengths differ or if sets of models differ
@@ -230,7 +236,14 @@ export class CommandRegistry {
 
               // Close the initial modal and open a new one with fresh data
               initialModal.close();
-              new AiModelSuggestModal(this.plugin.app, editor, editorService, this.availableModels).open();
+              new AiModelSuggestModal(
+                this.plugin.app,
+                editor,
+                editorService,
+                this.availableModels,
+                settings,
+                this.serviceLocator.getModelCapabilities()
+              ).open();
             }
           } catch (e) {
             // Don't close the initial modal here, as it might still be useful
@@ -441,7 +454,7 @@ export class CommandRegistry {
         [AI_SERVICE_GEMINI]: settings.geminiUrl || DEFAULT_GEMINI_CONFIG.url,
       };
 
-      this.availableModels = await this.fetchAvailableModels(defaultUrls, openAiKey, openRouterKey);
+      this.availableModels = await this.fetchAvailableModels(defaultUrls, openAiKey, openRouterKey, settings);
       console.log(`[ChatGPT MD] Found ${this.availableModels.length} available models.`);
     } catch (error) {
       console.error("[ChatGPT MD] Error initializing available models:", error);
@@ -457,7 +470,8 @@ export class CommandRegistry {
   public async fetchAvailableModels(
     urls: { [key: string]: string },
     apiKey: string,
-    openrouterApiKey: string
+    openrouterApiKey: string,
+    settings?: any
   ): Promise<string[]> {
     function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
       return Promise.race([promise, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
@@ -466,16 +480,40 @@ export class CommandRegistry {
     try {
       const promises: Promise<string[]>[] = [];
 
+      // Get service instances from service locator
+      const ollamaService = this.serviceLocator.getAiApiService(AI_SERVICE_OLLAMA);
+      const lmstudioService = this.serviceLocator.getAiApiService(AI_SERVICE_LMSTUDIO);
+      const openaiService = this.serviceLocator.getAiApiService(AI_SERVICE_OPENAI);
+      const openrouterService = this.serviceLocator.getAiApiService(AI_SERVICE_OPENROUTER);
+      const anthropicService = this.serviceLocator.getAiApiService(AI_SERVICE_ANTHROPIC);
+      const geminiService = this.serviceLocator.getAiApiService(AI_SERVICE_GEMINI);
+
       // Add Ollama promise (always fetched)
-      promises.push(withTimeout(fetchAvailableOllamaModels(urls[AI_SERVICE_OLLAMA]), FETCH_MODELS_TIMEOUT_MS, []));
+      promises.push(
+        withTimeout(
+          ollamaService.fetchAvailableModels(urls[AI_SERVICE_OLLAMA], undefined, settings),
+          FETCH_MODELS_TIMEOUT_MS,
+          []
+        )
+      );
 
       // Add LM Studio promise (always fetched, no API key required)
-      promises.push(withTimeout(fetchAvailableLmStudioModels(urls[AI_SERVICE_LMSTUDIO]), FETCH_MODELS_TIMEOUT_MS, []));
+      promises.push(
+        withTimeout(
+          lmstudioService.fetchAvailableModels(urls[AI_SERVICE_LMSTUDIO], undefined, settings),
+          FETCH_MODELS_TIMEOUT_MS,
+          []
+        )
+      );
 
       // Conditionally add OpenAI promise
       if (isValidApiKey(apiKey)) {
         promises.push(
-          withTimeout(fetchAvailableOpenAiModels(urls[AI_SERVICE_OPENAI], apiKey), FETCH_MODELS_TIMEOUT_MS, [])
+          withTimeout(
+            openaiService.fetchAvailableModels(urls[AI_SERVICE_OPENAI], apiKey, settings),
+            FETCH_MODELS_TIMEOUT_MS,
+            []
+          )
         );
       }
 
@@ -483,7 +521,7 @@ export class CommandRegistry {
       if (isValidApiKey(openrouterApiKey)) {
         promises.push(
           withTimeout(
-            fetchAvailableOpenRouterModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey),
+            openrouterService.fetchAvailableModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey, settings),
             FETCH_MODELS_TIMEOUT_MS,
             []
           )
@@ -495,7 +533,7 @@ export class CommandRegistry {
       if (isValidApiKey(anthropicApiKey)) {
         promises.push(
           withTimeout(
-            fetchAvailableAnthropicModels(urls[AI_SERVICE_ANTHROPIC], anthropicApiKey),
+            anthropicService.fetchAvailableModels(urls[AI_SERVICE_ANTHROPIC], anthropicApiKey, settings),
             FETCH_MODELS_TIMEOUT_MS,
             []
           )
@@ -506,7 +544,11 @@ export class CommandRegistry {
       const geminiApiKey = this.apiAuthService.getApiKey(this.settingsService.getSettings(), AI_SERVICE_GEMINI);
       if (isValidApiKey(geminiApiKey)) {
         promises.push(
-          withTimeout(fetchAvailableGeminiModels(urls[AI_SERVICE_GEMINI], geminiApiKey), FETCH_MODELS_TIMEOUT_MS, [])
+          withTimeout(
+            geminiService.fetchAvailableModels(urls[AI_SERVICE_GEMINI], geminiApiKey, settings),
+            FETCH_MODELS_TIMEOUT_MS,
+            []
+          )
         );
       }
 

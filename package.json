@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-md",
-  "version": "2.9.2-beta",
+  "version": "2.12.0-beta",
   "description": "A seamless integration of openAIs GPT LLMs and Ollama into Obsidian.",
   "main": "main.js",
   "type": "module",
@@ -20,18 +20,26 @@
   },
   "keywords": [],
   "author": "",
-  "license": "MIT",
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.1",
+    "@ai-sdk/google": "^3.0.1",
+    "@ai-sdk/openai": "^3.0.1",
+    "@ai-sdk/openai-compatible": "^2.0.1",
+    "@openrouter/ai-sdk-provider": "^1.5.4",
+    "ai": "6.0.3",
+    "zod": "4.2.1"
+  },
   "devDependencies": {
-    "@codemirror/state": "^6.5.2",
-    "@codemirror/view": "^6.38.5",
-    "@types/node": "^24.7.0",
-    "@typescript-eslint/eslint-plugin": "8.46.0",
-    "@typescript-eslint/parser": "8.46.0",
+    "@codemirror/state": "^6.5.3",
+    "@codemirror/view": "^6.39.7",
+    "@types/node": "^25.0.3",
+    "@typescript-eslint/eslint-plugin": "8.50.1",
+    "@typescript-eslint/parser": "8.50.1",
     "builtin-modules": "5.0.0",
-    "esbuild": "0.25.10",
-    "eslint": "^9.37.0",
+    "esbuild": "0.27.2",
+    "eslint": "^9.39.2",
     "obsidian": "latest",
-    "prettier": "^3.6.2",
+    "prettier": "^3.7.4",
     "tslib": "2.8.1",
     "typescript": "5.9.3"
   }

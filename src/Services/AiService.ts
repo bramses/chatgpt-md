@@ -20,10 +20,20 @@ import {
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
+import { OpenAIProvider } from "@ai-sdk/openai";
+import { OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
+import { AnthropicProvider } from "@ai-sdk/anthropic";
+import { GoogleGenerativeAIProvider } from "@ai-sdk/google";
+import { OpenRouterProvider } from "@openrouter/ai-sdk-provider";
+import { generateText, LanguageModel, streamText } from "ai";
+import { ToolService } from "./ToolService";
+import { StreamingHandler } from "./StreamingHandler";
+import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 /**
  * Interface defining the contract for AI service implementations
  */
+
 export interface IAiApiService {
   /**
    * Call the AI API with the given parameters
@@ -36,7 +46,8 @@ export interface IAiApiService {
     editor?: Editor,
     setAtCursor?: boolean,
     apiKey?: string,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    toolService?: ToolService
   ): Promise<{
     fullString: string;
     mode: string;
@@ -52,6 +63,11 @@ export interface IAiApiService {
     messages: string[],
     editorService: EditorService
   ): Promise<string>;
+
+  /**
+   * Fetch available models for this service
+   */
+  fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]>;
 }
 
 /**
@@ -64,6 +80,16 @@ export type StreamingResponse = {
 };
 
 /**
+ * Type definition for all supported AI providers
+ */
+export type AiProvider =
+  | OpenAIProvider
+  | OpenAICompatibleProvider
+  | AnthropicProvider
+  | GoogleGenerativeAIProvider
+  | OpenRouterProvider;
+
+/**
  * Base class for AI service implementations
  * Contains common functionality and defines abstract methods that must be implemented by subclasses
  */
@@ -73,6 +99,10 @@ export abstract class BaseAiService implements IAiApiService {
   protected apiResponseParser: ApiResponseParser;
   protected readonly errorService: ErrorService;
   protected readonly notificationService: NotificationService;
+  protected capabilitiesCache?: ModelCapabilitiesCache;
+
+  // Abstract property that subclasses must implement to specify their provider
+  protected abstract provider: AiProvider;
 
   // Abstract property that subclasses must implement to specify their service type
   protected abstract serviceType: string;
@@ -83,12 +113,33 @@ export abstract class BaseAiService implements IAiApiService {
   // Abstract property to specify if the service supports system field in payload
   protected abstract supportsSystemField(): boolean;
 
-  constructor(errorService?: ErrorService, notificationService?: NotificationService) {
-    this.notificationService = notificationService ?? new NotificationService();
-    this.errorService = errorService ?? new ErrorService(this.notificationService);
+  // Static callback for saving settings (set once at plugin initialization)
+  private static saveSettingsCallback: (() => Promise<void>) | null = null;
+
+  /**
+   * Set the callback for saving settings
+   * This should be called once during plugin initialization
+   */
+  public static setSaveSettingsCallback(callback: () => Promise<void>): void {
+    BaseAiService.saveSettingsCallback = callback;
+  }
+
+  constructor(capabilitiesCache?: ModelCapabilitiesCache) {
+    this.notificationService = new NotificationService();
+    this.errorService = new ErrorService(this.notificationService);
     this.apiService = new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = new ApiAuthService(this.notificationService);
     this.apiResponseParser = new ApiResponseParser(this.notificationService);
+    this.capabilitiesCache = capabilitiesCache;
+  }
+
+  /**
+   * Check if a model is known to support tools (from cache only)
+   */
+  protected modelSupportsTools(modelName: string, settings: ChatGPT_MDSettings): boolean {
+    // Only use cache as source of truth - default to false if not in cache
+    const cachedSupport = this.capabilitiesCache?.supportsTools(modelName);
+    return cachedSupport === true; // Default to false if undefined
   }
 
   /**
@@ -120,16 +171,6 @@ export abstract class BaseAiService implements IAiApiService {
   abstract getDefaultConfig(): Record<string, any>;
 
   /**
-   * Create a payload for the API request
-   */
-  abstract createPayload(config: Record<string, any>, messages: Message[]): Record<string, any>;
-
-  /**
-   * Handle API errors
-   */
-  abstract handleAPIError(err: unknown, config: Record<string, any>, prefix: string): never;
-
-  /**
    * Call the AI API with the given parameters
    */
   async callAIAPI(
@@ -140,7 +181,8 @@ export abstract class BaseAiService implements IAiApiService {
     editor?: Editor,
     setAtCursor?: boolean,
     apiKey?: string,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    toolService?: ToolService
   ): Promise<any> {
     const config = { ...this.getDefaultConfig(), ...options };
 
@@ -150,8 +192,8 @@ export abstract class BaseAiService implements IAiApiService {
     }
 
     return options.stream && editor
-      ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings)
-      : this.callNonStreamingAPI(apiKey, messages, config, settings);
+      ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings, toolService)
+      : this.callNonStreamingAPI(apiKey, messages, config, settings, this.provider, toolService);
   }
 
   /**
@@ -229,6 +271,15 @@ export abstract class BaseAiService implements IAiApiService {
   abstract getApiKeyFromSettings(settings: ChatGPT_MDSettings): string;
 
   /**
+   * Fetch available models for this service
+   * @param url The service endpoint URL
+   * @param apiKey Optional API key (required for some services)
+   * @param settings Optional settings containing whitelist configuration
+   * @returns Array of model names with service prefix (e.g., "openai@gpt-4")
+   */
+  abstract fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]>;
+
+  /**
    * Call the AI API in streaming mode
    */
   protected abstract callStreamingAPI(
@@ -238,7 +289,8 @@ export abstract class BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    toolService?: ToolService
   ): Promise<StreamingResponse>;
 
   /**
@@ -248,7 +300,9 @@ export abstract class BaseAiService implements IAiApiService {
     apiKey: string | undefined,
     messages: Message[],
     config: Record<string, any>,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    provider?: AiProvider,
+    toolService?: ToolService
   ): Promise<any>;
 
   /**
@@ -290,13 +344,14 @@ export abstract class BaseAiService implements IAiApiService {
 
       try {
         // Use a separate try/catch block for the API call to handle errors without returning them to the chat
-        // For title inference, we call the API directly without the plugin system message
-        return await this.callNonStreamingAPIForTitleInference(
+        // Call the regular non-streaming API (which uses AI SDK)
+        const response = await this.callNonStreamingAPI(
           apiKey,
           [{ role: ROLE_USER, content: prompt }],
           config,
           settings
         );
+        return response.fullString || response;
       } catch (apiError) {
         // Log the error but don't return it to the chat
         console.error(`[ChatGPT MD] Error calling API for title inference:`, apiError);
@@ -310,33 +365,6 @@ export abstract class BaseAiService implements IAiApiService {
   };
 
   /**
-   * Call non-streaming API specifically for title inference (without plugin system message)
-   */
-  protected async callNonStreamingAPIForTitleInference(
-    apiKey: string | undefined,
-    messages: Message[],
-    config: Record<string, any>,
-    settings: ChatGPT_MDSettings
-  ): Promise<any> {
-    try {
-      config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings, true); // Skip plugin system message
-
-      const response = await this.apiService.makeNonStreamingRequest(
-        this.getApiEndpoint(config),
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Return simple object with response and model
-      return response;
-    } catch (err) {
-      throw err; // Re-throw for title inference error handling
-    }
-  }
-
-  /**
    * Stop streaming
    */
   public stopStreaming(): void {
@@ -344,28 +372,19 @@ export abstract class BaseAiService implements IAiApiService {
   }
 
   /**
-   * Process streaming result and handle aborted case
-   * This centralizes the common logic for all AI services
-   */
-  protected processStreamingResult(result: { text: string; wasAborted: boolean }): StreamingResponse {
-    // If streaming was aborted and text is empty, return empty string with wasAborted flag
-    if (result.wasAborted && result.text === "") {
-      return { fullString: "", mode: "streaming", wasAborted: true };
-    }
-
-    // Normal case - return the text with wasAborted flag
-    return {
-      fullString: result.text,
-      mode: "streaming",
-      wasAborted: result.wasAborted,
-    };
-  }
-
-  /**
    * Get the full API endpoint URL
    */
   protected getApiEndpoint(config: Record<string, any>): string {
     return `${config.url}${API_ENDPOINTS[this.serviceType as keyof typeof API_ENDPOINTS]}`;
+  }
+
+  /**
+   * Extract model name by removing provider prefix
+   * e.g., "openai@gpt-4" -> "gpt-4"
+   */
+  protected extractModelName(model: string): string {
+    const atIndex = model.indexOf("@");
+    return atIndex !== -1 ? model.slice(atIndex + 1) : model;
   }
 
   /**
@@ -411,34 +430,6 @@ export abstract class BaseAiService implements IAiApiService {
   }
 
   /**
-   * Prepare API call with common setup
-   */
-  protected prepareApiCall(
-    apiKey: string | undefined,
-    messages: Message[],
-    config: Record<string, any>,
-    settings: ChatGPT_MDSettings,
-    skipPluginSystemMessage: boolean = false
-  ) {
-    // Validate API key
-    this.apiAuthService.validateApiKey(apiKey, this.serviceType);
-
-    // Add plugin system message to help LLM understand context (unless skipped)
-    const finalMessages = skipPluginSystemMessage ? messages : this.addPluginSystemMessage(messages, settings);
-
-    // Create payload and headers
-    const payload = this.createPayload(config, finalMessages);
-    const headers = this.apiAuthService.createAuthHeaders(apiKey!, this.serviceType);
-
-    // Add plugin system message to payload if service supports system field and not skipped
-    if (this.supportsSystemField() && !skipPluginSystemMessage && !payload.system) {
-      payload.system = settings.pluginSystemMessage;
-    }
-
-    return { payload, headers };
-  }
-
-  /**
    * Handle API errors for both streaming and non-streaming calls
    */
   protected handleApiCallError(
@@ -465,81 +456,243 @@ export abstract class BaseAiService implements IAiApiService {
   }
 
   /**
-   * Default streaming API implementation that can be used by most services
+   * Common AI SDK generateText implementation
+   * Can be used by any service that has a provider
    */
-  protected async defaultCallStreamingAPI(
-    apiKey: string | undefined,
+  protected async callAiSdkGenerateText(
+    model: LanguageModel,
+    modelName: string,
+    messages: Message[],
+    tools?: Record<string, any>,
+    toolService?: ToolService,
+    settings?: ChatGPT_MDSettings
+  ): Promise<{ fullString: string; model: string }> {
+    // Convert messages to AI SDK format
+    const aiSdkMessages = messages.map((msg) => ({
+      role: msg.role as "user" | "assistant" | "system",
+      content: msg.content,
+    }));
+
+    // Prepare request
+    const request: any = {
+      model,
+      messages: aiSdkMessages,
+    };
+
+    // Add tools if provided AND model supports them (check settings)
+    const toolsAvailable = tools && Object.keys(tools).length > 0;
+    const shouldUseTool = toolsAvailable && settings && this.modelSupportsTools(modelName, settings);
+
+    if (shouldUseTool) {
+      request.tools = tools;
+    }
+
+    // Call AI SDK generateText
+    let response;
+    try {
+      response = await generateText(request);
+    } catch (err: any) {
+      console.log(`[ChatGPT MD] Error during generateText:`, err);
+      // Don't retry - cache is the only source of truth
+      throw err;
+    }
+
+    // Handle tool calls if present
+    if (toolService && response.toolCalls && response.toolCalls.length > 0) {
+      // Request user approval and execute tool calls
+      const toolResults = await toolService.handleToolCalls(response.toolCalls, modelName);
+
+      // Process results (filter, approve, get context)
+      const { contextMessages } = await toolService.processToolResults(response.toolCalls, toolResults, modelName);
+
+      // Build continuation messages
+      const updatedMessages = [...aiSdkMessages];
+
+      if (response.text?.trim()) {
+        updatedMessages.push({ role: "assistant", content: response.text });
+      }
+
+      updatedMessages.push(...contextMessages);
+
+      // Call generateText again for final response (no tools - just answer)
+      const continuationResponse = await generateText({
+        model,
+        messages: updatedMessages,
+      });
+
+      return { fullString: continuationResponse.text, model: modelName };
+    }
+
+    // No tool calls - return directly
+    return { fullString: response.text, model: modelName };
+  }
+
+  /**
+   * Common AI SDK streamText implementation
+   * Can be used by any service that has a provider
+   */
+  protected async callAiSdkStreamText(
+    model: LanguageModel,
+    modelName: string,
     messages: Message[],
     config: Record<string, any>,
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean,
+    tools?: Record<string, any>,
+    toolService?: ToolService,
     settings?: ChatGPT_MDSettings
   ): Promise<StreamingResponse> {
+    // Convert messages to AI SDK format
+    const aiSdkMessages = messages.map((msg) => ({
+      role: msg.role as "user" | "assistant" | "system",
+      content: msg.content,
+    }));
+
+    // Insert assistant header
+    const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, modelName);
+
+    // Setup abort controller
+    const abortController = new AbortController();
+    this.apiService.setAbortController(abortController);
+
+    // Initialize streaming handler
+    const initialCursor = setAtCursor ? cursorPositions.initialCursor : cursorPositions.newCursor;
+    let handler: StreamingHandler | undefined;
+
     try {
-      // Use the common preparation method
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings!);
+      handler = new StreamingHandler(editor, initialCursor, setAtCursor);
+      handler.startBuffering();
 
-      // Insert assistant header
-      const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, payload.model);
+      // Prepare request
+      const request: any = {
+        model,
+        messages: aiSdkMessages,
+        abortSignal: abortController.signal,
+      };
 
-      // Make streaming request using ApiService with centralized endpoint
-      const response = await this.apiService.makeStreamingRequest(
-        this.getApiEndpoint(config),
-        payload,
-        headers,
-        this.serviceType
-      );
+      // Add tools if provided AND model supports them (check settings)
+      const toolsAvailable = tools && Object.keys(tools).length > 0;
+      const shouldUseTool = toolsAvailable && settings && this.modelSupportsTools(modelName, settings);
 
-      // Process the streaming response using ApiResponseParser
-      const result = await this.apiResponseParser.processStreamResponse(
-        response,
-        this.serviceType,
-        editor,
-        cursorPositions,
-        setAtCursor,
-        this.apiService
-      );
+      if (shouldUseTool) {
+        request.tools = tools;
+      }
 
-      // Use the helper method to process the result
-      return this.processStreamingResult(result);
+      let fullText = "";
+      let result: any;
+      let finalResult: any;
+
+      // Helper function to consume a stream
+      const consumeStream = async (streamResult: any): Promise<string> => {
+        let text = "";
+        const { textStream } = streamResult;
+
+        for await (const textPart of textStream) {
+          if (this.apiService.wasAborted()) {
+            break;
+          }
+          text += textPart;
+          handler?.appendText(textPart);
+        }
+
+        return text;
+      };
+
+      // Call AI SDK streamText - if tools were used and it fails, retry without tools
+      try {
+        result = streamText(request);
+
+        // Consume stream
+        fullText = await consumeStream(result);
+        handler.stopBuffering();
+
+        // Try to get final result
+        finalResult = await result;
+
+        // Try to await finishReason if it's a promise (it might contain errors)
+        let actualFinishReason = finalResult?.finishReason;
+        if (actualFinishReason && typeof actualFinishReason.then === "function") {
+          try {
+            actualFinishReason = await actualFinishReason;
+          } catch (finishErr: any) {
+            // Let caller handle the error
+            throw finishErr;
+          }
+        }
+      } catch (err: any) {
+        handler?.stopBuffering();
+        throw err;
+      }
+
+      // Handle tool calls after streaming completes
+      if (toolService && finalResult && finalResult.toolCalls) {
+        const toolCalls = await finalResult.toolCalls;
+        if (toolCalls && toolCalls.length > 0) {
+          // Show indicator
+          const toolNotice = "_[Tool approval required...]_\n";
+          const indicatorCursor = handler.getCursor();
+          editor.replaceRange(toolNotice, indicatorCursor);
+          handler.updateCursorAfterInsert(toolNotice, indicatorCursor);
+
+          // Execute and process tool calls
+          const toolResults = await toolService.handleToolCalls(toolCalls, modelName);
+          const { contextMessages } = await toolService.processToolResults(toolCalls, toolResults, modelName);
+
+          // Clear indicator
+          const toolCursor = handler.getCursor();
+          editor.replaceRange("", { line: toolCursor.line - 1, ch: 0 }, toolCursor);
+          handler.setCursor({ line: toolCursor.line - 1, ch: 0 });
+
+          // Build continuation messages
+          const updatedMessages = [...aiSdkMessages];
+          updatedMessages.push({ role: "assistant", content: fullText });
+          updatedMessages.push(...contextMessages);
+
+          // Continue streaming
+          const continuationResult = streamText({
+            model,
+            messages: updatedMessages,
+          });
+
+          // Reset handler for continuation
+          const continuationCursor = handler.getCursor();
+          handler.reset(continuationCursor);
+          handler.startBuffering();
+
+          try {
+            for await (const textPart of continuationResult.textStream) {
+              if (this.apiService.wasAborted()) break;
+              fullText += textPart;
+              handler.appendText(textPart);
+            }
+          } finally {
+            handler.stopBuffering();
+          }
+        }
+      }
+
+      // Move visible cursor to final position
+      const finalCursor = handler.getCursor();
+      if (!setAtCursor) {
+        editor.setCursor(finalCursor);
+      }
+
+      // Return the streaming response
+      return {
+        fullString: fullText,
+        mode: "streaming",
+        wasAborted: this.apiService.wasAborted(),
+      };
     } catch (err) {
-      // The error is already handled by the ApiService, which uses ErrorService
-      // Just return the error message for the chat
+      // Handle unexpected errors
       const errorMessage = `Error: ${err}`;
+
+      // Write error to editor at the appropriate cursor position
+      const errorCursor = handler?.getCursor() || initialCursor;
+      editor.replaceRange(errorMessage, errorCursor);
+
       return { fullString: errorMessage, mode: "streaming" };
-    }
-  }
-
-  /**
-   * Default non-streaming API implementation that can be used by most services
-   */
-  protected async defaultCallNonStreamingAPI(
-    apiKey: string | undefined,
-    messages: Message[],
-    config: Record<string, any>,
-    settings?: ChatGPT_MDSettings
-  ): Promise<any> {
-    try {
-      console.log(`[ChatGPT MD] "no stream"`, config);
-
-      config.stream = false;
-      const { payload, headers } = this.prepareApiCall(apiKey, messages, config, settings!);
-
-      const response = await this.apiService.makeNonStreamingRequest(
-        this.getApiEndpoint(config),
-        payload,
-        headers,
-        this.serviceType
-      );
-
-      // Return simple object with response and model
-      return { fullString: response, model: payload.model };
-    } catch (err) {
-      const isTitleInference =
-        messages.length === 1 && messages[0].content?.toString().includes("Infer title from the summary");
-
-      return this.handleApiCallError(err, config, isTitleInference);
     }
   }
 }
@@ -556,83 +709,51 @@ export interface OllamaModel {
 }
 
 /**
- * Determine the AI provider from a URL or model
+ * Determine the AI provider from a model string
+ * Model prefixes (e.g., "openai@gpt-4") are the canonical way to specify providers
  */
 export const aiProviderFromUrl = (url?: string, model?: string): string | undefined => {
-  // Check model first for service prefixes
-  if (model?.startsWith("openai@")) {
-    return AI_SERVICE_OPENAI;
+  if (!model) {
+    return undefined;
   }
-  if (model?.includes(AI_SERVICE_OPENROUTER)) {
-    return AI_SERVICE_OPENROUTER;
-  }
-  if (model?.startsWith("lmstudio@")) {
-    return AI_SERVICE_LMSTUDIO;
-  }
-  if (model?.startsWith("anthropic@")) {
-    return AI_SERVICE_ANTHROPIC;
-  }
-  if (model?.startsWith("gemini@")) {
-    return AI_SERVICE_GEMINI;
-  }
-  if (model?.startsWith("ollama@")) {
-    return AI_SERVICE_OLLAMA;
-  }
-  if (model?.startsWith("local@")) {
-    // Backward compatibility: local@ prefix points to Ollama
-    return AI_SERVICE_OLLAMA;
-  }
-  if (model?.includes("claude")) {
-    return AI_SERVICE_ANTHROPIC;
-  }
-  if (model?.includes("gemini")) {
-    return AI_SERVICE_GEMINI;
-  }
-  if (model?.includes("local")) {
-    // Check URL to distinguish between Ollama and LM Studio for legacy "local" models
-    if (url?.includes("1234")) {
-      return AI_SERVICE_LMSTUDIO;
+
+  // Canonical: Check explicit provider prefixes
+  const prefixMap: [string, string][] = [
+    ["openai@", AI_SERVICE_OPENAI],
+    ["anthropic@", AI_SERVICE_ANTHROPIC],
+    ["gemini@", AI_SERVICE_GEMINI],
+    ["ollama@", AI_SERVICE_OLLAMA],
+    ["lmstudio@", AI_SERVICE_LMSTUDIO],
+    ["openrouter@", AI_SERVICE_OPENROUTER],
+    ["local@", AI_SERVICE_OLLAMA], // backward compatibility
+  ];
+
+  for (const [prefix, service] of prefixMap) {
+    if (model.startsWith(prefix)) {
+      return service;
     }
-    return AI_SERVICE_OLLAMA;
   }
 
-  // Check for common OpenAI model patterns (backward compatibility)
-  if (model?.includes("gpt") || model?.includes("o1") || model?.includes("o3") || model?.includes("o4")) {
-    return AI_SERVICE_OPENAI;
-  }
+  // Legacy: Infer from model name patterns (backward compatibility)
+  const modelLower = model.toLowerCase();
 
-  // Then check URL patterns
-  // Define URL patterns
-  const OPENROUTER_URL_PATTERN = "openrouter";
-  const ANTHROPIC_URL_PATTERN = "anthropic";
-  const GEMINI_URL_PATTERN = "generativelanguage.googleapis.com";
-  const LOCAL_URL_PATTERNS = ["localhost", "127.0.0.1"];
-  const LMSTUDIO_URL_PATTERN = "1234"; // LM Studio default port
-
-  if (url?.includes(OPENROUTER_URL_PATTERN)) {
-    return AI_SERVICE_OPENROUTER;
-  }
-  if (url?.includes(ANTHROPIC_URL_PATTERN)) {
+  if (modelLower.includes("claude")) {
     return AI_SERVICE_ANTHROPIC;
   }
-  if (url?.includes(GEMINI_URL_PATTERN)) {
+  if (modelLower.includes("gemini")) {
     return AI_SERVICE_GEMINI;
   }
-  if (url?.includes(LMSTUDIO_URL_PATTERN)) {
-    return AI_SERVICE_LMSTUDIO;
-  }
-  if (LOCAL_URL_PATTERNS.some((pattern) => url?.includes(pattern))) {
-    return AI_SERVICE_OLLAMA;
-  }
-
-  // Default to OpenAI for models without explicit service identification
-  // This maintains backward compatibility for existing configurations
-  if (model && !url) {
+  if (
+    modelLower.includes("gpt") ||
+    modelLower.startsWith("o1") ||
+    modelLower.startsWith("o3") ||
+    modelLower.startsWith("o4")
+  ) {
     return AI_SERVICE_OPENAI;
   }
 
-  // Return undefined if no provider can be determined
-  return undefined;
+  // Default to OpenAI for unrecognized models (most common case)
+  return AI_SERVICE_OPENAI;
 };
 
 /**

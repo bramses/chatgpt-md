@@ -13,6 +13,7 @@ User presses hotkey or selects command from palette.
 **Location**: `src/core/CommandRegistry.ts`
 
 Command handler executes:
+
 - Gets `EditorService` from `ServiceLocator`
 - Retrieves settings from `SettingsService`
 - Parses frontmatter from current note
@@ -22,6 +23,7 @@ Command handler executes:
 **Location**: `src/Services/EditorService.ts`
 
 EditorService orchestrates extraction:
+
 - Reads editor content
 - Passes to MessageService for processing
 
@@ -30,6 +32,7 @@ EditorService orchestrates extraction:
 **Location**: `src/Services/MessageService.ts`
 
 MessageService performs:
+
 - **Split messages** - By `<hr class="__chatgpt_plugin">` separator
 - **Extract roles** - Parse `role::assistant` or `role::user`
 - **Find links** - Detect `[[Wiki Links]]` and `[Markdown](links)`
@@ -41,6 +44,7 @@ MessageService performs:
 **Location**: `src/Services/FileService.ts`
 
 For each link found:
+
 - FileService retrieves linked note content
 - Content added to message context
 - Prevents circular references
@@ -50,6 +54,7 @@ For each link found:
 **Location**: `src/Services/FrontmatterService.ts`
 
 FrontmatterService:
+
 - Takes note frontmatter (YAML)
 - Merges with global plugin settings
 - Per-note settings override globals
@@ -60,6 +65,7 @@ FrontmatterService:
 **Location**: `src/core/ServiceLocator.ts`
 
 ServiceLocator:
+
 - Parses model prefix (`ollama@`, `openrouter@`, etc.) or defaults to OpenAI
 - Returns appropriate service via `getAiApiService(serviceType)`
 
@@ -68,6 +74,7 @@ ServiceLocator:
 **Location**: `src/Services/*Service.ts`
 
 Selected AI service:
+
 - Constructs API request with messages
 - Applies frontmatter configuration (temperature, max_tokens, etc.)
 - Gets API key from ApiAuthService
@@ -79,6 +86,7 @@ Selected AI service:
 **Location**: `src/Services/EditorService.ts`
 
 EditorService.processResponse():
+
 - Receives streaming chunks or complete response
 - Inserts content at cursor or end of file (based on `generateAtCursor` setting)
 - Formats with heading prefix
@@ -90,6 +98,7 @@ EditorService.processResponse():
 **Location**: `src/Services/*Service.ts` (inferTitle method)
 
 If configured (`autoInferTitle: true`) and conditions met:
+
 - Note title is timestamp format
 - More than 4 messages exchanged
 - Service calls title inference
@@ -134,23 +143,21 @@ The capital of France is Paris.
 ### Different Service Formats
 
 **Anthropic**:
+
 ```json
 {
   "system": "You are a helpful assistant...",
-  "messages": [
-    {"role": "user", "content": "What is the capital of France?"}
-  ]
+  "messages": [{ "role": "user", "content": "What is the capital of France?" }]
 }
 ```
 
 **Gemini**:
+
 ```json
 {
-  "contents": [
-    {"role": "user", "parts": [{"text": "What is the capital of France?"}]}
-  ],
+  "contents": [{ "role": "user", "parts": [{ "text": "What is the capital of France?" }] }],
   "systemInstruction": {
-    "parts": [{"text": "You are a helpful assistant..."}]
+    "parts": [{ "text": "You are a helpful assistant..." }]
   }
 }
 ```
@@ -179,12 +186,14 @@ The capital of France is Paris.
 ## Error Handling Flow
 
 At each stage:
+
 - **ErrorService** processes errors
 - **NotificationService** shows user messages
 - Platform-specific notifications (Notice vs status bar)
 - Errors don't crash plugin, gracefully handled
 
 **Common error points**:
+
 1. Network failure → `CHAT_ERROR_MESSAGE_NO_CONNECTION`
 2. 401 Unauthorized → `CHAT_ERROR_MESSAGE_401`
 3. 404 Not Found → `CHAT_ERROR_MESSAGE_404`
@@ -199,6 +208,7 @@ When note contains `[[Linked Note]]`:
 1. MessageService finds link via regex
 2. FileService retrieves "Linked Note" content
 3. Content added to user message:
+
    ```
    Original message
 
@@ -206,9 +216,11 @@ When note contains `[[Linked Note]]`:
    Context from [[Linked Note]]:
    [Note content here]
    ```
+
 4. Sent to AI for richer context
 
 **Prevents**:
+
 - Circular references (tracks already-included notes)
 - Including http:// URLs (external links ignored)
 
@@ -224,6 +236,7 @@ When triggered:
    - More than 4 messages in conversation
 
 2. Service constructs title inference prompt:
+
    ```
    Based on this conversation, suggest a concise title in [language]:
    [Conversation history]
@@ -248,37 +261,45 @@ When triggered:
 Different APIs return different formats:
 
 **OpenAI/OpenRouter**:
+
 ```json
 {
-  "choices": [{
-    "delta": {"content": "text chunk"}
-  }]
+  "choices": [
+    {
+      "delta": { "content": "text chunk" }
+    }
+  ]
 }
 ```
 
 **Ollama**:
+
 ```json
 {
-  "message": {"content": "text chunk"}
+  "message": { "content": "text chunk" }
 }
 ```
 
 **Anthropic**:
+
 ```json
 {
   "type": "content_block_delta",
-  "delta": {"text": "text chunk"}
+  "delta": { "text": "text chunk" }
 }
 ```
 
 **Gemini**:
+
 ```json
 {
-  "candidates": [{
-    "content": {
-      "parts": [{"text": "text chunk"}]
+  "candidates": [
+    {
+      "content": {
+        "parts": [{ "text": "text chunk" }]
+      }
     }
-  }]
+  ]
 }
 ```
 
@@ -317,15 +338,18 @@ Optional: Title Inference
 ## Performance Considerations
 
 **Parallel Operations**:
+
 - Model fetching happens in background on plugin load
 - Multiple models fetched in parallel (6s timeout each)
 
 **Streaming Benefits**:
+
 - Real-time response display (better UX)
 - Partial content shown immediately
 - Can be aborted mid-stream
 
 **Token Efficiency**:
+
 - Link context only included when needed
 - Comment blocks excluded from API calls
 - Frontmatter stripped before sending

@@ -3,11 +3,11 @@ import { Message } from "src/Models/Message";
 import { AI_SERVICE_OPENROUTER, ROLE_SYSTEM } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { BaseAiService, IAiApiService, StreamingResponse } from "src/Services/AiService";
-import { ErrorService } from "./ErrorService";
-import { NotificationService } from "./NotificationService";
-import { ApiService } from "./ApiService";
-import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
+import { isValidApiKey } from "./ApiAuthService";
+import { createOpenRouter, OpenRouterProvider } from "@openrouter/ai-sdk-provider";
+import { ToolService } from "./ToolService";
+import { detectToolSupport } from "./ToolSupportDetector";
+import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 // Define a constant for OpenRouter service
 export interface OpenRouterModel {
@@ -18,17 +18,7 @@ export interface OpenRouterModel {
     prompt: number;
     completion: number;
   };
-}
-
-export interface OpenRouterStreamPayload {
-  model: string;
-  messages: Array<Message>;
-  temperature: number;
-  top_p: number;
-  presence_penalty: number;
-  frequency_penalty: number;
-  max_tokens: number;
-  stream: boolean;
+  supported_parameters?: string[];
 }
 
 export interface OpenRouterConfig {
@@ -63,55 +53,13 @@ export const DEFAULT_OPENROUTER_CONFIG: OpenRouterConfig = {
   url: "https://openrouter.ai",
 };
 
-export const fetchAvailableOpenRouterModels = async (url: string, apiKey: string) => {
-  try {
-    const apiAuthService = new ApiAuthService();
-
-    // Check if API key is empty or undefined
-    if (!isValidApiKey(apiKey)) {
-      console.error("OpenRouter API key is missing. Please add your OpenRouter API key in the settings.");
-      return [];
-    }
-
-    // Use ApiService for the API request
-    const apiService = new ApiService();
-    const headers = apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENROUTER);
-
-    const models = await apiService.makeGetRequest(`${url}/api/v1/models`, headers, AI_SERVICE_OPENROUTER);
-
-    return models.data
-      .sort((a: OpenRouterModel, b: OpenRouterModel) => {
-        if (a.id < b.id) return 1;
-        if (a.id > b.id) return -1;
-        return 0;
-      })
-      .map((model: OpenRouterModel) => `${AI_SERVICE_OPENROUTER}@${model.id}`);
-  } catch (error) {
-    console.error("Error fetching models:", error);
-    return [];
-  }
-};
-
 export class OpenRouterService extends BaseAiService implements IAiApiService {
-  protected errorService: ErrorService;
-  protected notificationService: NotificationService;
-  protected apiService: ApiService;
-  protected apiAuthService: ApiAuthService;
-  protected apiResponseParser: ApiResponseParser;
   protected serviceType = AI_SERVICE_OPENROUTER;
+  protected provider: OpenRouterProvider;
 
-  constructor(
-    errorService?: ErrorService,
-    notificationService?: NotificationService,
-    apiService?: ApiService,
-    apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser
-  ) {
-    super(errorService, notificationService);
-    this.errorService = errorService || new ErrorService(this.notificationService);
-    this.apiService = apiService || new ApiService(this.errorService, this.notificationService);
-    this.apiAuthService = apiAuthService || new ApiAuthService(this.notificationService);
-    this.apiResponseParser = apiResponseParser || new ApiResponseParser(this.notificationService);
+  constructor(capabilitiesCache?: ModelCapabilitiesCache) {
+    super(capabilitiesCache);
+    this.provider = createOpenRouter();
   }
 
   getDefaultConfig(): OpenRouterConfig {
@@ -120,6 +68,41 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
 
   getApiKeyFromSettings(settings: ChatGPT_MDSettings): string {
     return this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
+  }
+
+  async fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]> {
+    try {
+      if (!apiKey || !isValidApiKey(apiKey)) {
+        console.error("OpenRouter API key is missing. Please add your OpenRouter API key in the settings.");
+        return [];
+      }
+
+      const headers = this.apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENROUTER);
+      const models = await this.apiService.makeGetRequest(`${url}/api/v1/models`, headers, AI_SERVICE_OPENROUTER);
+
+      return models.data
+        .sort((a: OpenRouterModel, b: OpenRouterModel) => {
+          if (a.id < b.id) return 1;
+          if (a.id > b.id) return -1;
+          return 0;
+        })
+        .map((model: OpenRouterModel) => {
+          const fullId = `${AI_SERVICE_OPENROUTER}@${model.id}`;
+
+          // Use centralized detection with API metadata
+          const whitelist = settings?.toolEnabledModels || "";
+          const supportsTools = detectToolSupport("openrouter", model.id, whitelist, model);
+          if (this.capabilitiesCache) {
+            this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
+            console.log(`[OpenRouter] Cached: ${fullId} -> Tools: ${supportsTools}`);
+          }
+
+          return fullId;
+        });
+    } catch (error) {
+      console.error("Error fetching OpenRouter models:", error);
+      return [];
+    }
   }
 
   // Implement abstract methods from BaseAiService
@@ -131,49 +114,15 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     return false; // OpenRouter uses messages array, not system field
   }
 
-  createPayload(config: OpenRouterConfig, messages: Message[]): OpenRouterStreamPayload {
-    // Remove the provider prefix if it exists in the model name
-    const modelName = config.model.includes("@") ? config.model.split("@")[1] : config.model;
-
-    // Process system commands using the centralized method
-    const processedMessages = this.processSystemCommands(messages, config.system_commands);
-
-    return {
-      model: modelName,
-      messages: processedMessages,
-      max_tokens: config.max_tokens,
-      temperature: config.temperature,
-      top_p: config.top_p,
-      presence_penalty: config.presence_penalty,
-      frequency_penalty: config.frequency_penalty,
-      stream: config.stream,
-    };
-  }
-
-  handleAPIError(err: any, config: OpenRouterConfig, prefix: string): never {
-    // Use the new ErrorService to handle errors
-    const context = {
-      model: config.model,
-      url: config.url,
-      defaultUrl: DEFAULT_OPENROUTER_CONFIG.url,
-      aiService: AI_SERVICE_OPENROUTER,
-    };
-
-    // Special handling for custom URL errors
-    if (err instanceof Object && config.url !== DEFAULT_OPENROUTER_CONFIG.url) {
-      return this.errorService.handleUrlError(
-        config.url,
-        DEFAULT_OPENROUTER_CONFIG.url,
-        AI_SERVICE_OPENROUTER
-      ) as never;
-    }
-
-    // Use the centralized error handling
-    return this.errorService.handleApiError(err, AI_SERVICE_OPENROUTER, {
-      context,
-      showNotification: true,
-      logToConsole: true,
-    }) as never;
+  /**
+   * Initialize the OpenRouter provider with the given configuration
+   */
+  private ensureProvider(apiKey: string | undefined): void {
+    const customFetch = this.apiService.createFetchAdapter();
+    this.provider = createOpenRouter({
+      apiKey: apiKey,
+      fetch: customFetch,
+    });
   }
 
   protected async callStreamingAPI(
@@ -183,23 +132,46 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean | undefined,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    toolService?: ToolService
   ): Promise<StreamingResponse> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings);
+    this.ensureProvider(apiKey);
+
+    // Extract model name (remove provider prefix if present)
+    const modelName = this.extractModelName(config.model);
+
+    const tools = toolService?.getToolsForRequest(settings!);
+
+    // Use the common AI SDK streaming method from base class
+    return this.callAiSdkStreamText(
+      this.provider(modelName),
+      config.model,
+      messages,
+      config,
+      editor,
+      headingPrefix,
+      setAtCursor,
+      tools,
+      toolService
+    );
   }
 
   protected async callNonStreamingAPI(
     apiKey: string | undefined,
     messages: Message[],
     config: OpenRouterConfig,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    provider?: OpenRouterProvider,
+    toolService?: ToolService
   ): Promise<any> {
-    // Use the default implementation from BaseAiService
-    return this.defaultCallNonStreamingAPI(apiKey, messages, config, settings);
-  }
+    this.ensureProvider(apiKey);
 
-  protected showNoTitleInferredNotification(): void {
-    this.notificationService.showWarning("Could not infer title. The file name was not changed.");
+    // Extract model name (remove provider prefix if present)
+    const modelName = this.extractModelName(config.model);
+
+    const tools = toolService?.getToolsForRequest(settings!);
+
+    // Use the common AI SDK method from base class
+    return this.callAiSdkGenerateText(this.provider(modelName), config.model, messages, tools, toolService);
   }
 }

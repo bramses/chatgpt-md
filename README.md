@@ -4,16 +4,42 @@
 
 ![Chatting with links about vacation plans](images/chat-with-link.gif)
 
-## What's New in v2.8.0 🚀
-### 🆕 GPT-5 Model Support
+## 🚀 What's New in v3.0.0: Privacy-First AI Tool Calling
 
-- **Latest OpenAI Models**: Full support for OpenAI's newest GPT-5 family:
-  - `gpt-5` - The flagship model with enhanced reasoning capabilities
-  - `gpt-5-mini` - Optimized for speed and efficiency
-  - `gpt-5-nano` - Ultra-lightweight for quick responses  
-  - `gpt-5-chat-latest` - Always-updated chat model
-- **Smart Token Management**: Enhanced handling of token limit responses for more reliable interactions
-- **Performance Optimizations**: Refined message service architecture and improved API integration
+**Your AI assistant can now search your vault, read files, and search the web—with explicit approval at every step.**
+
+### Key Features
+
+- **🔍 Vault Search**: AI discovers relevant notes in your vault (you approve which files to share)
+- **📄 File Reading**: AI can request access to specific files (you select which ones)
+- **🌐 Web Search**: AI searches the web via Brave Search API (1,000 free queries/month)
+- **✅ Three-Layer Approval System**: 
+  1. Approve what the AI wants to do
+  2. Review what it found
+  3. Select exactly which results to share
+- **🔒 Privacy-First Design**: No data reaches the AI without your explicit consent
+- **🎯 All Providers Supported**: OpenAI, Anthropic, Gemini, OpenRouter, Ollama, LM Studio
+- **⚙️ Disabled by Default**: Opt-in feature only—enable in Settings → Tool Calling
+
+### Why This Matters
+
+For privacy-conscious note-takers, this is a game-changer. You get the power of AI with full control over your data. Your vault stays yours.
+
+### Getting Started with Tool Calling
+
+1. **Install the beta**: Use [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) and select version **2.12.0-beta**
+2. **Enable in settings**: Go to Settings → ChatGPT MD → Tool Calling
+3. **Optional**: Add Brave Search API key for web search (1,000 free queries/month)
+4. **Start chatting**: Your AI will ask for approval when it wants to use tools
+
+⚠️ **Beta Warning**: Test on a backup/test vault first. This is a beta release with active development.
+
+### Use Cases
+
+- **Research Assistant**: "Search my vault for notes about quantum computing and find recent papers"
+- **Knowledge Synthesis**: "Find all my Q3 meeting notes and summarize key decisions"
+- **Web-Enhanced Writing**: "Search the web for latest statistics and incorporate them"
+- **Note Discovery**: "Find connections between notes I might have missed"
 
 ## A simple and quick Start 🏁
 Get started in just a few simple steps:

@@ -31,6 +31,7 @@ npm run build:full-analysis
 ## Build Process
 
 The build process uses **esbuild** for fast bundling:
+
 - **Entry point**: `src/main.ts`
 - **Output**: `main.js`
 
@@ -41,6 +42,7 @@ The build process uses **esbuild** for fast bundling:
 **Externals**: Obsidian API, Electron, CodeMirror modules marked as external
 
 **Production mode**:
+
 - Aggressive minification (whitespace, identifiers, syntax)
 - Tree shaking enabled
 - Console.log statements removed via `drop: ["console", "debugger"]`
@@ -49,6 +51,7 @@ The build process uses **esbuild** for fast bundling:
 - Bundle analysis via metafile (if `ANALYZE=true`)
 
 **Development mode**:
+
 - Watch mode for automatic rebuilds
 - Inline sourcemaps for debugging
 - No minification
@@ -96,31 +99,40 @@ src/
 ### Adding a New AI Service
 
 1. **Create service file** in `Services/` extending `BaseAiService`
+
    ```typescript
    export class NewService extends BaseAiService {
      protected serviceType = AI_SERVICE_NEW;
-     protected getSystemMessageRole() { return "system"; }
-     protected supportsSystemField() { return true; }
+     protected getSystemMessageRole() {
+       return "system";
+     }
+     protected supportsSystemField() {
+       return true;
+     }
    }
    ```
 
 2. **Add service constant** to `Constants.ts`
+
    ```typescript
    export const AI_SERVICE_NEW = "newservice";
    ```
 
 3. **Add API endpoint** to `API_ENDPOINTS` in `Constants.ts`
+
    ```typescript
    [AI_SERVICE_NEW]: "/api/endpoint"
    ```
 
 4. **Register in ServiceLocator** (`getAiApiService()` method)
+
    ```typescript
    case AI_SERVICE_NEW:
      return new NewService(...);
    ```
 
 5. **Add configuration** to `Models/Config.ts`
+
    ```typescript
    interface NewServiceSettings {
      newServiceDefaultModel: string;
@@ -129,6 +141,7 @@ src/
    ```
 
 6. **Add fetch function** for available models (if applicable)
+
    ```typescript
    export async function fetchAvailableNewServiceModels(url, apiKey) {
      // Implementation
@@ -140,11 +153,13 @@ src/
 ### Testing Locally
 
 1. **Build the plugin**
+
    ```bash
    npm run build
    ```
 
 2. **Copy to Obsidian plugins folder**
+
    ```bash
    # Example path (adjust for your setup)
    cp -r . ~/.obsidian/plugins/chatgpt-md/
@@ -160,19 +175,23 @@ src/
 ### Debugging
 
 **Development mode**:
+
 ```bash
 npm run dev
 ```
+
 - Auto-rebuilds on file changes
 - Inline sourcemaps for debugging
 - Console.log statements preserved
 
 **Browser console in Obsidian**:
+
 - Press Ctrl+Shift+I (Windows/Linux) or Cmd+Option+I (Mac)
 - Check Console tab for errors
 - Use breakpoints in Sources tab
 
 **Common debugging patterns**:
+
 ```typescript
 console.log("[ChatGPT MD] Debug message:", data);
 console.error("[ChatGPT MD] Error:", error);
@@ -185,12 +204,14 @@ Note: Console logs are removed in production builds.
 ### ESLint Configuration
 
 Rules enforced:
+
 - No `require()` imports (use ES6 `import` or dynamic `import()`)
 - Unused variables must be prefixed with `_` (e.g., `_error`)
 - TypeScript strict mode
 - No `any` types (prefer explicit types)
 
 ### Fix linting issues
+
 ```bash
 npm run lint:fix
 ```
@@ -202,16 +223,19 @@ npm run lint:fix
 Code must work on both platforms:
 
 **Desktop** (Electron):
+
 - Node.js modules available
 - Can use `http`, `https`, `url` modules
 - Better CORS handling via `requestStream.ts`
 
 **Mobile** (iOS/Android):
+
 - No Node.js modules
 - Must use Web APIs only
 - Falls back to `fetch()` for HTTP
 
 **Platform detection**:
+
 ```typescript
 import { Platform } from "obsidian";
 
@@ -225,6 +249,7 @@ if (Platform.isMobile) {
 ### Dynamic Imports for Node.js Modules
 
 Pattern used in `requestStream.ts`:
+
 ```typescript
 (async () => {
   try {
@@ -241,6 +266,7 @@ Pattern used in `requestStream.ts`:
 ### Production Build
 
 Optimizations applied:
+
 - Tree shaking removes unused code
 - Minification reduces bundle size
 - Dead code elimination
@@ -253,6 +279,7 @@ npm run build:analyze
 ```
 
 Shows:
+
 - Output bundle size
 - Largest source files
 - Dependency sizes
@@ -260,6 +287,7 @@ Shows:
 ### Code Splitting
 
 Not currently implemented but could be added for:
+
 - Lazy loading AI service implementations
 - On-demand UI component loading
 
@@ -268,6 +296,7 @@ Not currently implemented but could be added for:
 **Production**: None (all peer dependencies)
 
 **Dev Dependencies**:
+
 - `esbuild` - Fast bundler
 - `typescript` - Type checking
 - `eslint` - Code linting
