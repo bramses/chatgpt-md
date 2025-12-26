@@ -89,9 +89,9 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
         .map((model: OpenRouterModel) => {
           const fullId = `${AI_SERVICE_OPENROUTER}@${model.id}`;
 
-          // Use centralized detection with API metadata
+          // Use centralized detection with whitelist only
           const whitelist = settings?.toolEnabledModels || "";
-          const supportsTools = detectToolSupport("openrouter", model.id, whitelist, model);
+          const supportsTools = detectToolSupport(model.id, whitelist);
           if (this.capabilitiesCache) {
             this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
             console.log(`[OpenRouter] Cached: ${fullId} -> Tools: ${supportsTools}`);

@@ -71,7 +71,7 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
 
           // Conservative: assume tools for common model names
           const whitelist = settings?.toolEnabledModels || "";
-          const supportsTools = detectToolSupport("lmstudio", model.id, whitelist);
+          const supportsTools = detectToolSupport(model.id, whitelist);
           if (this.capabilitiesCache) {
             this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
             console.log(`[LM Studio] Cached: ${fullId} -> Tools: ${supportsTools}`);

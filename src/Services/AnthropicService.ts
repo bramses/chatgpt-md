@@ -67,7 +67,7 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
 
             // Pattern-based detection: Claude 3+ models support tools
             const whitelist = settings?.toolEnabledModels || "";
-            const supportsTools = detectToolSupport("anthropic", model.id, whitelist);
+            const supportsTools = detectToolSupport(model.id, whitelist);
             if (this.capabilitiesCache) {
               this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
               console.log(`[Anthropic] Cached: ${fullId} -> Tools: ${supportsTools}`);

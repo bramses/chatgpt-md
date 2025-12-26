@@ -86,7 +86,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
 
           // Detect tool support using centralized detector
           const whitelist = settings?.toolEnabledModels || "";
-          const supportsTools = detectToolSupport(AI_SERVICE_OPENAI, model.id, whitelist);
+          const supportsTools = detectToolSupport(model.id, whitelist);
           if (this.capabilitiesCache) {
             this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
             console.log(`[OpenAI] Cached: ${fullId} -> Tools: ${supportsTools}`);

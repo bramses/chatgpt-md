@@ -78,7 +78,7 @@ export class GeminiService extends BaseAiService implements IAiApiService {
 
             // Pattern-based detection for Gemini
             const whitelist = settings?.toolEnabledModels || "";
-            const supportsTools = detectToolSupport("gemini", model.name, whitelist);
+            const supportsTools = detectToolSupport(model.name, whitelist);
             if (this.capabilitiesCache) {
               this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
               console.log(`[Gemini] Cached: ${fullId} -> Tools: ${supportsTools}`);

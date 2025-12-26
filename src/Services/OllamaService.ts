@@ -69,7 +69,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
 
           // Pattern-based detection for Ollama
           const whitelist = settings?.toolEnabledModels || "";
-          const supportsTools = detectToolSupport("ollama", model.name, whitelist);
+          const supportsTools = detectToolSupport(model.name, whitelist);
           if (this.capabilitiesCache) {
             this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
             console.log(`[Ollama] Cached: ${fullId} -> Tools: ${supportsTools}`);
