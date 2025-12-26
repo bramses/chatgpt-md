@@ -345,6 +345,17 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         type: "toggle",
         group: "Tool Calling",
       },
+      {
+        id: "toolEnabledModels",
+        name: "Tool-Enabled Models",
+        description:
+          "Whitelist of models that can use tools. One pattern per line. " +
+          "Supports wildcards using * (e.g., gpt-4* matches gpt-4o, gpt-4-turbo). " +
+          "Model names are matched without provider prefix.",
+        type: "textarea",
+        placeholder: "gpt-5.2-*",
+        group: "Tool Calling",
+      },
 
       // Web Search (requires tool calling)
       {
@@ -459,6 +470,12 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         if (schema.id === "defaultChatFrontmatter" || schema.id === "pluginSystemMessage") {
           text.inputEl.style.height = "260px";
           text.inputEl.style.minHeight = "260px";
+        }
+
+        // Medium height for toolEnabledModels
+        if (schema.id === "toolEnabledModels") {
+          text.inputEl.style.height = "120px";
+          text.inputEl.style.minHeight = "120px";
         }
 
         return text;

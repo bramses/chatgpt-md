@@ -38,7 +38,7 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
     return this.apiAuthService.getApiKey(settings, AI_SERVICE_ANTHROPIC);
   }
 
-  async fetchAvailableModels(url: string, apiKey?: string): Promise<string[]> {
+  async fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]> {
     try {
       if (!apiKey || !isValidApiKey(apiKey)) {
         console.error("Anthropic API key is missing. Please add your Anthropic API key in the settings.");
@@ -67,7 +67,8 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
             const fullId = `anthropic@${model.id}`;
 
             // Pattern-based detection: Claude 3+ models support tools
-            const supportsTools = detectToolSupport("anthropic", model.id);
+            const whitelist = settings?.toolEnabledModels || "";
+            const supportsTools = detectToolSupport("anthropic", model.id, whitelist);
             if (this.capabilitiesCache) {
               this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
               console.log(`[Anthropic] Cached: ${fullId} -> Tools: ${supportsTools}`);

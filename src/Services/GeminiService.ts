@@ -43,7 +43,7 @@ export class GeminiService extends BaseAiService implements IAiApiService {
     return this.apiAuthService.getApiKey(settings, AI_SERVICE_GEMINI);
   }
 
-  async fetchAvailableModels(url: string, apiKey?: string): Promise<string[]> {
+  async fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]> {
     try {
       if (!apiKey || !isValidApiKey(apiKey)) {
         console.error("Gemini API key is missing. Please add your Gemini API key in the settings.");
@@ -78,7 +78,8 @@ export class GeminiService extends BaseAiService implements IAiApiService {
             const fullId = `gemini@${modelName}`;
 
             // Pattern-based detection for Gemini
-            const supportsTools = detectToolSupport("gemini", model.name);
+            const whitelist = settings?.toolEnabledModels || "";
+            const supportsTools = detectToolSupport("gemini", model.name, whitelist);
             if (this.capabilitiesCache) {
               this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
               console.log(`[Gemini] Cached: ${fullId} -> Tools: ${supportsTools}`);

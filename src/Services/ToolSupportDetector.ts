@@ -1,218 +1,119 @@
 /**
- * Centralized tool support detection for all AI providers
- * Single source of truth for which models support tool calling
- *
- * Note: Neither OpenAI's API nor the @ai-sdk/openai library expose tool capability metadata.
- * This requires manual maintenance using pattern matching and explicit lookup tables.
- * See: https://community.openai.com/t/expose-model-capabilities-in-the-v1-models-api-response/1314117
+ * Whitelist-based tool support detection
+ * 
+ * Users configure which models can use tools via settings.
+ * Supports wildcard patterns like gpt-4* to match multiple models.
+ * OpenRouter API metadata is used as fallback for models not in whitelist.
  */
 
 /**
- * Explicit list of OpenAI models with known tool support status
- * This takes precedence over pattern matching for accuracy
- * Generated from: https://platform.openai.com/docs/models
+ * Convert a glob-style pattern to a RegExp
+ * Supports * as wildcard matching any characters
+ * 
+ * @param pattern - Glob pattern like "gpt-4*" or "claude-3-5-sonnet*"
+ * @returns RegExp that matches the pattern
  */
-const OPENAI_TOOL_SUPPORT: Record<string, boolean> = {
-  // Reasoning models - DO NOT support tools
-  "o1": false,
-  "o1-2024-12-17": false,
-  "o1-preview": false,
-  "o1-mini": false,
-  "o1-pro": false,
-  "o1-pro-2025-03-19": false,
-  "o3": false,
-  "o3-mini": false,
-  "o3-mini-2025-01-31": false,
-  "o3-2025-04-16": false,
-  "o3-pro": false,
-  "o3-pro-2025-06-10": false,
-  "o3-deep-research": false,
-  "o3-deep-research-2025-06-26": false,
-  "o4-mini": false,
-  "o4-mini-2025-04-16": false,
-  "o4-mini-deep-research": false,
-  "o4-mini-deep-research-2025-06-26": false,
-
-  // Standard chat models - DO support tools
-  "gpt-4": true,
-  "gpt-4-0613": true,
-  "gpt-4-0125-preview": true,
-  "gpt-4-turbo": true,
-  "gpt-4-turbo-preview": true,
-  "gpt-4-turbo-2024-04-09": true,
-  "gpt-4-1106-preview": true,
-  "gpt-4o": true,
-  "gpt-4o-2024-05-13": true,
-  "gpt-4o-2024-08-06": true,
-  "gpt-4o-2024-11-20": true,
-  "gpt-4o-mini": true,
-  "gpt-4o-mini-2024-07-18": true,
-  "gpt-4.1": true,
-  "gpt-4.1-2025-04-14": true,
-  "gpt-4.1-mini": true,
-  "gpt-4.1-mini-2025-04-14": true,
-  "gpt-4.1-nano": true,
-  "gpt-4.1-nano-2025-04-14": true,
-  "gpt-3.5-turbo": true,
-  "gpt-3.5-turbo-0125": true,
-  "gpt-3.5-turbo-1106": true,
-  "chatgpt-4o-latest": true,
-  "gpt-5": true,
-  "gpt-5-2025-08-07": true,
-  "gpt-5-mini": true,
-  "gpt-5-mini-2025-08-07": true,
-  "gpt-5-nano": true,
-  "gpt-5-nano-2025-08-07": true,
-  "gpt-5-pro": true,
-  "gpt-5-pro-2025-10-06": true,
-  "gpt-5-chat-latest": true,
-  "gpt-5-codex": true,
-  "gpt-5.1": true,
-  "gpt-5.1-2025-11-13": true,
-  "gpt-5.1-chat-latest": true,
-  "gpt-5.1-codex": true,
-  "gpt-5.2": true,
-  "gpt-5.2-2025-12-11": true,
-  "gpt-5.2-pro": true,
-  "gpt-5.2-pro-2025-12-11": true,
-  "gpt-5.2-chat-latest": true,
-
-  // Instruct models - DO NOT support tools (not for chat)
-  "gpt-3.5-turbo-instruct": false,
-  "gpt-3.5-turbo-instruct-0914": false,
-
-  // Specialized variants - DO NOT support tools (not for chat)
-  // Audio/Realtime models
-  "gpt-4o-audio-preview": false,
-  "gpt-4o-audio-preview-2024-12-17": false,
-  "gpt-4o-audio-preview-2025-06-03": false,
-  "gpt-4o-realtime-preview": false,
-  "gpt-4o-realtime-preview-2024-12-17": false,
-  "gpt-4o-realtime-preview-2025-06-03": false,
-  "gpt-4o-mini-realtime-preview": false,
-  "gpt-4o-mini-realtime-preview-2024-12-17": false,
-  "gpt-4o-mini-audio-preview": false,
-  "gpt-4o-mini-audio-preview-2024-12-17": false,
-  "gpt-realtime": false,
-  "gpt-realtime-2025-08-28": false,
-  "gpt-realtime-mini": false,
-  "gpt-realtime-mini-2025-10-06": false,
-  "gpt-audio": false,
-  "gpt-audio-2025-08-28": false,
-  "gpt-audio-mini": false,
-  "gpt-audio-mini-2025-10-06": false,
-  "gpt-realtime-mini-2025-12-15": false,
-  "gpt-audio-mini-2025-12-15": false,
-  // Search models
-  "gpt-4o-search-preview": false,
-  "gpt-4o-search-preview-2025-03-11": false,
-  "gpt-4o-mini-search-preview": false,
-  "gpt-4o-mini-search-preview-2025-03-11": false,
-  "gpt-5-search-api": false,
-  "gpt-5-search-api-2025-10-14": false,
-  // Transcribe models
-  "gpt-4o-transcribe": false,
-  "gpt-4o-mini-transcribe": false,
-  "gpt-4o-transcribe-diarize": false,
-  "gpt-4o-mini-transcribe-2025-12-15": false,
-  "gpt-4o-mini-transcribe-2025-03-20": false,
-  // TTS models
-  "gpt-4o-mini-tts": false,
-  "gpt-4o-mini-tts-2025-03-20": false,
-  "gpt-4o-mini-tts-2025-12-15": false,
-
-  // Non-chat models (filtered out but included for completeness)
-  "davinci-002": false,
-  "babbage-002": false,
-  "gpt-3.5-turbo-16k": false,
-  "text-embedding-ada-002": false,
-  "text-embedding-3-small": false,
-  "text-embedding-3-large": false,
-  "tts-1": false,
-  "tts-1-1106": false,
-  "tts-1-hd": false,
-  "tts-1-hd-1106": false,
-  "whisper-1": false,
-  "dall-e-2": false,
-  "dall-e-3": false,
-  "chatgpt-image-latest": false,
-  "gpt-image-1": false,
-  "gpt-image-1-mini": false,
-  "gpt-image-1.5": false,
-  "omni-moderation-latest": false,
-  "omni-moderation-2024-09-26": false,
-  "sora-2": false,
-  "sora-2-pro": false,
-};
+function patternToRegex(pattern: string): RegExp {
+  // Escape special regex characters except *
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+  // Convert * to regex .*
+  const regexPattern = escaped.replace(/\*/g, '.*');
+  // Match the entire string
+  return new RegExp(`^${regexPattern}$`, 'i');
+}
 
 /**
- * Regex patterns for detecting tool support per service
- * Used as fallback when model is not in explicit list
- * Patterns are checked in order: noSupport first (more specific), then support
+ * Parse the whitelist string into an array of patterns
+ * 
+ * @param whitelist - Newline-separated list of patterns
+ * @returns Array of trimmed, non-empty patterns
  */
-const TOOL_SUPPORT_PATTERNS: Record<string, { support: RegExp[]; noSupport?: RegExp[] }> = {
-  openai: {
-    // Reasoning models never support tools - check these FIRST
-    noSupport: [/^o[13]/],
-    // Then standard models that DO support tools
-    support: [/^gpt-4/, /^gpt-5/, /^gpt-3\.5-turbo/, /^chatgpt-4o-latest/],
-  },
-  anthropic: {
-    support: [/^claude-3/],
-  },
-  gemini: {
-    support: [/gemini-2/, /gemini-pro/],
-  },
-  ollama: {
-    support: [/llama-?3/i, /mistral/i, /mixtral/i, /qwen/i, /gemma/i],
-  },
-  lmstudio: {
-    support: [/llama-?3/i, /mistral/i],
-  },
-};
+function parseWhitelist(whitelist: string): string[] {
+  if (!whitelist || typeof whitelist !== 'string') {
+    return [];
+  }
+  
+  return whitelist
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0 && !line.startsWith('#'));
+}
 
 /**
- * Detect if a model supports tools based on service type and model ID
- *
- * @param serviceType - The AI service type (openai, anthropic, etc.)
+ * Extract model name without provider prefix
+ * e.g., "openai@gpt-4o" -> "gpt-4o"
+ * 
+ * @param modelId - Full model ID potentially with provider prefix
+ * @returns Model name without prefix
+ */
+function extractModelName(modelId: string): string {
+  const atIndex = modelId.indexOf('@');
+  return atIndex !== -1 ? modelId.slice(atIndex + 1) : modelId;
+}
+
+/**
+ * Check if a model matches any pattern in the whitelist
+ * 
+ * @param modelId - The model ID to check (with or without provider prefix)
+ * @param whitelist - Newline-separated list of patterns from settings
+ * @returns true if model matches any pattern
+ */
+export function isModelInWhitelist(modelId: string, whitelist: string): boolean {
+  const modelName = extractModelName(modelId);
+  const patterns = parseWhitelist(whitelist);
+  
+  for (const pattern of patterns) {
+    const regex = patternToRegex(pattern);
+    if (regex.test(modelName)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Detect if a model supports tools
+ * 
+ * Priority:
+ * 1. Check user whitelist from settings
+ * 2. For OpenRouter: check API metadata as fallback
+ * 3. Default to false
+ * 
+ * @param serviceType - The AI service type (openai, anthropic, openrouter, etc.)
  * @param modelId - The model ID to check
+ * @param whitelist - User-configured whitelist from settings
  * @param apiMetadata - Optional API metadata (e.g., from OpenRouter)
- * @returns true if the model is known to support tools, false otherwise
+ * @returns true if the model supports tools
  */
 export function detectToolSupport(
   serviceType: string,
   modelId: string,
+  whitelist: string,
   apiMetadata?: any
 ): boolean {
-  // OpenRouter: use actual API data if available (most reliable)
+  // For OpenRouter: API metadata is the primary source
   if (serviceType === "openrouter" && apiMetadata?.supported_parameters) {
-    return apiMetadata.supported_parameters.includes("tools");
+    const supportsTools = apiMetadata.supported_parameters.includes("tools");
+    console.log(`[ToolSupportDetector] OpenRouter API metadata for ${modelId}: ${supportsTools}`);
+    return supportsTools;
   }
-
-  // OpenAI: check explicit list first (for accuracy on known edge cases like reasoning models)
-  if (serviceType === "openai" && modelId in OPENAI_TOOL_SUPPORT) {
-    return OPENAI_TOOL_SUPPORT[modelId];
+  
+  // For other services: check user whitelist
+  if (isModelInWhitelist(modelId, whitelist)) {
+    console.log(`[ToolSupportDetector] Model ${modelId} matched whitelist`);
+    return true;
   }
-
-  // Other services and pattern matching fallback
-  const patterns = TOOL_SUPPORT_PATTERNS[serviceType];
-  if (!patterns) {
-    return false;
-  }
-
-  // Check negative patterns first (e.g., reasoning models that don't support tools)
-  if (patterns.noSupport?.some((pattern) => modelId.match(pattern))) {
-    return false;
-  }
-
-  // Then check positive patterns
-  return patterns.support.some((pattern) => modelId.match(pattern));
+  
+  // Default: no tool support
+  console.log(`[ToolSupportDetector] Model ${modelId} not in whitelist, tools disabled`);
+  return false;
 }
 
 /**
- * Get all supported patterns for a given service
- * Useful for debugging or documentation
+ * Get the default whitelist value
+ * Used for initial settings and reset
  */
-export function getToolSupportPatterns(serviceType: string): { support: RegExp[]; noSupport?: RegExp[] } | undefined {
-  return TOOL_SUPPORT_PATTERNS[serviceType];
+export function getDefaultToolWhitelist(): string {
+  return "gpt-5.2*";
 }

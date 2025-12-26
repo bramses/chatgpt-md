@@ -72,7 +72,7 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
     return this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
   }
 
-  async fetchAvailableModels(url: string, apiKey?: string): Promise<string[]> {
+  async fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]> {
     try {
       if (!apiKey || !isValidApiKey(apiKey)) {
         console.error("OpenRouter API key is missing. Please add your OpenRouter API key in the settings.");
@@ -92,7 +92,8 @@ export class OpenRouterService extends BaseAiService implements IAiApiService {
           const fullId = `${AI_SERVICE_OPENROUTER}@${model.id}`;
 
           // Use centralized detection with API metadata
-          const supportsTools = detectToolSupport("openrouter", model.id, model);
+          const whitelist = settings?.toolEnabledModels || "";
+          const supportsTools = detectToolSupport("openrouter", model.id, whitelist, model);
           if (this.capabilitiesCache) {
             this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
             console.log(`[OpenRouter] Cached: ${fullId} -> Tools: ${supportsTools}`);

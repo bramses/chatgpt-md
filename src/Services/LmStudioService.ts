@@ -44,7 +44,7 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
     return this.apiAuthService.getApiKey(settings, AI_SERVICE_LMSTUDIO);
   }
 
-  async fetchAvailableModels(url: string, apiKey?: string): Promise<string[]> {
+  async fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]> {
     try {
       const headers =
         apiKey && isValidApiKey(apiKey)
@@ -70,7 +70,8 @@ export class LmStudioService extends BaseAiService implements IAiApiService {
           const fullId = `lmstudio@${model.id}`;
 
           // Conservative: assume tools for common model names
-          const supportsTools = detectToolSupport("lmstudio", model.id);
+          const whitelist = settings?.toolEnabledModels || "";
+          const supportsTools = detectToolSupport("lmstudio", model.id, whitelist);
           if (this.capabilitiesCache) {
             this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
             console.log(`[LM Studio] Cached: ${fullId} -> Tools: ${supportsTools}`);

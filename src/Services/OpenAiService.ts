@@ -41,7 +41,7 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
     return this.apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
   }
 
-  async fetchAvailableModels(url: string, apiKey?: string): Promise<string[]> {
+  async fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]> {
     try {
       if (!apiKey || !isValidApiKey(apiKey)) {
         console.error("OpenAI API key is missing. Please add your OpenAI API key in the settings.");
@@ -102,7 +102,8 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
           const fullId = `openai@${model.id}`;
 
           // Detect tool support using centralized detector
-          const supportsTools = detectToolSupport(AI_SERVICE_OPENAI, model.id);
+          const whitelist = settings?.toolEnabledModels || "";
+          const supportsTools = detectToolSupport(AI_SERVICE_OPENAI, model.id, whitelist);
           if (this.capabilitiesCache) {
             this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
             console.log(`[OpenAI] Cached: ${fullId} -> Tools: ${supportsTools}`);

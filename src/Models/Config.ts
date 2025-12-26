@@ -62,6 +62,8 @@ export interface ChatBehaviorSettings {
   autoInferTitle: boolean;
   /** Whether to enable AI tool calling (vault search, file read) */
   enableToolCalling: boolean;
+  /** Whitelist of model patterns that can use tools - supports wildcards like gpt-4* */
+  toolEnabledModels: string;
   /** Enable debug mode for detailed logging */
   debugMode: boolean;
   /** System message that provides context about the Obsidian/ChatGPT MD plugin environment */
@@ -229,6 +231,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   generateAtCursor: false,
   autoInferTitle: false,
   enableToolCalling: false,
+  toolEnabledModels: "gpt-5.2*",
   debugMode: false,
   pluginSystemMessage: PLUGIN_SYSTEM_MESSAGE,
 

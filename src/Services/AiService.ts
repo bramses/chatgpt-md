@@ -67,7 +67,7 @@ export interface IAiApiService {
   /**
    * Fetch available models for this service
    */
-  fetchAvailableModels(url: string, apiKey?: string): Promise<string[]>;
+  fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]>;
 }
 
 /**
@@ -276,9 +276,10 @@ export abstract class BaseAiService implements IAiApiService {
    * Fetch available models for this service
    * @param url The service endpoint URL
    * @param apiKey Optional API key (required for some services)
+   * @param settings Optional settings containing whitelist configuration
    * @returns Array of model names with service prefix (e.g., "openai@gpt-4")
    */
-  abstract fetchAvailableModels(url: string, apiKey?: string): Promise<string[]>;
+  abstract fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]>;
 
   /**
    * Call the AI API in streaming mode
@@ -678,7 +679,7 @@ export abstract class BaseAiService implements IAiApiService {
           console.log(`[ChatGPT MD] AI requested ${toolCalls.length} tool call(s)`);
 
           // Show indicator
-          const toolNotice = "\n\n_[Tool approval required...]_\n";
+          const toolNotice = "_[Tool approval required...]_\n";
           const indicatorCursor = handler.getCursor();
           editor.replaceRange(toolNotice, indicatorCursor);
           handler.updateCursorAfterInsert(toolNotice, indicatorCursor);

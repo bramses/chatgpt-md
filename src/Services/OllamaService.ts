@@ -52,7 +52,7 @@ export class OllamaService extends BaseAiService implements IAiApiService {
     return this.apiAuthService.getApiKey(settings, AI_SERVICE_OLLAMA);
   }
 
-  async fetchAvailableModels(url: string): Promise<string[]> {
+  async fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]> {
     try {
       const headers = { "Content-Type": "application/json" };
       const json = await this.apiService.makeGetRequest(`${url}/api/tags`, headers, AI_SERVICE_OLLAMA);
@@ -68,7 +68,8 @@ export class OllamaService extends BaseAiService implements IAiApiService {
           const fullId = `ollama@${model.name}`;
 
           // Pattern-based detection for Ollama
-          const supportsTools = detectToolSupport("ollama", model.name);
+          const whitelist = settings?.toolEnabledModels || "";
+          const supportsTools = detectToolSupport("ollama", model.name, whitelist);
           if (this.capabilitiesCache) {
             this.capabilitiesCache.setSupportsTools(fullId, supportsTools);
             console.log(`[Ollama] Cached: ${fullId} -> Tools: ${supportsTools}`);
