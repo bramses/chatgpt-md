@@ -490,18 +490,30 @@ export class CommandRegistry {
 
       // Add Ollama promise (always fetched)
       promises.push(
-        withTimeout(ollamaService.fetchAvailableModels(urls[AI_SERVICE_OLLAMA], undefined, settings), FETCH_MODELS_TIMEOUT_MS, [])
+        withTimeout(
+          ollamaService.fetchAvailableModels(urls[AI_SERVICE_OLLAMA], undefined, settings),
+          FETCH_MODELS_TIMEOUT_MS,
+          []
+        )
       );
 
       // Add LM Studio promise (always fetched, no API key required)
       promises.push(
-        withTimeout(lmstudioService.fetchAvailableModels(urls[AI_SERVICE_LMSTUDIO], undefined, settings), FETCH_MODELS_TIMEOUT_MS, [])
+        withTimeout(
+          lmstudioService.fetchAvailableModels(urls[AI_SERVICE_LMSTUDIO], undefined, settings),
+          FETCH_MODELS_TIMEOUT_MS,
+          []
+        )
       );
 
       // Conditionally add OpenAI promise
       if (isValidApiKey(apiKey)) {
         promises.push(
-          withTimeout(openaiService.fetchAvailableModels(urls[AI_SERVICE_OPENAI], apiKey, settings), FETCH_MODELS_TIMEOUT_MS, [])
+          withTimeout(
+            openaiService.fetchAvailableModels(urls[AI_SERVICE_OPENAI], apiKey, settings),
+            FETCH_MODELS_TIMEOUT_MS,
+            []
+          )
         );
       }
 

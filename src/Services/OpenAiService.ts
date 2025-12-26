@@ -9,8 +9,31 @@ import { ToolService } from "./ToolService";
 import { detectToolSupport } from "./ToolSupportDetector";
 import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
+/**
+ * Filter predicate for valid OpenAI chat models
+ * Excludes audio, transcription, realtime, and TTS models
+ */
+const isValidOpenAiChatModel = (model: OpenAiModel): boolean => {
+  const id = model.id;
+  const isGenerationModel =
+    id.includes("o3") ||
+    id.includes("o4") ||
+    id.includes("o1") ||
+    id.includes("gpt-4") ||
+    id.includes("gpt-5") ||
+    id.includes("gpt-3");
+
+  const isExcluded =
+    id.includes("audio") ||
+    id.includes("transcribe") ||
+    id.includes("realtime") ||
+    id.includes("o1-pro") ||
+    id.includes("tts");
+
+  return isGenerationModel && !isExcluded;
+};
+
 export const DEFAULT_OPENAI_CONFIG: OpenAIConfig = {
-  apiKey: "",
   aiService: AI_SERVICE_OPENAI,
   frequency_penalty: 0,
   max_tokens: 400,
@@ -51,48 +74,8 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
       const headers = this.apiAuthService.createAuthHeaders(apiKey, AI_SERVICE_OPENAI);
       const models = await this.apiService.makeGetRequest(`${url}/v1/models`, headers, AI_SERVICE_OPENAI);
 
-      // Log raw API response for debugging and analysis
-      console.log(`[OpenAI] Raw models response - Total models: ${models.data?.length || 0}`);
-      console.log(`[OpenAI] Sample model structure:`, JSON.stringify(models.data?.[0], null, 2));
-
-      // Log all model IDs to see what's available
-      const allModelIds = models.data?.map((m: OpenAiModel) => m.id) || [];
-      console.log(`[OpenAI] All available models from API:`, allModelIds);
-
-      // Log models that match our filter criteria
-      const filteredIds = models.data
-        ?.filter(
-          (model: OpenAiModel) =>
-            (model.id.includes("o3") ||
-              model.id.includes("o4") ||
-              model.id.includes("o1") ||
-              model.id.includes("gpt-4") ||
-              model.id.includes("gpt-5") ||
-              model.id.includes("gpt-3")) &&
-            !model.id.includes("audio") &&
-            !model.id.includes("transcribe") &&
-            !model.id.includes("realtime") &&
-            !model.id.includes("o1-pro") &&
-            !model.id.includes("tts")
-        )
-        ?.map((m: OpenAiModel) => m.id) || [];
-      console.log(`[OpenAI] Models after filter (${filteredIds.length}):`, filteredIds);
-
       return models.data
-        .filter(
-          (model: OpenAiModel) =>
-            (model.id.includes("o3") ||
-              model.id.includes("o4") ||
-              model.id.includes("o1") ||
-              model.id.includes("gpt-4") ||
-              model.id.includes("gpt-5") ||
-              model.id.includes("gpt-3")) &&
-            !model.id.includes("audio") &&
-            !model.id.includes("transcribe") &&
-            !model.id.includes("realtime") &&
-            !model.id.includes("o1-pro") &&
-            !model.id.includes("tts")
-        )
+        .filter(isValidOpenAiChatModel)
         .sort((a: OpenAiModel, b: OpenAiModel) => {
           if (a.id < b.id) return 1;
           if (a.id > b.id) return -1;
@@ -193,7 +176,6 @@ export class OpenAiService extends BaseAiService implements IAiApiService {
 }
 
 export interface OpenAIConfig {
-  apiKey: string;
   aiService: string;
   frequency_penalty: number;
   max_tokens: number;

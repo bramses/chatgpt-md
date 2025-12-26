@@ -10,7 +10,6 @@ import { detectToolSupport } from "./ToolSupportDetector";
 import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 export const DEFAULT_ANTHROPIC_CONFIG: AnthropicConfig = {
-  apiKey: "",
   aiService: AI_SERVICE_ANTHROPIC,
   max_tokens: 400,
   model: "anthropic@claude-sonnet-4-20250514",
@@ -164,7 +163,6 @@ export class AnthropicService extends BaseAiService implements IAiApiService {
 }
 
 export interface AnthropicConfig {
-  apiKey: string;
   aiService: string;
   max_tokens: number;
   model: string;

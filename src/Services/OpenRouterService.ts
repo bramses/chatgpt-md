@@ -22,7 +22,6 @@ export interface OpenRouterModel {
 }
 
 export interface OpenRouterConfig {
-  apiKey: string;
   aiService: string;
   frequency_penalty: number;
   max_tokens: number;
@@ -39,7 +38,6 @@ export interface OpenRouterConfig {
 }
 
 export const DEFAULT_OPENROUTER_CONFIG: OpenRouterConfig = {
-  apiKey: "",
   aiService: AI_SERVICE_OPENROUTER,
   frequency_penalty: 0.5,
   max_tokens: 400,

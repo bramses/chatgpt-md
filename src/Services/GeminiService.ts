@@ -10,7 +10,6 @@ import { detectToolSupport } from "./ToolSupportDetector";
 import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 export const DEFAULT_GEMINI_CONFIG: GeminiConfig = {
-  apiKey: "",
   aiService: AI_SERVICE_GEMINI,
   max_tokens: 400,
   model: "gemini@gemini-2.5-flash",
@@ -172,7 +171,6 @@ export class GeminiService extends BaseAiService implements IAiApiService {
 }
 
 export interface GeminiConfig {
-  apiKey: string;
   aiService: string;
   max_tokens: number;
   model: string;

@@ -5,7 +5,6 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { SearchResultsApprovalModal } from "src/Views/SearchResultsApprovalModal";
 import { WebSearchApprovalModal } from "src/Views/WebSearchApprovalModal";
 import { VaultSearchResult, WebSearchResult } from "src/Models/Tool";
-import { Logger } from "src/Utilities/Logger";
 
 /**
  * Handler for processing tool results
@@ -60,7 +59,7 @@ export class ToolService {
     results: VaultSearchResult[],
     modelName?: string
   ): Promise<VaultSearchResult[]> {
-    Logger.debug(`Requesting approval for search results: "${query}" (${results.length} results)`);
+    console.log(`[ChatGPT MD] Requesting approval for search results: "${query}" (${results.length} results)`);
 
     const modal = new SearchResultsApprovalModal(this.app, query, results, modelName);
     modal.open();
@@ -68,11 +67,11 @@ export class ToolService {
     const decision = await modal.waitForResult();
 
     if (!decision.approved) {
-      Logger.debug(`Search results approval cancelled by user`);
+      console.log(`[ChatGPT MD] Search results approval cancelled by user`);
       return [];
     }
 
-    Logger.debug(`User approved ${decision.approvedResults.length} of ${results.length} search results`);
+    console.log(`[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} search results`);
     return decision.approvedResults;
   }
 
@@ -84,7 +83,7 @@ export class ToolService {
     results: WebSearchResult[],
     modelName?: string
   ): Promise<WebSearchResult[]> {
-    Logger.debug(`Requesting approval for web search results: "${query}" (${results.length} results)`);
+    console.log(`[ChatGPT MD] Requesting approval for web search results: "${query}" (${results.length} results)`);
 
     const modal = new WebSearchApprovalModal(this.app, query, results, modelName);
     modal.open();
@@ -92,11 +91,11 @@ export class ToolService {
     const decision = await modal.waitForResult();
 
     if (!decision.approved) {
-      Logger.debug(`Web search results approval cancelled by user`);
+      console.log(`[ChatGPT MD] Web search results approval cancelled by user`);
       return [];
     }
 
-    Logger.debug(`User approved ${decision.approvedResults.length} of ${results.length} web search results`);
+    console.log(`[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} web search results`);
     return decision.approvedResults;
   }
 
@@ -108,8 +107,6 @@ export class ToolService {
   ): Promise<Array<{ path: string; content: string }>> {
     const fileContents: Array<{ path: string; content: string }> = [];
 
-    Logger.debug(`readFilesFromSearchResults called with ${searchResults.length} results`);
-
     for (const searchResult of searchResults) {
       try {
         // Extract actual file path from markdown link format if needed
@@ -118,30 +115,21 @@ export class ToolService {
         const markdownMatch = actualPath.match(/\]\((.*?)\)$/);
         if (markdownMatch) {
           actualPath = markdownMatch[1];
-          Logger.debug(`Extracted actual path from markdown link: ${actualPath}`);
         }
 
-        Logger.debug(`Attempting to read file: ${actualPath}`);
         const file = this.app.vault.getAbstractFileByPath(actualPath);
-        Logger.debug(`getAbstractFileByPath returned:`, file);
 
         if (file instanceof TFile) {
-          Logger.debug(`File is TFile, reading content...`);
           const content = await this.app.vault.read(file);
-          Logger.debug(`Successfully read ${content.length} characters from ${actualPath}`);
           fileContents.push({
             path: actualPath,
             content: content,
           });
-        } else {
-          Logger.debug(`File is not TFile instance. Type: ${typeof file}, Constructor: ${file?.constructor?.name}`);
         }
       } catch (error) {
-        Logger.error(`Error reading file ${searchResult.path}:`, error);
+        console.error(`[ChatGPT MD] Error reading file ${searchResult.path}:`, error);
       }
     }
-
-    Logger.debug(`readFilesFromSearchResults completed: read ${fileContents.length} files`);
     return fileContents;
   }
 
@@ -308,8 +296,6 @@ export class ToolService {
     const results = [];
 
     for (const toolCall of toolCalls) {
-      Logger.debug("Tool call structure:", JSON.stringify(toolCall, null, 2));
-
       // Extract tool info - handle different possible structures
       const toolName = toolCall.toolName || toolCall.name || toolCall.tool;
       const toolArgs = toolCall.args || toolCall.input || toolCall.arguments || {};
@@ -344,7 +330,6 @@ export class ToolService {
 
         // Use modified args if provided (e.g., filtered file list from approval modal)
         const argsToUse = approved.modifiedArgs || toolArgs;
-        Logger.debug(`Tool "${toolName}" executing with args:`, JSON.stringify(argsToUse, null, 2));
 
         const result = await tool.execute(argsToUse, {
           app: this.app,

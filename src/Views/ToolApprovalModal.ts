@@ -286,21 +286,6 @@ export class ToolApprovalModal extends Modal {
   }
 
   /**
-   * Get purpose description for tool
-   */
-  private getToolPurpose(): string {
-    const purposes: Record<string, string> = {
-      vault_search:
-        "Search your vault for files matching the query. Returns file names and content previews. The current note is excluded.",
-      file_read:
-        "Read the full contents of the specified files. You can select which files you want to share with the AI.",
-      web_search:
-        "Search the web for information using Brave Search. Returns relevant web pages with titles, URLs, and snippets.",
-    };
-    return purposes[this.toolName] || "Execute a tool operation.";
-  }
-
-  /**
    * Wait for user decision
    */
   waitForResult(): Promise<ToolApprovalDecision> {

@@ -139,8 +139,6 @@ export abstract class BaseAiService implements IAiApiService {
   protected modelSupportsTools(modelName: string, settings: ChatGPT_MDSettings): boolean {
     // Only use cache as source of truth - default to false if not in cache
     const cachedSupport = this.capabilitiesCache?.supportsTools(modelName);
-
-    console.log(`[ChatGPT MD] modelSupportsTools - model: ${modelName}, cached: ${cachedSupport}`);
     return cachedSupport === true; // Default to false if undefined
   }
 
@@ -487,9 +485,6 @@ export abstract class BaseAiService implements IAiApiService {
 
     if (shouldUseTool) {
       request.tools = tools;
-      console.log(`[ChatGPT MD] Including tools for model ${modelName}`);
-    } else if (toolsAvailable && !shouldUseTool) {
-      console.log(`[ChatGPT MD] Model ${modelName} is known to not support tools, skipping tools`);
     }
 
     // Call AI SDK generateText
@@ -504,8 +499,6 @@ export abstract class BaseAiService implements IAiApiService {
 
     // Handle tool calls if present
     if (toolService && response.toolCalls && response.toolCalls.length > 0) {
-      console.log(`[ChatGPT MD] AI requested ${response.toolCalls.length} tool call(s)`);
-
       // Request user approval and execute tool calls
       const toolResults = await toolService.handleToolCalls(response.toolCalls, modelName);
 
@@ -584,14 +577,9 @@ export abstract class BaseAiService implements IAiApiService {
 
       if (shouldUseTool) {
         request.tools = tools;
-        console.log(`[ChatGPT MD] Including tools for model ${modelName}`);
-      } else if (toolsAvailable && !shouldUseTool) {
-        console.log(`[ChatGPT MD] Model ${modelName} is known to not support tools, skipping tools`);
       }
 
       let fullText = "";
-      let needsRetryWithoutTools = false;
-      let retryErrorMessage = "";
       let result: any;
       let finalResult: any;
 
@@ -611,9 +599,6 @@ export abstract class BaseAiService implements IAiApiService {
         return text;
       };
 
-      // Attempt to stream
-      console.log(`[ChatGPT MD] Calling streamText for model ${modelName} with tools: ${shouldUseTool}`);
-
       // Call AI SDK streamText - if tools were used and it fails, retry without tools
       try {
         result = streamText(request);
@@ -623,7 +608,6 @@ export abstract class BaseAiService implements IAiApiService {
         handler.stopBuffering();
 
         // Try to get final result
-        console.log(`[ChatGPT MD] Attempting to get final result...`);
         finalResult = await result;
 
         // Try to await finishReason if it's a promise (it might contain errors)
@@ -632,52 +616,19 @@ export abstract class BaseAiService implements IAiApiService {
           try {
             actualFinishReason = await actualFinishReason;
           } catch (finishErr: any) {
-            console.log(`[ChatGPT MD] Error in finishReason promise:`, finishErr);
-            // If tools were used and we got an error, retry without tools
-            if (shouldUseTool) {
-              retryErrorMessage = finishErr?.message || String(finishErr);
-              needsRetryWithoutTools = true;
-            }
+            // Let caller handle the error
+            throw finishErr;
           }
-        }
-
-        console.log(`[ChatGPT MD] Final result:`, {
-          textLength: finalResult?.text?.length || 0,
-          finishReason: actualFinishReason,
-        });
-
-        // Check if we got no output despite "success" - if tools were used, retry without them
-        if (!needsRetryWithoutTools && (!finalResult?.text || finalResult.text.length === 0) && shouldUseTool) {
-          console.warn(`[ChatGPT MD] Got empty result with tools. Will retry without tools.`);
-          retryErrorMessage = "The request produced no output.";
-          needsRetryWithoutTools = true;
         }
       } catch (err: any) {
         handler?.stopBuffering();
-
-        console.log(`[ChatGPT MD] Error during request:`, err);
-
-        // If tools were used, retry without them (generic approach - don't parse error)
-        if (shouldUseTool) {
-          retryErrorMessage = err?.message || String(err);
-          needsRetryWithoutTools = true;
-        } else {
-          throw err;
-        }
-      }
-
-      // If error occurred with tools, don't retry - cache is the only source of truth
-      if (needsRetryWithoutTools) {
-        console.error(`[ChatGPT MD] Error with tools for ${modelName}:`, retryErrorMessage);
-        throw new Error(`Tool calling failed for ${modelName}: ${retryErrorMessage}`);
+        throw err;
       }
 
       // Handle tool calls after streaming completes
       if (toolService && finalResult && finalResult.toolCalls) {
         const toolCalls = await finalResult.toolCalls;
         if (toolCalls && toolCalls.length > 0) {
-          console.log(`[ChatGPT MD] AI requested ${toolCalls.length} tool call(s)`);
-
           // Show indicator
           const toolNotice = "_[Tool approval required...]_\n";
           const indicatorCursor = handler.getCursor();

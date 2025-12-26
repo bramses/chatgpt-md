@@ -15,15 +15,15 @@ export class AiModelSuggestModal extends SuggestModal<string> {
     editor: Editor,
     editorService: EditorService,
     modelNames: string[] = [],
-    settings?: ChatGPT_MDSettings,
-    capabilitiesCache?: ModelCapabilitiesCache
+    settings: ChatGPT_MDSettings,
+    capabilitiesCache: ModelCapabilitiesCache
   ) {
     super(app);
     this.modelNames = modelNames;
     this.editor = editor;
     this.editorService = editorService;
-    this.settings = settings!;
-    this.capabilitiesCache = capabilitiesCache!;
+    this.settings = settings;
+    this.capabilitiesCache = capabilitiesCache;
     this.limit = this.modelNames.length;
     if (this.modelNames.length > 0) {
       this.setPlaceholder("Select Large Language Model");

@@ -2,6 +2,20 @@
 
 All user interface components and modals.
 
+## v3.0.0 Updates
+
+**New Tool Calling Modals**: v3.0.0 introduces new UI components for tool calling:
+- `ToolApprovalModal.ts` - Interactive modal for approving tool execution requests
+- `SearchResultsApprovalModal.ts` - Review and filter vault search results
+- `WebSearchApprovalModal.ts` - Review and filter web search results
+
+These modals implement the three-layer approval system:
+1. Tool execution approval
+2. Results review
+3. Selective sharing
+
+See [`planning/code-review/`](planning/code-review/) for detailed analysis.
+
 ## AiModelSuggestModal.ts
 
 **Model selection modal**

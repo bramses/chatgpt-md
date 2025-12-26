@@ -2,6 +2,21 @@
 
 All service implementations following single responsibility principle.
 
+## v3.0.0 Updates
+
+**New Tool Calling Services**: v3.0.0 introduces comprehensive tool calling infrastructure:
+- `ToolService.ts` - Orchestrates tool calling with approval workflow
+- `ToolRegistry.ts` - Manages available tools and their configurations
+- `ToolExecutor.ts` - Executes approved tools with security checks
+- `ToolSupportDetector.ts` - Whitelist-based tool support detection
+- `VaultTools.ts` - Vault-specific tool implementations (search, file read)
+- `WebSearchService.ts` - Web search integration with Brave Search API
+- `StreamingHandler.ts` - Refactored streaming response processor
+
+All AI services updated to support tool calling with consistent interface.
+
+See [`planning/code-review/`](planning/code-review/) for detailed analysis and implementation guidance.
+
 ## Service Architecture
 
 ### Base Classes

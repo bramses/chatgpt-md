@@ -1,6 +1,6 @@
 # ChatGPT MD Changelog
 
-## v2.12.0-beta (December 2025) - Privacy-First AI Tool Calling
+## v3.0.0 (December 2025) - Privacy-First AI Tool Calling
 
 ### 🎯 Major Features
 
