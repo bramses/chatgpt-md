@@ -10,6 +10,7 @@ import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
 import { DEFAULT_ANTHROPIC_CONFIG } from "src/Services/AnthropicService";
 import { DEFAULT_GEMINI_CONFIG } from "src/Services/GeminiService";
+import { getDefaultToolWhitelist } from "src/Services/ToolSupportDetector";
 
 /**
  * Generate default chat front matter using service provider defaults
@@ -231,7 +232,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   generateAtCursor: false,
   autoInferTitle: false,
   enableToolCalling: false,
-  toolEnabledModels: "gpt-5.2*",
+  toolEnabledModels: getDefaultToolWhitelist(),
   debugMode: false,
   pluginSystemMessage: PLUGIN_SYSTEM_MESSAGE,
 

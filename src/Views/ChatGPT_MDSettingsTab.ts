@@ -7,6 +7,7 @@ import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
 import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
 import { DEFAULT_ANTHROPIC_CONFIG } from "src/Services/AnthropicService";
 import { DEFAULT_GEMINI_CONFIG } from "src/Services/GeminiService";
+import { getDefaultToolWhitelist } from "src/Services/ToolSupportDetector";
 
 interface SettingDefinition {
   id: keyof ChatGPT_MDSettings;
@@ -350,10 +351,10 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         name: "Tool-Enabled Models",
         description:
           "Whitelist of models that can use tools. One pattern per line. " +
-          "Supports wildcards using * (e.g., gpt-4* matches gpt-4o, gpt-4-turbo). " +
-          "Model names are matched without provider prefix.",
+          "Date-suffixed versions are matched automatically (e.g., 'o3' matches 'o3-2025-04-16'). " +
+          "Use * suffix for prefix matching. Lines starting with # are comments.",
         type: "textarea",
-        placeholder: "gpt-5.2-*",
+        placeholder: "gpt-5.2\ngpt-5.2-chat-latest\no3\nclaude-opus-4-5",
         group: "Tool Calling",
       },
 
@@ -463,23 +464,34 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
             await this.settingsProvider.saveSettings();
           });
 
-        // Set width for all textareas
         text.inputEl.style.width = "300px";
 
-        // Special height for defaultChatFrontmatter and pluginSystemMessage
         if (schema.id === "defaultChatFrontmatter" || schema.id === "pluginSystemMessage") {
           text.inputEl.style.height = "260px";
           text.inputEl.style.minHeight = "260px";
         }
 
-        // Medium height for toolEnabledModels
         if (schema.id === "toolEnabledModels") {
-          text.inputEl.style.height = "120px";
-          text.inputEl.style.minHeight = "120px";
+          text.inputEl.style.height = "320px";
+          text.inputEl.style.minHeight = "320px";
         }
 
         return text;
       });
+
+      if (schema.id === "toolEnabledModels") {
+        setting.addButton((button) => {
+          button
+            .setButtonText("Reset to Recommended")
+            .setTooltip("Restore the recommended default whitelist")
+            .onClick(async () => {
+              const defaultWhitelist = getDefaultToolWhitelist();
+              this.settingsProvider.settings.toolEnabledModels = defaultWhitelist;
+              await this.settingsProvider.saveSettings();
+              this.display();
+            });
+        });
+      }
     } else if (schema.type === "toggle") {
       setting.addToggle((toggle) =>
         toggle.setValue(Boolean(this.settingsProvider.settings[schema.id])).onChange(async (value) => {
