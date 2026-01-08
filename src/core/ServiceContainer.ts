@@ -10,9 +10,6 @@ import { ApiService } from "src/Services/ApiService";
 import { ApiAuthService } from "src/Services/ApiAuthService";
 import { AiProviderService } from "src/Services/AiProviderService";
 import { SettingsService } from "src/Services/SettingsService";
-import { VaultTools } from "src/Services/VaultTools";
-import { WebSearchService } from "src/Services/WebSearchService";
-import { ToolRegistry } from "src/Services/ToolRegistry";
 import { ToolService } from "src/Services/ToolService";
 import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
@@ -51,10 +48,7 @@ export class ServiceContainer {
 	// Settings (now includes frontmatter operations)
 	readonly settingsService: SettingsService;
 
-	// Tool services
-	readonly webSearchService: WebSearchService;
-	readonly vaultTools: VaultTools;
-	readonly toolRegistry: ToolRegistry;
+	// Tool services (consolidated into single ToolService)
 	readonly toolService: ToolService;
 
 	private constructor(
@@ -72,9 +66,6 @@ export class ServiceContainer {
 		editorService: EditorService,
 		aiProviderService: () => AiProviderService,
 		settingsService: SettingsService,
-		webSearchService: WebSearchService,
-		vaultTools: VaultTools,
-		toolRegistry: ToolRegistry,
 		toolService: ToolService
 	) {
 		this.app = app;
@@ -91,9 +82,6 @@ export class ServiceContainer {
 		this.editorService = editorService;
 		this.aiProviderService = aiProviderService;
 		this.settingsService = settingsService;
-		this.webSearchService = webSearchService;
-		this.vaultTools = vaultTools;
-		this.toolRegistry = toolRegistry;
 		this.toolService = toolService;
 	}
 
@@ -142,11 +130,8 @@ export class ServiceContainer {
 		// Set the save settings callback for AI services
 		AiProviderService.setSaveSettingsCallback(settingsService.saveSettings.bind(settingsService));
 
-		// === Tool services ===
-		const webSearchService = new WebSearchService(notificationService);
-		const vaultTools = new VaultTools(app, fileService);
-		const toolRegistry = new ToolRegistry(app, vaultTools, webSearchService, settingsService);
-		const toolService = new ToolService(app, toolRegistry, notificationService);
+		// === Tool services (consolidated) ===
+		const toolService = new ToolService(app, fileService, notificationService, settingsService.getSettings());
 
 		// === Create container ===
 		return new ServiceContainer(
@@ -164,9 +149,6 @@ export class ServiceContainer {
 			editorService,
 			aiProviderService,
 			settingsService,
-			webSearchService,
-			vaultTools,
-			toolRegistry,
 			toolService
 		);
 	}
