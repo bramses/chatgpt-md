@@ -1,10 +1,11 @@
 import { App, Editor, MarkdownView } from "obsidian";
-import { getHeaderRole, getHeadingPrefix } from "src/Utilities/TextHelpers";
 import { FrontmatterManager } from "src/Services/FrontmatterManager";
-import { HORIZONTAL_LINE_CLASS, NEWLINE, ROLE_ASSISTANT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
+import { addHorizontalRule, appendMessage, moveCursorToEnd, addCommentBlock } from "src/Utilities/EditorHelpers";
+import { NEWLINE } from "src/Constants";
 
 /**
  * Service responsible for editor content manipulation
+ * Now uses utility functions for common operations
  */
 export class EditorContentService {
   private frontmatterManager?: FrontmatterManager;
@@ -14,27 +15,21 @@ export class EditorContentService {
       this.frontmatterManager = new FrontmatterManager(app);
     }
   }
+
   /**
    * Add a horizontal rule with a role header
+   * Delegates to utility function
    */
   addHorizontalRule(editor: Editor, role: string, headingLevel: number): void {
-    const formattedContent = `${NEWLINE}<hr class="${HORIZONTAL_LINE_CLASS}">${NEWLINE}${getHeadingPrefix(headingLevel)}${ROLE_IDENTIFIER}${role}${NEWLINE}`;
-
-    const currentPosition = editor.getCursor();
-
-    editor.replaceRange(formattedContent, currentPosition);
-    editor.setCursor(currentPosition.line + formattedContent.split("\n").length - 1, 0);
+    addHorizontalRule(editor, role, headingLevel);
   }
 
   /**
    * Append a message to the editor
+   * Delegates to utility function
    */
   appendMessage(editor: Editor, message: string, headingLevel: number): void {
-    const headingPrefix = getHeadingPrefix(headingLevel);
-    const assistantRoleHeader = getHeaderRole(headingPrefix, ROLE_ASSISTANT);
-    const userRoleHeader = getHeaderRole(headingPrefix, ROLE_USER);
-
-    editor.replaceRange(`${assistantRoleHeader}${message}${userRoleHeader}`, editor.getCursor());
+    appendMessage(editor, message, headingLevel);
   }
 
   /**
@@ -83,34 +78,17 @@ export class EditorContentService {
 
   /**
    * Move the cursor to the end of the document
+   * Delegates to utility function
    */
   moveCursorToEnd(editor: Editor): void {
-    try {
-      const length = editor.lastLine();
-
-      const newCursor = {
-        line: length + 1,
-        ch: 0,
-      };
-      editor.setCursor(newCursor);
-    } catch (err) {
-      throw new Error("Error moving cursor to end of file" + err);
-    }
+    moveCursorToEnd(editor);
   }
 
   /**
    * Add a comment block at the cursor position
+   * Delegates to utility function
    */
   addCommentBlock(editor: Editor, commentStart: string, commentEnd: string): void {
-    const cursor = editor.getCursor();
-    const commentBlock = `${commentStart}${NEWLINE}${commentEnd}`;
-
-    editor.replaceRange(commentBlock, cursor);
-
-    // Move cursor to middle of comment block
-    editor.setCursor({
-      line: cursor.line + 1,
-      ch: cursor.ch,
-    });
+    addCommentBlock(editor, commentStart, commentEnd);
   }
 }
