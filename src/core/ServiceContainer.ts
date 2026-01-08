@@ -8,7 +8,6 @@ import { NotificationService } from "src/Services/NotificationService";
 import { ErrorService } from "src/Services/ErrorService";
 import { ApiService } from "src/Services/ApiService";
 import { ApiAuthService } from "src/Services/ApiAuthService";
-import { ApiResponseParser } from "src/Services/ApiResponseParser";
 import { AiProviderService } from "src/Services/AiProviderService";
 import { SettingsService } from "src/Services/SettingsService";
 import { VaultTools } from "src/Services/VaultTools";
@@ -38,7 +37,6 @@ export class ServiceContainer {
 	readonly errorService: ErrorService;
 	readonly apiService: ApiService;
 	readonly apiAuthService: ApiAuthService;
-	readonly apiResponseParser: ApiResponseParser;
 
 	// Content services
 	readonly fileService: FileService;
@@ -67,7 +65,6 @@ export class ServiceContainer {
 		errorService: ErrorService,
 		apiService: ApiService,
 		apiAuthService: ApiAuthService,
-		apiResponseParser: ApiResponseParser,
 		fileService: FileService,
 		frontmatterManager: FrontmatterManager,
 		messageService: MessageService,
@@ -87,7 +84,6 @@ export class ServiceContainer {
 		this.errorService = errorService;
 		this.apiService = apiService;
 		this.apiAuthService = apiAuthService;
-		this.apiResponseParser = apiResponseParser;
 		this.fileService = fileService;
 		this.frontmatterManager = frontmatterManager;
 		this.messageService = messageService;
@@ -117,7 +113,6 @@ export class ServiceContainer {
 		const errorService = new ErrorService(notificationService);
 		const apiService = new ApiService(errorService, notificationService);
 		const apiAuthService = new ApiAuthService(notificationService);
-		const apiResponseParser = new ApiResponseParser(notificationService);
 
 		// === Content services ===
 		const fileService = new FileService(app);
@@ -162,7 +157,6 @@ export class ServiceContainer {
 			errorService,
 			apiService,
 			apiAuthService,
-			apiResponseParser,
 			fileService,
 			frontmatterManager,
 			messageService,

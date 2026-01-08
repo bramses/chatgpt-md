@@ -4,13 +4,13 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "./EditorService";
 import { ApiService } from "./ApiService";
 import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
 import { ToolService } from "./ToolService";
 import { StreamingHandler } from "./StreamingHandler";
 import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 import { detectToolSupport } from "./ToolSupportDetector";
+import { insertAssistantHeader } from "src/Utilities/ResponseHelpers";
 
 // AI SDK providers
 import { OpenAIProvider, createOpenAI } from "@ai-sdk/openai";
@@ -99,7 +99,6 @@ export type AiProvider =
 export class AiProviderService implements IAiApiService {
 	private apiService: ApiService;
 	private apiAuthService: ApiAuthService;
-	private apiResponseParser: ApiResponseParser;
 	private readonly errorService: ErrorService;
 	private readonly notificationService: NotificationService;
 	private capabilitiesCache?: ModelCapabilitiesCache;
@@ -119,7 +118,6 @@ export class AiProviderService implements IAiApiService {
 		this.errorService = new ErrorService(this.notificationService);
 		this.apiService = new ApiService(this.errorService, this.notificationService);
 		this.apiAuthService = new ApiAuthService(this.notificationService);
-		this.apiResponseParser = new ApiResponseParser(this.notificationService);
 		this.capabilitiesCache = capabilitiesCache;
 
 		// Register all adapters
@@ -594,7 +592,7 @@ export class AiProviderService implements IAiApiService {
 			content: msg.content,
 		}));
 
-		const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, modelName);
+		const cursorPositions = insertAssistantHeader(editor, headingPrefix, modelName);
 
 		const abortController = new AbortController();
 		this.apiService.setAbortController(abortController);

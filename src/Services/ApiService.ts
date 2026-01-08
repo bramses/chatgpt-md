@@ -1,9 +1,9 @@
 import { requestUrl } from "obsidian";
 import { ApiAuthService } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
 import { requestStream } from "./requestStream";
+import { parseNonStreamingResponse } from "src/Utilities/ResponseHelpers";
 
 /**
  * ApiService handles all API communication for the application
@@ -15,18 +15,15 @@ export class ApiService {
   private errorService: ErrorService;
   private notificationService: NotificationService;
   private apiAuthService: ApiAuthService;
-  private apiResponseParser: ApiResponseParser;
 
   constructor(
     errorService?: ErrorService,
     notificationService?: NotificationService,
-    apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser
+    apiAuthService?: ApiAuthService
   ) {
     this.notificationService = notificationService || new NotificationService();
     this.errorService = errorService || new ErrorService(this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService();
-    this.apiResponseParser = apiResponseParser || new ApiResponseParser();
   }
 
   /**
@@ -65,7 +62,7 @@ export class ApiService {
         });
       }
 
-      return this.apiResponseParser.parseNonStreamingResponse(data, serviceType);
+      return parseNonStreamingResponse(data, serviceType);
     } catch (error) {
       return this.errorService.handleApiError(error, serviceType, {
         returnForChat: true,

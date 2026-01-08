@@ -2,7 +2,6 @@ import { Editor, MarkdownView } from "obsidian";
 import { Message } from "src/Models/Message";
 import { ApiService } from "./ApiService";
 import { ApiAuthService, isValidApiKey } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
 import { EditorService } from "./EditorService";
 import {
   AI_SERVICE_ANTHROPIC,
@@ -29,6 +28,7 @@ import { generateText, LanguageModel, streamText } from "ai";
 import { ToolService } from "./ToolService";
 import { StreamingHandler } from "./StreamingHandler";
 import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
+import { insertAssistantHeader } from "src/Utilities/ResponseHelpers";
 
 /**
  * Interface defining the contract for AI service implementations
@@ -100,7 +100,6 @@ export type AiProvider =
 export abstract class BaseAiService implements IAiApiService {
   protected apiService: ApiService;
   protected apiAuthService: ApiAuthService;
-  protected apiResponseParser: ApiResponseParser;
   protected readonly errorService: ErrorService;
   protected readonly notificationService: NotificationService;
   protected capabilitiesCache?: ModelCapabilitiesCache;
@@ -133,7 +132,6 @@ export abstract class BaseAiService implements IAiApiService {
     this.errorService = new ErrorService(this.notificationService);
     this.apiService = new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = new ApiAuthService(this.notificationService);
-    this.apiResponseParser = new ApiResponseParser(this.notificationService);
     this.capabilitiesCache = capabilitiesCache;
   }
 
@@ -554,7 +552,7 @@ export abstract class BaseAiService implements IAiApiService {
     }));
 
     // Insert assistant header
-    const cursorPositions = this.apiResponseParser.insertAssistantHeader(editor, headingPrefix, modelName);
+    const cursorPositions = insertAssistantHeader(editor, headingPrefix, modelName);
 
     // Setup abort controller
     const abortController = new AbortController();
