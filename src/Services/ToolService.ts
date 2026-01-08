@@ -1,14 +1,21 @@
 import { App, TFile } from "obsidian";
-import { requestUrl } from "obsidian";
 import { z } from "zod";
 import { tool, zodSchema } from "ai";
 import { FileService } from "./FileService";
 import { NotificationService } from "./NotificationService";
+import { ToolRegistry } from "./ToolRegistry";
+import { VaultSearchService } from "./VaultSearchService";
+import { WebSearchService } from "./WebSearchService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { SearchResultsApprovalModal } from "src/Views/SearchResultsApprovalModal";
 import { WebSearchApprovalModal } from "src/Views/WebSearchApprovalModal";
 import { ToolApprovalModal } from "src/Views/ToolApprovalModal";
-import { FileReadResult, ToolExecutionContext, VaultSearchResult, WebSearchResult, ToolApprovalDecision, ToolApprovalRequest } from "src/Models/Tool";
+import {
+  ToolApprovalDecision,
+  ToolApprovalRequest,
+  VaultSearchResult,
+  WebSearchResult,
+} from "src/Models/Tool";
 
 /**
  * Handler for processing tool results
@@ -24,27 +31,41 @@ type ToolResultHandler = (
 /**
  * Unified Tool Service
  * Consolidates all tool-related functionality:
- * - Tool registration (from ToolRegistry)
- * - Vault operations (from VaultTools)
- * - Web search (from WebSearchService)
+ * - Tool registration (delegates to ToolRegistry)
+ * - Vault operations (delegates to VaultSearchService)
+ * - Web search (delegates to WebSearchService)
  * - Tool orchestration and approval (from ToolService)
  */
 export class ToolService {
   private approvalHandler?: (toolName: string, args: any) => Promise<any>;
   private readonly toolResultHandlers: Record<string, ToolResultHandler>;
-  private readonly tools: Map<string, any> = new Map();
+  private readonly registry: ToolRegistry;
+  private readonly vaultSearchService: VaultSearchService;
+  private readonly webSearchService: WebSearchService;
 
   constructor(
     private app: App,
     private fileService: FileService,
     private notificationService: NotificationService,
-    private settingsService: ChatGPT_MDSettings
+    private settingsService: ChatGPT_MDSettings,
+    registry?: ToolRegistry,
+    vaultSearchService?: VaultSearchService,
+    webSearchService?: WebSearchService
   ) {
     this.toolResultHandlers = {
       vault_search: this.handleVaultSearchResult.bind(this),
       file_read: this.handleFileReadResult.bind(this),
       web_search: this.handleWebSearchResult.bind(this),
     };
+
+    // Use provided registry or create new one (for backward compatibility)
+    this.registry = registry || new ToolRegistry();
+
+    // Use provided vaultSearchService or create new one (for backward compatibility)
+    this.vaultSearchService = vaultSearchService || new VaultSearchService(app, fileService);
+
+    // Use provided webSearchService or create new one (for backward compatibility)
+    this.webSearchService = webSearchService || new WebSearchService(notificationService);
 
     // Register default tools
     this.registerDefaultTools();
@@ -76,7 +97,7 @@ export class ToolService {
       ),
       execute: async (args: { query: string; limit?: number }) => {
         // Tool execution - approval is handled by the caller via requestApproval
-        const results = await this.searchVault(args, {
+        const results = await this.vaultSearchService.searchVault(args, {
           app: this.app,
           toolCallId: "",
           messages: [],
@@ -104,7 +125,7 @@ export class ToolService {
       ),
       execute: async (args: { filePaths: string[] }) => {
         // Tool execution - approval is handled by the caller via requestApproval
-        return await this.readFiles(args, {
+        return await this.vaultSearchService.readFiles(args, {
           app: this.app,
           toolCallId: "",
           messages: [],
@@ -129,7 +150,7 @@ export class ToolService {
       ),
       execute: async (args: { query: string; limit?: number }) => {
         // Tool execution - approval is handled by the caller via requestApproval
-        return await this.searchWeb(
+        return await this.webSearchService.searchWeb(
           args,
           this.settingsService.webSearchProvider,
           this.settingsService.webSearchApiKey,
@@ -142,278 +163,34 @@ export class ToolService {
 
   /**
    * Register a new tool
+   * Delegates to ToolRegistry
    */
   registerTool(name: string, toolDef: any): void {
-    this.tools.set(name, toolDef);
-    console.log(`[ChatGPT MD] Registered tool: ${name}`);
+    this.registry.registerTool(name, toolDef);
   }
 
   /**
    * Get a specific tool by name
+   * Delegates to ToolRegistry
    */
   getTool(name: string): any | undefined {
-    return this.tools.get(name);
+    return this.registry.getTool(name);
   }
 
   /**
    * Get all registered tools
+   * Delegates to ToolRegistry
    */
   getAllTools(): Record<string, any> {
-    const toolsObject: Record<string, any> = {};
-    this.tools.forEach((toolDef, name) => {
-      toolsObject[name] = toolDef;
-    });
-    return toolsObject;
+    return this.registry.getAllTools();
   }
 
   /**
    * Get tools enabled for a request based on settings
+   * Delegates to ToolRegistry
    */
   getEnabledTools(settings: ChatGPT_MDSettings): Record<string, any> | undefined {
-    if (!settings.enableToolCalling) {
-      return undefined;
-    }
-
-    const enabledTools: Record<string, any> = {};
-
-    // Vault tools
-    enabledTools.vault_search = this.tools.get("vault_search");
-    enabledTools.file_read = this.tools.get("file_read");
-
-    // Web search tool (check setting)
-    if (settings.enableWebSearch) {
-      enabledTools.web_search = this.tools.get("web_search");
-    }
-
-    return Object.keys(enabledTools).length > 0 ? enabledTools : undefined;
-  }
-
-  // ========== Vault Operations (from VaultTools) ==========
-
-  /**
-   * Search vault for files matching query (searches filename and content)
-   * Supports multi-word queries - matches files containing ANY of the words (OR search)
-   */
-  async searchVault(
-    args: { query: string; limit?: number },
-    context: ToolExecutionContext
-  ): Promise<VaultSearchResult[]> {
-    const { query, limit = 10 } = args;
-    const lowerQuery = query.toLowerCase();
-
-    // Split query into individual words for OR search
-    const queryWords = lowerQuery.split(/\s+/).filter((word) => word.length > 0);
-
-    const results: VaultSearchResult[] = [];
-
-    // Get all markdown files
-    const files = this.app.vault.getMarkdownFiles();
-
-    // Get the current file path to exclude it from search
-    const currentFile = this.app.workspace.getActiveFile();
-    const currentFilePath = currentFile?.path;
-
-    for (const file of files) {
-      // Check if aborted
-      if (context.abortSignal?.aborted) {
-        break;
-      }
-
-      // Skip current file
-      if (currentFilePath && file.path === currentFilePath) {
-        continue;
-      }
-
-      const lowerBasename = file.basename.toLowerCase();
-
-      // Check if filename matches any query word
-      let filenameMatch = false;
-      for (const word of queryWords) {
-        if (lowerBasename.includes(word)) {
-          filenameMatch = true;
-          break;
-        }
-      }
-
-      if (filenameMatch) {
-        results.push({
-          path: file.path,
-          basename: file.basename,
-          matches: 1,
-        });
-      } else {
-        // Check if file content matches any query word
-        const content = await this.app.vault.read(file);
-        const lowerContent = content.toLowerCase();
-
-        for (const word of queryWords) {
-          if (lowerContent.includes(word)) {
-            results.push({
-              path: file.path,
-              basename: file.basename,
-              matches: 1,
-            });
-            break;
-          }
-        }
-      }
-
-      // Stop if we have enough results
-      if (results.length >= Math.min(limit, 50)) {
-        break;
-      }
-    }
-
-    console.log(`[ChatGPT MD] Vault search: "${query}" found ${results.length} results`);
-    return results;
-  }
-
-  /**
-   * Read contents of specified files
-   */
-  async readFiles(args: { filePaths: string[] }, context: ToolExecutionContext): Promise<FileReadResult[]> {
-    const { filePaths } = args;
-    const results: FileReadResult[] = [];
-
-    for (const path of filePaths) {
-      // Check if aborted
-      if (context.abortSignal?.aborted) {
-        break;
-      }
-
-      const file = this.app.vault.getAbstractFileByPath(path);
-
-      if (file instanceof TFile) {
-        try {
-          const content = await this.app.vault.read(file);
-          results.push({
-            path: file.path,
-            content: content,
-            size: file.stat.size,
-          });
-        } catch (error) {
-          console.error(`[ChatGPT MD] Error reading file ${path}:`, error);
-          results.push({
-            path: path,
-            content: `Error reading file: ${error}`,
-            size: 0,
-          });
-        }
-      } else {
-        results.push({
-          path: path,
-          content: `File not found: ${path}`,
-          size: 0,
-        });
-      }
-    }
-
-    console.log(`[ChatGPT MD] Read ${results.length} files`);
-    return results;
-  }
-
-  // ========== Web Search Operations (from WebSearchService) ==========
-
-  /**
-   * Search using Brave Search API
-   * Requires API key (free tier: 1,000 queries/month)
-   */
-  private async searchBrave(query: string, apiKey: string, limit: number = 5): Promise<WebSearchResult[]> {
-    try {
-      const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${limit}`;
-
-      const response = await requestUrl({
-        url,
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "X-Subscription-Token": apiKey,
-        },
-      });
-
-      const data = response.json;
-
-      return (
-        data.web?.results?.map((result: any) => ({
-          title: result.title,
-          url: result.url,
-          snippet: result.description,
-        })) || []
-      );
-    } catch (error) {
-      console.error("[ChatGPT MD] Brave search error:", error);
-      this.notificationService.showWarning("Web search failed. Check your API key.");
-      return [];
-    }
-  }
-
-  /**
-   * Search using a custom API endpoint
-   * Expected response format: { results: [{ title, url, snippet }] }
-   */
-  private async searchCustom(query: string, apiUrl: string, apiKey?: string, limit: number = 5): Promise<WebSearchResult[]> {
-    try {
-      const url = `${apiUrl}?q=${encodeURIComponent(query)}&limit=${limit}`;
-
-      const headers: Record<string, string> = {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      };
-
-      if (apiKey) {
-        headers["Authorization"] = `Bearer ${apiKey}`;
-      }
-
-      const response = await requestUrl({ url, method: "GET", headers });
-      const data = response.json;
-
-      return (
-        data.results?.slice(0, limit).map((result: any) => ({
-          title: result.title || "Untitled",
-          url: result.url || result.link || "",
-          snippet: result.snippet || result.description || "",
-        })) || []
-      );
-    } catch (error) {
-      console.error("[ChatGPT MD] Custom search error:", error);
-      this.notificationService.showWarning("Custom web search failed. Check your endpoint configuration.");
-      return [];
-    }
-  }
-
-  /**
-   * Main search method that routes to the appropriate provider
-   */
-  async searchWeb(
-    args: { query: string; limit?: number },
-    provider: "brave" | "custom",
-    apiKey?: string,
-    customUrl?: string
-  ): Promise<WebSearchResult[]> {
-    const { query, limit = 5 } = args;
-    const maxLimit = Math.min(limit, 10); // Cap at 10 results
-
-    console.log(`[ChatGPT MD] Web search: "${query}" using ${provider}`);
-
-    switch (provider) {
-      case "brave":
-        if (!apiKey) {
-          this.notificationService.showWarning("Brave Search requires an API key. Please configure in settings.");
-          return [];
-        }
-        return this.searchBrave(query, apiKey, maxLimit);
-
-      case "custom":
-        if (!customUrl) {
-          this.notificationService.showWarning("Custom search requires an API URL. Please configure in settings.");
-          return [];
-        }
-        return this.searchCustom(query, customUrl, apiKey, maxLimit);
-
-      default:
-        this.notificationService.showWarning("Unknown search provider. Please configure in settings.");
-        return [];
-    }
+    return this.registry.getEnabledTools(settings);
   }
 
   // ========== Tool Orchestration and Approval ==========
@@ -498,7 +275,9 @@ export class ToolService {
       return [];
     }
 
-    console.log(`[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} web search results`);
+    console.log(
+      `[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} web search results`
+    );
     return decision.approvedResults;
   }
 

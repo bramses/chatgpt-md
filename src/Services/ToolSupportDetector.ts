@@ -2,7 +2,7 @@
  * Whitelist-based tool support detection
  *
  * Users configure which models can use tools via settings.
- * 
+ *
  * Matching Strategy (simple and model-agnostic):
  * - Exact match: "o3" matches "o3"
  * - Date suffix match: "o3" matches "o3-2025-04-16" (date is safe)
@@ -12,11 +12,11 @@
 
 /**
  * Check if a suffix is a date pattern (safe to match automatically)
- * 
+ *
  * Recognizes common date formats used by AI providers:
  * - YYYYMMDD (Anthropic style: -20251101)
  * - YYYY-MM-DD (OpenAI style: -2025-04-16)
- * 
+ *
  * @param suffix - The suffix after the base model name (including leading dash)
  * @returns true if suffix is a date pattern
  */
@@ -24,18 +24,18 @@ function isDateSuffix(suffix: string): boolean {
   if (!suffix || suffix.length === 0) {
     return false;
   }
-  
+
   // Must start with a dash
   if (!suffix.startsWith("-")) {
     return false;
   }
-  
+
   const datePatterns = [
-    /^-\d{8}$/,              // -YYYYMMDD (e.g., -20251101)
-    /^-\d{4}-\d{2}-\d{2}$/,  // -YYYY-MM-DD (e.g., -2025-04-16)
+    /^-\d{8}$/, // -YYYYMMDD (e.g., -20251101)
+    /^-\d{4}-\d{2}-\d{2}$/, // -YYYY-MM-DD (e.g., -2025-04-16)
   ];
-  
-  return datePatterns.some(pattern => pattern.test(suffix));
+
+  return datePatterns.some((pattern) => pattern.test(suffix));
 }
 
 /**
@@ -56,43 +56,43 @@ function isDateSuffix(suffix: string): boolean {
 function matchesPattern(modelId: string, pattern: string): boolean {
   // Extract model name (part after @) for matching
   let modelName = modelId.includes("@") ? modelId.split("@")[1] : modelId;
-  
+
   // For OpenRouter models with format "openrouter@provider/model", extract just the model part
   // e.g., "openrouter@openai/gpt-5.2" -> "gpt-5.2"
   if (modelName.includes("/")) {
     modelName = modelName.split("/")[1];
   }
-  
+
   // Check if pattern includes provider prefix
   const patternHasProvider = pattern.includes("@");
   const patternName = patternHasProvider ? pattern.split("@")[1] : pattern;
   const patternProvider = patternHasProvider ? pattern.split("@")[0] : null;
   const modelProvider = modelId.includes("@") ? modelId.split("@")[0] : null;
-  
+
   // If pattern has provider, it must match exactly
   if (patternHasProvider && patternProvider !== modelProvider) {
     return false;
   }
-  
+
   // If pattern has no provider and model is openrouter, allow matching
   // (OpenRouter proxies models from other providers)
   // Otherwise, if pattern has no provider, it matches any provider
-  
+
   // Use model name for matching
   const nameToMatch = modelName;
   const patternToMatch = patternName;
-  
+
   // Check for explicit wildcard (prefix matching)
   if (patternToMatch.endsWith("*")) {
     const prefix = patternToMatch.slice(0, -1);
     return nameToMatch.startsWith(prefix);
   }
-  
+
   // Exact match
   if (nameToMatch === patternToMatch) {
     return true;
   }
-  
+
   // Date suffix match: model starts with pattern AND remainder is a date
   if (nameToMatch.startsWith(patternToMatch)) {
     const suffix = nameToMatch.slice(patternToMatch.length);
@@ -100,7 +100,7 @@ function matchesPattern(modelId: string, pattern: string): boolean {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -162,7 +162,7 @@ export function detectToolSupport(modelId: string, whitelist: string): boolean {
 /**
  * Get the default whitelist value
  * Used for initial settings and reset
- * 
+ *
  * Lists important models explicitly. Date-suffixed versions are matched automatically.
  */
 export function getDefaultToolWhitelist(): string {

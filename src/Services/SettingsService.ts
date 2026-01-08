@@ -1,4 +1,4 @@
-import { Plugin, App, Editor, MarkdownView, TFile } from "obsidian";
+import { Editor, MarkdownView, Plugin, TFile } from "obsidian";
 import { ChatGPT_MDSettings, DEFAULT_SETTINGS } from "src/Models/Config";
 import { ChatGPT_MDSettingsTab } from "../Views/ChatGPT_MDSettingsTab";
 import { NotificationService } from "./NotificationService";
@@ -9,12 +9,12 @@ import { parseSettingsFrontmatter } from "src/Utilities/TextHelpers";
 import { getDefaultConfigForService } from "src/Utilities/FrontmatterHelpers";
 import { aiProviderFromKeys, aiProviderFromUrl } from "src/Utilities/ProviderHelpers";
 import {
-	AI_SERVICE_ANTHROPIC,
-	AI_SERVICE_GEMINI,
-	AI_SERVICE_LMSTUDIO,
-	AI_SERVICE_OLLAMA,
-	AI_SERVICE_OPENAI,
-	AI_SERVICE_OPENROUTER,
+  AI_SERVICE_ANTHROPIC,
+  AI_SERVICE_GEMINI,
+  AI_SERVICE_LMSTUDIO,
+  AI_SERVICE_OLLAMA,
+  AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENROUTER,
 } from "src/Constants";
 
 /**

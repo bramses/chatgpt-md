@@ -3,15 +3,19 @@ import { Message } from "src/Models/Message";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { FileService } from "./FileService";
 import { NotificationService } from "./NotificationService";
+import { HORIZONTAL_LINE_MD, NEWLINE, ROLE_ASSISTANT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 import {
-	HORIZONTAL_LINE_MD,
-	NEWLINE,
-	ROLE_ASSISTANT,
-	ROLE_IDENTIFIER,
-	ROLE_USER,
-} from "src/Constants";
-import { getHeaderRole, getHeadingPrefix, extractRoleAndMessage as extractRoleAndMessageUtil, escapeRegExp } from "../Utilities/TextHelpers";
-import { findLinksInMessage, splitMessages, removeYAMLFrontMatter, removeCommentBlocks } from "../Utilities/MessageHelpers";
+  escapeRegExp,
+  extractRoleAndMessage as extractRoleAndMessageUtil,
+  getHeaderRole,
+  getHeadingPrefix,
+} from "../Utilities/TextHelpers";
+import {
+  findLinksInMessage,
+  removeCommentBlocks,
+  removeYAMLFrontMatter,
+  splitMessages,
+} from "../Utilities/MessageHelpers";
 
 /**
  * Service responsible for all message-related operations

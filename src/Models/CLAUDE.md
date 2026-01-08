@@ -5,6 +5,7 @@ TypeScript interfaces for settings and configuration.
 ## v3.0.0 Updates
 
 **New Tool Calling Models**: v3.0.0 introduces new models for tool calling:
+
 - `Tool.ts` - Describes executable tools that can be called from prompts
 - `ModelCapabilities.ts` - Tracks which models support tool calling
 - Tool approval and execution types

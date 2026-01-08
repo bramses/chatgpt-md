@@ -7,8 +7,7 @@ import { SettingsService } from "./SettingsService";
 import { FrontmatterManager } from "./FrontmatterManager";
 import { NotificationService } from "./NotificationService";
 import { Message } from "src/Models/Message";
-import { addHorizontalRule, addCommentBlock, moveCursorToEnd } from "src/Utilities/EditorHelpers";
-import { NEWLINE } from "src/Constants";
+import { addCommentBlock, addHorizontalRule, moveCursorToEnd } from "src/Utilities/EditorHelpers";
 
 /**
  * Service responsible for editor operations

@@ -16,11 +16,7 @@ export class ApiService {
   private notificationService: NotificationService;
   private apiAuthService: ApiAuthService;
 
-  constructor(
-    errorService?: ErrorService,
-    notificationService?: NotificationService,
-    apiAuthService?: ApiAuthService
-  ) {
+  constructor(errorService?: ErrorService, notificationService?: NotificationService, apiAuthService?: ApiAuthService) {
     this.notificationService = notificationService || new NotificationService();
     this.errorService = errorService || new ErrorService(this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService();

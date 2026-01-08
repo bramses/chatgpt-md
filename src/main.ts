@@ -2,107 +2,84 @@ import { Plugin } from "obsidian";
 import { ServiceContainer } from "./core/ServiceContainer";
 import { ChatHandler } from "./Commands/ChatHandler";
 import { ModelSelectHandler } from "./Commands/ModelSelectHandler";
-import { AddDividerHandler, AddCommentBlockHandler } from "./Commands/SimpleHandlers";
+import { AddCommentBlockHandler, AddDividerHandler } from "./Commands/SimpleHandlers";
 import { StopStreamingHandler } from "./Commands/StopStreamingHandler";
 import { InferTitleHandler } from "./Commands/InferTitleHandler";
-import { MoveToNewChatHandler, ChooseChatTemplateHandler, ClearChatHandler } from "./Commands/RemainingHandlers";
+import { ChooseChatTemplateHandler, ClearChatHandler, MoveToNewChatHandler } from "./Commands/RemainingHandlers";
+import { CommandRegistrar } from "./Commands/CommandRegistrar";
 
 export default class ChatGPT_MD extends Plugin {
-	private services: ServiceContainer;
-	private modelSelectHandler: ModelSelectHandler;
-	private stopStreamingHandler: StopStreamingHandler;
-	private chatHandler: ChatHandler;
-	private inferTitleHandler: InferTitleHandler;
+  private services: ServiceContainer;
+  private modelSelectHandler: ModelSelectHandler;
+  private stopStreamingHandler: StopStreamingHandler;
+  private chatHandler: ChatHandler;
+  private inferTitleHandler: InferTitleHandler;
 
-	async onload() {
-		// Create service container with all dependencies wired
-		this.services = ServiceContainer.create(this.app, this);
+  async onload() {
+    // Create service container with all dependencies wired
+    this.services = ServiceContainer.create(this.app, this);
 
-		// Get settings service and ensure migrations run first
-		const settingsService = this.services.settingsService;
-		await settingsService.loadSettings();
-		await settingsService.migrateSettings();
+    // Get settings service and ensure migrations run first
+    const settingsService = this.services.settingsService;
+    await settingsService.loadSettings();
+    await settingsService.migrateSettings();
 
-		// Add settings tab after migrations have completed
-		await settingsService.addSettingTab();
+    // Add settings tab after migrations have completed
+    await settingsService.addSettingTab();
 
-		// Create handlers with constructor injection
-		this.stopStreamingHandler = new StopStreamingHandler(this.services);
-		this.chatHandler = new ChatHandler(this.services, this.stopStreamingHandler);
-		this.inferTitleHandler = new InferTitleHandler(this.services, this.stopStreamingHandler);
-		this.modelSelectHandler = new ModelSelectHandler(this.services);
+    // Create handlers with constructor injection
+    this.stopStreamingHandler = new StopStreamingHandler(this.services);
+    this.chatHandler = new ChatHandler(this.services, this.stopStreamingHandler);
+    this.inferTitleHandler = new InferTitleHandler(this.services, this.stopStreamingHandler);
+    this.modelSelectHandler = new ModelSelectHandler(this.services);
 
-		// Register all commands
-		this.registerCommands();
+    // Register all commands
+    this.registerCommands();
 
-		// Initialize available models after registry is created, but don't block startup
-		// Run model initialization in the background
-		this.modelSelectHandler.initializeAvailableModels().catch((error) => {
-			console.error("[ChatGPT MD] Error initializing models in background:", error);
-		});
-	}
+    // Initialize available models after registry is created, but don't block startup
+    // Run model initialization in the background
+    this.modelSelectHandler.initializeAvailableModels().catch((error) => {
+      console.error("[ChatGPT MD] Error initializing models in background:", error);
+    });
+  }
 
-	/**
-	 * Register all plugin commands
-	 */
-	private registerCommands(): void {
-		// Chat command
-		this.addCommand({
-			...ChatHandler.getCommand(),
-			editorCallback: (editor, view) => this.chatHandler.execute(editor, view),
-		});
+  /**
+   * Register all plugin commands
+   */
+  private registerCommands(): void {
+    const registrar = new CommandRegistrar(this);
 
-		// Select model command
-		this.addCommand({
-			...ModelSelectHandler.getCommand(),
-			editorCallback: (editor, view) => this.modelSelectHandler.execute(editor, view),
-		});
+    // Chat command
+    this.addCommand({
+      ...ChatHandler.getCommand(),
+      editorCallback: (editor, view) => this.chatHandler.execute(editor, view),
+    });
 
-		// Add divider command
-		const addDividerHandler = new AddDividerHandler(this.services);
-		this.addCommand({
-			...AddDividerHandler.getCommand(),
-			editorCallback: (editor) => addDividerHandler.execute(editor),
-		});
+    // Select model command
+    this.addCommand({
+      ...ModelSelectHandler.getCommand(),
+      editorCallback: (editor, view) => this.modelSelectHandler.execute(editor, view),
+    });
 
-		// Add comment block command
-		const addCommentBlockHandler = new AddCommentBlockHandler(this.services);
-		this.addCommand({
-			...AddCommentBlockHandler.getCommand(),
-			editorCallback: (editor) => addCommentBlockHandler.execute(editor),
-		});
+    // Add divider command
+    registrar.registerEditorCommand(new AddDividerHandler(this.services));
 
-		// Stop streaming command
-		this.addCommand({
-			...StopStreamingHandler.getCommand(),
-			callback: () => this.stopStreamingHandler.execute(),
-		});
+    // Add comment block command
+    registrar.registerEditorCommand(new AddCommentBlockHandler(this.services));
 
-		// Infer title command
-		this.addCommand({
-			...InferTitleHandler.getCommand(),
-			editorCallback: (editor, view) => this.inferTitleHandler.execute(editor, view),
-		});
+    // Stop streaming command
+    registrar.registerCallbackCommand(this.stopStreamingHandler);
 
-		// Move to new chat command
-		const moveToNewChatHandler = new MoveToNewChatHandler(this.services);
-		this.addCommand({
-			...MoveToNewChatHandler.getCommand(),
-			editorCallback: (editor) => moveToNewChatHandler.execute(editor),
-		});
+    // Infer title command
+    registrar.registerEditorViewCommand(this.inferTitleHandler);
 
-		// Choose chat template command
-		const chooseChatTemplateHandler = new ChooseChatTemplateHandler(this.services);
-		this.addCommand({
-			...ChooseChatTemplateHandler.getCommand(),
-			callback: () => chooseChatTemplateHandler.execute(),
-		});
+    // Move to new chat command
+    registrar.registerEditorCommand(new MoveToNewChatHandler(this.services));
 
-		// Clear chat command
-		const clearChatHandler = new ClearChatHandler(this.services);
-		this.addCommand({
-			...ClearChatHandler.getCommand(),
-			editorCallback: (editor) => clearChatHandler.execute(editor),
-		});
-	}
+    // Choose chat template command
+    registrar.registerCallbackCommand(new ChooseChatTemplateHandler(this.services));
+
+    // Clear chat command
+    registrar.registerEditorCommand(new ClearChatHandler(this.services));
+  }
 }

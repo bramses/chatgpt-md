@@ -51,7 +51,12 @@ export interface IAiApiService {
    * @param settings - Plugin settings
    * @param providerType - Optional provider type (for unified service)
    */
-  fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings, providerType?: string): Promise<string[]>;
+  fetchAvailableModels(
+    url: string,
+    apiKey?: string,
+    settings?: ChatGPT_MDSettings,
+    providerType?: string
+  ): Promise<string[]>;
 }
 
 /**

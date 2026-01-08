@@ -89,16 +89,12 @@ async function fetchModelsFromProvider(provider, apiKey, url) {
           },
         });
         const anthropicData = await anthropicResponse.json();
-        models = anthropicData.data
-          .filter((m) => m.type === "model" && m.id)
-          .map((m) => `anthropic@${m.id}`);
+        models = anthropicData.data.filter((m) => m.type === "model" && m.id).map((m) => `anthropic@${m.id}`);
         break;
 
       case "gemini":
         // Gemini uses a different endpoint
-        const geminiResponse = await fetch(
-          `${url}/v1beta/models?key=${apiKey}`
-        );
+        const geminiResponse = await fetch(`${url}/v1beta/models?key=${apiKey}`);
         const geminiData = await geminiResponse.json();
         models = geminiData.models
           .filter((m) => m.name.includes("gemini"))
@@ -109,12 +105,9 @@ async function fetchModelsFromProvider(provider, apiKey, url) {
         break;
 
       case "openrouter":
-        const openrouterResponse = await fetch(
-          "https://openrouter.ai/api/v1/models",
-          {
-            headers: { Authorization: `Bearer ${apiKey}` },
-          }
-        );
+        const openrouterResponse = await fetch("https://openrouter.ai/api/v1/models", {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
         const openrouterData = await openrouterResponse.json();
         models = openrouterData.data.map((m) => `openrouter@${m.id}`);
         break;
@@ -303,9 +296,7 @@ async function main() {
     for (const provider in results) {
       if (results[provider].errors.length > 0) {
         console.log(`\n   ${provider.toUpperCase()}:`);
-        results[provider].errors.forEach((m) =>
-          console.log(`     - ${m.model}: ${m.error}`)
-        );
+        results[provider].errors.forEach((m) => console.log(`     - ${m.model}: ${m.error}`));
       }
     }
   }

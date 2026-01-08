@@ -1,5 +1,9 @@
 import { Editor, EditorPosition } from "obsidian";
-import { flushBufferedText, calculateCursorAfterInsert, DEFAULT_FLUSH_INTERVAL_MS } from "src/Utilities/StreamingHelpers";
+import {
+  calculateCursorAfterInsert,
+  DEFAULT_FLUSH_INTERVAL_MS,
+  flushBufferedText,
+} from "src/Utilities/StreamingHelpers";
 
 /**
  * StreamingHandler manages text streaming with buffering and cursor positioning
@@ -14,7 +18,12 @@ export class StreamingHandler {
   private flushInterval: number;
   private setAtCursor: boolean;
 
-  constructor(editor: Editor, initialCursor: EditorPosition, setAtCursor: boolean = false, flushInterval: number = DEFAULT_FLUSH_INTERVAL_MS) {
+  constructor(
+    editor: Editor,
+    initialCursor: EditorPosition,
+    setAtCursor: boolean = false,
+    flushInterval: number = DEFAULT_FLUSH_INTERVAL_MS
+  ) {
     this.editor = editor;
     this.currentCursor = initialCursor;
     this.setAtCursor = setAtCursor;

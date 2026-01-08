@@ -214,20 +214,14 @@ async function main() {
     fs.mkdirSync(resultsDir, { recursive: true });
   }
 
-  fs.writeFileSync(
-    path.join(resultsDir, "tool-supported-models.json"),
-    JSON.stringify(toolSupportedModels, null, 2)
-  );
+  fs.writeFileSync(path.join(resultsDir, "tool-supported-models.json"), JSON.stringify(toolSupportedModels, null, 2));
 
   fs.writeFileSync(
     path.join(resultsDir, "tool-unsupported-models.json"),
     JSON.stringify(toolUnsupportedModels, null, 2)
   );
 
-  fs.writeFileSync(
-    path.join(resultsDir, "tool-error-models.json"),
-    JSON.stringify(errorModels, null, 2)
-  );
+  fs.writeFileSync(path.join(resultsDir, "tool-error-models.json"), JSON.stringify(errorModels, null, 2));
 
   console.log(`\n📁 Results saved to: ${resultsDir}`);
 }

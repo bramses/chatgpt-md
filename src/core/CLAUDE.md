@@ -5,6 +5,7 @@ This directory contains the core architectural components of the plugin.
 ## v3.0.0 Updates
 
 **New Tool Calling System**: Core infrastructure now supports AI tool calling with approval workflows:
+
 - `ToolService` - Orchestrates tool calling with approval workflow
 - `ToolRegistry` - Manages available tools and configurations
 - `ToolExecutor` - Executes approved tools with security checks

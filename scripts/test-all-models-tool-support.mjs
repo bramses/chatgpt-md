@@ -223,9 +223,7 @@ async function main() {
     for (const provider in results) {
       if (results[provider].errors.length > 0) {
         console.log(`\n   ${provider.toUpperCase()}:`);
-        results[provider].errors.forEach((m) =>
-          console.log(`     - ${m.model}: ${m.error}`)
-        );
+        results[provider].errors.forEach((m) => console.log(`     - ${m.model}: ${m.error}`));
       }
     }
   }
