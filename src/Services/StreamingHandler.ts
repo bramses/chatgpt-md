@@ -1,11 +1,10 @@
 import { Editor, EditorPosition } from "obsidian";
-
-/** Default interval for flushing buffered text to editor (ms) */
-const DEFAULT_FLUSH_INTERVAL_MS = 50;
+import { flushBufferedText, calculateCursorAfterInsert, DEFAULT_FLUSH_INTERVAL_MS } from "src/Utilities/StreamingHelpers";
 
 /**
  * StreamingHandler manages text streaming with buffering and cursor positioning
  * Handles both direct cursor positioning and insertion at current selection
+ * Now uses utility functions for common operations
  */
 export class StreamingHandler {
   private editor: Editor;
@@ -40,21 +39,12 @@ export class StreamingHandler {
 
   /**
    * Flush buffered text to the editor
+   * Delegates to utility function
    */
   public flush(): void {
     if (this.bufferedText.length === 0) return;
 
-    if (this.setAtCursor) {
-      this.editor.replaceSelection(this.bufferedText);
-    } else {
-      this.editor.replaceRange(this.bufferedText, this.currentCursor);
-      const currentOffset = this.editor.posToOffset(this.currentCursor);
-      const newOffset = currentOffset + this.bufferedText.length;
-      this.currentCursor = this.editor.offsetToPos(newOffset);
-      // Update visible cursor position for real-time feedback
-      this.editor.setCursor(this.currentCursor);
-    }
-
+    this.currentCursor = flushBufferedText(this.editor, this.bufferedText, this.currentCursor, this.setAtCursor);
     this.bufferedText = "";
   }
 
@@ -85,11 +75,10 @@ export class StreamingHandler {
 
   /**
    * Update cursor position after inserting text at a specific position
+   * Delegates to utility function
    */
   public updateCursorAfterInsert(text: string, insertPosition: EditorPosition): void {
-    const offset = this.editor.posToOffset(insertPosition);
-    const newOffset = offset + text.length;
-    this.currentCursor = this.editor.offsetToPos(newOffset);
+    this.currentCursor = calculateCursorAfterInsert(this.editor, text, insertPosition);
   }
 
   /**

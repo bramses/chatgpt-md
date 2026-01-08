@@ -3,7 +3,7 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { ChatTemplatesSuggestModal } from "src/Views/ChatTemplatesSuggestModal";
 import { CHAT_FOLDER_TYPE, CHAT_TEMPLATE_FOLDER_TYPE } from "src/Constants";
 import { FileService } from "./FileService";
-import { EditorContentService } from "./EditorContentService";
+import { EditorService } from "./EditorService";
 
 /**
  * Service responsible for template management
@@ -12,7 +12,7 @@ export class TemplateService {
   constructor(
     private app: App,
     private fileService: FileService,
-    private editorContentService: EditorContentService
+    private editorService: EditorService
   ) {}
 
   /**
@@ -92,7 +92,7 @@ export class TemplateService {
       }
 
       activeView.editor.focus();
-      this.editorContentService.moveCursorToEnd(activeView.editor);
+      this.editorService.moveCursorToEnd(activeView.editor);
     } catch (err) {
       console.error(`[ChatGPT MD] Error in Create new chat with highlighted text`, err);
       new Notice(`[ChatGPT MD] Error in Create new chat with highlighted text, check console`);

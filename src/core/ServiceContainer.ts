@@ -1,6 +1,5 @@
 import { App, Plugin } from "obsidian";
 import { FileService } from "src/Services/FileService";
-import { EditorContentService } from "src/Services/EditorContentService";
 import { MessageService } from "src/Services/MessageService";
 import { TemplateService } from "src/Services/TemplateService";
 import { FrontmatterService } from "src/Services/FrontmatterService";
@@ -46,7 +45,6 @@ export class ServiceContainer {
 	// Content services
 	readonly fileService: FileService;
 	readonly frontmatterManager: FrontmatterManager;
-	readonly editorContentService: EditorContentService;
 	readonly messageService: MessageService;
 	readonly frontmatterService: FrontmatterService;
 	readonly templateService: TemplateService;
@@ -76,7 +74,6 @@ export class ServiceContainer {
 		apiResponseParser: ApiResponseParser,
 		fileService: FileService,
 		frontmatterManager: FrontmatterManager,
-		editorContentService: EditorContentService,
 		messageService: MessageService,
 		frontmatterService: FrontmatterService,
 		templateService: TemplateService,
@@ -99,7 +96,6 @@ export class ServiceContainer {
 		this.apiResponseParser = apiResponseParser;
 		this.fileService = fileService;
 		this.frontmatterManager = frontmatterManager;
-		this.editorContentService = editorContentService;
 		this.messageService = messageService;
 		this.frontmatterService = frontmatterService;
 		this.templateService = templateService;
@@ -134,7 +130,6 @@ export class ServiceContainer {
 		// === Content services ===
 		const fileService = new FileService(app);
 		const frontmatterManager = new FrontmatterManager(app);
-		const editorContentService = new EditorContentService(app);
 		const messageService = new MessageService(fileService, notificationService);
 
 		// === Settings service ===
@@ -142,17 +137,19 @@ export class ServiceContainer {
 
 		// === Frontmatter and template services ===
 		const frontmatterService = new FrontmatterService(app, frontmatterManager);
-		const templateService = new TemplateService(app, fileService, editorContentService);
 
-		// === Editor service (composite) ===
+		// === Editor service (composite, now includes content operations) ===
+		// Create with frontmatterService first, then create templateService
 		const editorService = new EditorService(
 			app,
 			fileService,
-			editorContentService,
 			messageService,
-			templateService,
+			undefined, // templateService - will be set after creation
 			frontmatterService
 		);
+
+		// Now create templateService with the merged editorService
+		const templateService = new TemplateService(app, fileService, editorService);
 
 		// === AI service factory ===
 		// Using a factory function to create new instances when needed
@@ -180,7 +177,6 @@ export class ServiceContainer {
 			apiResponseParser,
 			fileService,
 			frontmatterManager,
-			editorContentService,
 			messageService,
 			frontmatterService,
 			templateService,
