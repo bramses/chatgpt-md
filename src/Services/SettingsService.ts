@@ -7,7 +7,7 @@ import { SettingsMigrationService } from "./SettingsMigration";
 import { FrontmatterManager } from "./FrontmatterManager";
 import { parseSettingsFrontmatter } from "src/Utilities/TextHelpers";
 import { getDefaultConfigForService } from "src/Utilities/FrontmatterHelpers";
-import { aiProviderFromKeys, aiProviderFromUrl } from "./AiService";
+import { aiProviderFromKeys, aiProviderFromUrl } from "src/Utilities/ProviderHelpers";
 import {
 	AI_SERVICE_ANTHROPIC,
 	AI_SERVICE_GEMINI,

@@ -1,7 +1,7 @@
 import { Notice, Platform } from "obsidian";
 import { isValidApiKey } from "src/Services/ApiAuthService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { IAiApiService } from "src/Services/AiService";
+import { IAiApiService } from "src/Types/AiTypes";
 import { FETCH_MODELS_TIMEOUT_MS } from "src/Constants";
 import { getApiUrlsFromFrontmatter } from "src/Utilities/FrontmatterHelpers";
 import {

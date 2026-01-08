@@ -11,6 +11,7 @@ import { StreamingHandler } from "./StreamingHandler";
 import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 import { detectToolSupport } from "./ToolSupportDetector";
 import { insertAssistantHeader } from "src/Utilities/ResponseHelpers";
+import { IAiApiService, AiProvider, StreamingResponse } from "src/Types/AiTypes";
 
 // AI SDK providers
 import { OpenAIProvider, createOpenAI } from "@ai-sdk/openai";
@@ -41,55 +42,6 @@ import {
 	TITLE_INFERENCE_ERROR_HEADER,
 	API_ENDPOINTS,
 } from "src/Constants";
-
-/**
- * Interface defining the contract for AI service implementations
- */
-export interface IAiApiService {
-	callAIAPI(
-		messages: Message[],
-		options: Record<string, any>,
-		headingPrefix: string,
-		url: string,
-		editor?: Editor,
-		setAtCursor?: boolean,
-		apiKey?: string,
-		settings?: ChatGPT_MDSettings,
-		toolService?: ToolService
-	): Promise<{
-		fullString: string;
-		mode: string;
-		wasAborted?: boolean;
-	}>;
-
-	inferTitle(
-		view: MarkdownView,
-		settings: ChatGPT_MDSettings,
-		messages: string[],
-		editorService: EditorService
-	): Promise<string>;
-
-	fetchAvailableModels(url: string, apiKey?: string, settings?: ChatGPT_MDSettings): Promise<string[]>;
-}
-
-/**
- * Type for streaming API response
- */
-export type StreamingResponse = {
-	fullString: string;
-	mode: "streaming";
-	wasAborted?: boolean;
-};
-
-/**
- * Type for all supported AI providers (AI SDK)
- */
-export type AiProvider =
-	| OpenAIProvider
-	| OpenAICompatibleProvider
-	| AnthropicProvider
-	| GoogleGenerativeAIProvider
-	| OpenRouterProvider;
 
 /**
  * Unified AI Provider Service
