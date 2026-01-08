@@ -3,7 +3,7 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { FileService } from "./FileService";
 import { MessageService } from "./MessageService";
 import { TemplateService } from "./TemplateService";
-import { FrontmatterService } from "./FrontmatterService";
+import { SettingsService } from "./SettingsService";
 import { FrontmatterManager } from "./FrontmatterManager";
 import { NotificationService } from "./NotificationService";
 import { Message } from "src/Models/Message";
@@ -19,14 +19,14 @@ export class EditorService {
   private frontmatterManager?: FrontmatterManager;
   private messageService: MessageService;
   private templateService: TemplateService;
-  private frontmatterService: FrontmatterService;
+  private settingsService: SettingsService;
 
   constructor(
     private app: App,
     fileService?: FileService,
     messageService?: MessageService,
     templateService?: TemplateService,
-    frontmatterService?: FrontmatterService
+    settingsService?: SettingsService
   ) {
     // Initialize services if not provided
     this.fileService = fileService || new FileService(app);
@@ -34,11 +34,11 @@ export class EditorService {
     const notificationService = new NotificationService();
     this.messageService = messageService || new MessageService(this.fileService, notificationService);
 
-    // FrontmatterService now requires FrontmatterManager, so it must be provided
-    if (!frontmatterService) {
-      throw new Error("FrontmatterService must be provided as it requires FrontmatterManager dependency");
+    // SettingsService now handles frontmatter operations (merged from FrontmatterService)
+    if (!settingsService) {
+      throw new Error("SettingsService must be provided as it includes frontmatter operations");
     }
-    this.frontmatterService = frontmatterService;
+    this.settingsService = settingsService;
 
     this.templateService = templateService || new TemplateService(app, this.fileService, this);
   }
@@ -137,7 +137,7 @@ export class EditorService {
   // FrontmatterService delegations
 
   async getFrontmatter(view: MarkdownView, settings: ChatGPT_MDSettings, app: App): Promise<any> {
-    return await this.frontmatterService.getFrontmatter(view, settings);
+    return await this.settingsService.getFrontmatter(view);
   }
 
   // ResponseProcessingService delegations
@@ -150,6 +150,6 @@ export class EditorService {
    * Set the model in the front matter of the active file
    */
   async setModel(editor: Editor, modelName: string): Promise<void> {
-    await this.frontmatterService.updateFrontmatterField(editor, "model", modelName);
+    await this.settingsService.updateFrontmatterField(editor, "model", modelName);
   }
 }

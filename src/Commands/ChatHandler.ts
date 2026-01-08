@@ -1,6 +1,7 @@
 import { Editor, MarkdownView, Notice, Platform } from "obsidian";
 import { ServiceContainer } from "src/core/ServiceContainer";
-import { getHeadingPrefix, isTitleTimestampFormat } from "src/Utilities/TextHelpers";
+import { getHeadingPrefix } from "src/Utilities/TextHelpers";
+import { isTitleTimestampFormat } from "src/Utilities/FrontmatterHelpers";
 import {
 	CALL_CHATGPT_API_COMMAND_ID,
 	MIN_AUTO_INFER_MESSAGES,

@@ -10,8 +10,8 @@ import {
 	ROLE_IDENTIFIER,
 	ROLE_USER,
 } from "src/Constants";
-import { getHeaderRole, getHeadingPrefix } from "../Utilities/TextHelpers";
-import { findLinksInMessage, splitMessages, removeYAMLFrontMatter } from "../Utilities/MessageHelpers";
+import { getHeaderRole, getHeadingPrefix, extractRoleAndMessage as extractRoleAndMessageUtil, escapeRegExp } from "../Utilities/TextHelpers";
+import { findLinksInMessage, splitMessages, removeYAMLFrontMatter, removeCommentBlocks } from "../Utilities/MessageHelpers";
 
 /**
  * Service responsible for all message-related operations
@@ -49,59 +49,18 @@ export class MessageService {
 
   /**
    * Remove comments from messages
+   * Delegates to utility function
    */
   removeCommentsFromMessages(message: string): string {
-    try {
-      const commentBlock = /=begin-chatgpt-md-comment[\s\S]*?=end-chatgpt-md-comment/g;
-      return message.replace(commentBlock, "");
-    } catch (err) {
-      this.notificationService.showError("Error removing comments from messages: " + err);
-      return message;
-    }
+    return removeCommentBlocks(message);
   }
 
   /**
    * Extract role and content from a message
+   * Delegates to utility function
    */
   extractRoleAndMessage(message: string): Message {
-    try {
-      if (!message.includes(ROLE_IDENTIFIER)) {
-        return {
-          role: ROLE_USER,
-          content: message,
-        };
-      }
-
-      const [roleSection, ...contentSections] = message.split(ROLE_IDENTIFIER)[1].split("\n");
-      const cleanedRole = this.cleanupRole(roleSection);
-
-      return {
-        role: cleanedRole,
-        content: contentSections.join("\n").trim(),
-      };
-    } catch (error) {
-      this.notificationService.showError("Failed to extract role and message: " + error);
-      return {
-        role: ROLE_USER,
-        content: message,
-      };
-    }
-  }
-
-  /**
-   * Clean up role string to standardized format
-   */
-  private cleanupRole(role: string): string {
-    const trimmedRole = role.trim().toLowerCase();
-    const roles = [ROLE_USER, ROLE_ASSISTANT];
-    const foundRole = roles.find((r) => trimmedRole.includes(r));
-
-    if (foundRole) {
-      return foundRole;
-    }
-
-    this.notificationService.showWarning(`Unknown role: "${role}", defaulting to user`);
-    return ROLE_USER;
+    return extractRoleAndMessageUtil(message);
   }
 
   /**
@@ -142,7 +101,7 @@ export class MessageService {
               content = this.removeYAMLFrontMatter(content) || null;
 
               message = message.replace(
-                new RegExp(this.escapeRegExp(link.link), "g"),
+                new RegExp(escapeRegExp(link.link), "g"),
                 `${NEWLINE}${link.title}${NEWLINE}${content}${NEWLINE}`
               );
             } else {
@@ -264,12 +223,5 @@ export class MessageService {
 
     // Set cursor to end of inserted content
     editor.setCursor(newCursor);
-  }
-
-  /**
-   * Escape special characters in a string for use in a regular expression
-   */
-  private escapeRegExp(string: string): string {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 }

@@ -2,7 +2,6 @@ import { Message } from "src/Models/Message";
 import {
 	HORIZONTAL_LINE_MD,
 	MARKDOWN_LINKS_REGEX,
-	ROLE_IDENTIFIER,
 	ROLE_USER,
 	WIKI_LINKS_REGEX,
 } from "src/Constants";
@@ -13,20 +12,20 @@ import {
  */
 
 /**
- * Extract role and message content from a message string
- * Expected format: "role::message content"
+ * Remove comments from message content
+ * Comment blocks are delimited by =begin-chatgpt-md-comment and =end-chatgpt-md-comment
  */
-export function extractRoleAndMessage(message: string): { role: string; content: string } {
-	const lines = message.split("\n");
-	const firstLine = lines[0];
+export function removeCommentBlocks(message: string): string {
+	const commentStart = "=begin-chatgpt-md-comment";
+	const commentEnd = "=end-chatgpt-md-comment";
 
-	if (firstLine.includes(ROLE_IDENTIFIER)) {
-		const [role, ...contentParts] = firstLine.split(ROLE_IDENTIFIER);
-		const content = contentParts.join(ROLE_IDENTIFIER) + "\n" + lines.slice(1).join("\n");
-		return { role: role.trim(), content: content.trim() };
-	}
+	const startIndex = message.indexOf(commentStart);
+	if (startIndex === -1) return message;
 
-	return { role: ROLE_USER, content: message.trim() };
+	const endIndex = message.indexOf(commentEnd, startIndex);
+	if (endIndex === -1) return message;
+
+	return message.substring(0, startIndex) + message.substring(endIndex + commentEnd.length);
 }
 
 /**
@@ -105,21 +104,4 @@ export function removeYAMLFrontMatter(note: string | undefined): string | undefi
 
 	// Return content after frontmatter
 	return lines.slice(endIndex + 1).join("\n");
-}
-
-/**
- * Remove comment blocks from messages
- * Comment blocks are delimited by =begin-chatgpt-md-comment and =end-chatgpt-md-comment
- */
-export function removeCommentBlocks(message: string): string {
-	const commentStart = "=begin-chatgpt-md-comment";
-	const commentEnd = "=end-chatgpt-md-comment";
-
-	const startIndex = message.indexOf(commentStart);
-	if (startIndex === -1) return message;
-
-	const endIndex = message.indexOf(commentEnd, startIndex);
-	if (endIndex === -1) return message;
-
-	return message.substring(0, startIndex) + message.substring(endIndex + commentEnd.length);
 }

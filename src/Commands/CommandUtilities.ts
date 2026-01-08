@@ -3,6 +3,7 @@ import { isValidApiKey } from "src/Services/ApiAuthService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { IAiApiService } from "src/Services/AiService";
 import { FETCH_MODELS_TIMEOUT_MS } from "src/Constants";
+import { getApiUrlsFromFrontmatter } from "src/Utilities/FrontmatterHelpers";
 import {
 	DEFAULT_OPENAI_CONFIG,
 	DEFAULT_OPENROUTER_CONFIG,
@@ -22,16 +23,10 @@ import {
 
 /**
  * Get the API URLs for all AI services based on frontmatter
+ * Delegates to FrontmatterHelpers utility
  */
 export function getAiApiUrls(frontmatter: any): { [key: string]: string } {
-	return {
-		openai: frontmatter.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
-		openrouter: frontmatter.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
-		ollama: frontmatter.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
-		lmstudio: frontmatter.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
-		anthropic: frontmatter.anthropicUrl || DEFAULT_ANTHROPIC_CONFIG.url,
-		gemini: frontmatter.geminiUrl || DEFAULT_GEMINI_CONFIG.url,
-	};
+	return getApiUrlsFromFrontmatter(frontmatter);
 }
 
 /**

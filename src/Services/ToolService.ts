@@ -1,10 +1,11 @@
 import { App, TFile } from "obsidian";
 import { ToolRegistry } from "./ToolRegistry";
-import { ToolExecutor } from "./ToolExecutor";
+import { NotificationService } from "./NotificationService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { SearchResultsApprovalModal } from "src/Views/SearchResultsApprovalModal";
 import { WebSearchApprovalModal } from "src/Views/WebSearchApprovalModal";
-import { VaultSearchResult, WebSearchResult } from "src/Models/Tool";
+import { ToolApprovalModal } from "src/Views/ToolApprovalModal";
+import { VaultSearchResult, WebSearchResult, ToolApprovalDecision, ToolApprovalRequest, ToolExecutionContext } from "src/Models/Tool";
 
 /**
  * Handler for processing tool results
@@ -20,6 +21,7 @@ type ToolResultHandler = (
 /**
  * Service for orchestrating tool calling with AI SDK
  * Handles manual human-in-the-loop approval for tool calls
+ * Now includes ToolExecutor functionality (merged from ToolExecutor)
  */
 export class ToolService {
   private approvalHandler?: (toolName: string, args: any) => Promise<any>;
@@ -28,13 +30,35 @@ export class ToolService {
   constructor(
     private app: App,
     private toolRegistry: ToolRegistry,
-    private toolExecutor: ToolExecutor
+    private notificationService: NotificationService
   ) {
     this.toolResultHandlers = {
       vault_search: this.handleVaultSearchResult.bind(this),
       file_read: this.handleFileReadResult.bind(this),
       web_search: this.handleWebSearchResult.bind(this),
     };
+  }
+
+  /**
+   * Request approval from user for a tool call
+   * Merged from ToolExecutor
+   */
+  private async requestApproval(request: ToolApprovalRequest): Promise<ToolApprovalDecision> {
+    console.log(`[ChatGPT MD] Requesting approval for tool: ${request.toolName}`);
+
+    const modal = new ToolApprovalModal(this.app, request.toolName, request.args, request.modelName);
+    modal.open();
+
+    const decision = await modal.waitForResult();
+
+    if (!decision.approved) {
+      this.notificationService.showWarning(`Tool execution cancelled: ${request.toolName}`);
+      console.log(`[ChatGPT MD] Tool cancelled by user: ${request.toolName}`);
+    } else {
+      console.log(`[ChatGPT MD] Tool approved by user: ${request.toolName}`);
+    }
+
+    return decision;
   }
 
   /**
@@ -302,7 +326,7 @@ export class ToolService {
       const toolCallId = toolCall.toolCallId || toolCall.id || "unknown";
 
       // Request user approval for this tool call
-      const approved = await this.toolExecutor.requestApproval({
+      const approved = await this.requestApproval({
         toolCallId: toolCallId,
         toolName: toolName,
         args: toolArgs,

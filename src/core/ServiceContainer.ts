@@ -2,7 +2,6 @@ import { App, Plugin } from "obsidian";
 import { FileService } from "src/Services/FileService";
 import { MessageService } from "src/Services/MessageService";
 import { TemplateService } from "src/Services/TemplateService";
-import { FrontmatterService } from "src/Services/FrontmatterService";
 import { FrontmatterManager } from "src/Services/FrontmatterManager";
 import { EditorService } from "src/Services/EditorService";
 import { NotificationService } from "src/Services/NotificationService";
@@ -15,7 +14,6 @@ import { SettingsService } from "src/Services/SettingsService";
 import { VaultTools } from "src/Services/VaultTools";
 import { WebSearchService } from "src/Services/WebSearchService";
 import { ToolRegistry } from "src/Services/ToolRegistry";
-import { ToolExecutor } from "src/Services/ToolExecutor";
 import { ToolService } from "src/Services/ToolService";
 import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
@@ -46,21 +44,19 @@ export class ServiceContainer {
 	readonly fileService: FileService;
 	readonly frontmatterManager: FrontmatterManager;
 	readonly messageService: MessageService;
-	readonly frontmatterService: FrontmatterService;
 	readonly templateService: TemplateService;
 	readonly editorService: EditorService;
 
 	// AI services
 	readonly aiProviderService: () => AiProviderService;
 
-	// Settings
+	// Settings (now includes frontmatter operations)
 	readonly settingsService: SettingsService;
 
 	// Tool services
 	readonly webSearchService: WebSearchService;
 	readonly vaultTools: VaultTools;
 	readonly toolRegistry: ToolRegistry;
-	readonly toolExecutor: ToolExecutor;
 	readonly toolService: ToolService;
 
 	private constructor(
@@ -75,7 +71,6 @@ export class ServiceContainer {
 		fileService: FileService,
 		frontmatterManager: FrontmatterManager,
 		messageService: MessageService,
-		frontmatterService: FrontmatterService,
 		templateService: TemplateService,
 		editorService: EditorService,
 		aiProviderService: () => AiProviderService,
@@ -83,7 +78,6 @@ export class ServiceContainer {
 		webSearchService: WebSearchService,
 		vaultTools: VaultTools,
 		toolRegistry: ToolRegistry,
-		toolExecutor: ToolExecutor,
 		toolService: ToolService
 	) {
 		this.app = app;
@@ -97,7 +91,6 @@ export class ServiceContainer {
 		this.fileService = fileService;
 		this.frontmatterManager = frontmatterManager;
 		this.messageService = messageService;
-		this.frontmatterService = frontmatterService;
 		this.templateService = templateService;
 		this.editorService = editorService;
 		this.aiProviderService = aiProviderService;
@@ -105,7 +98,6 @@ export class ServiceContainer {
 		this.webSearchService = webSearchService;
 		this.vaultTools = vaultTools;
 		this.toolRegistry = toolRegistry;
-		this.toolExecutor = toolExecutor;
 		this.toolService = toolService;
 	}
 
@@ -132,20 +124,17 @@ export class ServiceContainer {
 		const frontmatterManager = new FrontmatterManager(app);
 		const messageService = new MessageService(fileService, notificationService);
 
-		// === Settings service ===
-		const settingsService = new SettingsService(plugin, notificationService, errorService);
-
-		// === Frontmatter and template services ===
-		const frontmatterService = new FrontmatterService(app, frontmatterManager);
+		// === Settings service (now includes frontmatter operations) ===
+		const settingsService = new SettingsService(plugin, frontmatterManager, notificationService, errorService);
 
 		// === Editor service (composite, now includes content operations) ===
-		// Create with frontmatterService first, then create templateService
+		// Create with settingsService (now includes frontmatter operations)
 		const editorService = new EditorService(
 			app,
 			fileService,
 			messageService,
 			undefined, // templateService - will be set after creation
-			frontmatterService
+			settingsService
 		);
 
 		// Now create templateService with the merged editorService
@@ -162,8 +151,7 @@ export class ServiceContainer {
 		const webSearchService = new WebSearchService(notificationService);
 		const vaultTools = new VaultTools(app, fileService);
 		const toolRegistry = new ToolRegistry(app, vaultTools, webSearchService, settingsService);
-		const toolExecutor = new ToolExecutor(app, toolRegistry, notificationService);
-		const toolService = new ToolService(app, toolRegistry, toolExecutor);
+		const toolService = new ToolService(app, toolRegistry, notificationService);
 
 		// === Create container ===
 		return new ServiceContainer(
@@ -178,7 +166,6 @@ export class ServiceContainer {
 			fileService,
 			frontmatterManager,
 			messageService,
-			frontmatterService,
 			templateService,
 			editorService,
 			aiProviderService,
@@ -186,7 +173,6 @@ export class ServiceContainer {
 			webSearchService,
 			vaultTools,
 			toolRegistry,
-			toolExecutor,
 			toolService
 		);
 	}
