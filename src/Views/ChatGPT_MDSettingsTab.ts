@@ -1,12 +1,14 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
-import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
-import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
-import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
-import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
-import { DEFAULT_ANTHROPIC_CONFIG } from "src/Services/AnthropicService";
-import { DEFAULT_GEMINI_CONFIG } from "src/Services/GeminiService";
+import {
+	DEFAULT_OPENAI_CONFIG,
+	DEFAULT_OPENROUTER_CONFIG,
+	DEFAULT_OLLAMA_CONFIG,
+	DEFAULT_LMSTUDIO_CONFIG,
+	DEFAULT_ANTHROPIC_CONFIG,
+	DEFAULT_GEMINI_CONFIG,
+} from "src/Services/DefaultConfigs";
 import { getDefaultToolWhitelist } from "src/Services/ToolSupportDetector";
 
 interface SettingDefinition {

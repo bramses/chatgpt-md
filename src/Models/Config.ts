@@ -1,15 +1,17 @@
-import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import {
-  DEFAULT_DATE_FORMAT,
-  DEFAULT_HEADING_LEVEL,
-  DEFAULT_INFER_TITLE_LANGUAGE,
-  PLUGIN_SYSTEM_MESSAGE,
+	DEFAULT_DATE_FORMAT,
+	DEFAULT_HEADING_LEVEL,
+	DEFAULT_INFER_TITLE_LANGUAGE,
+	PLUGIN_SYSTEM_MESSAGE,
 } from "../Constants";
-import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
-import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
-import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
-import { DEFAULT_ANTHROPIC_CONFIG } from "src/Services/AnthropicService";
-import { DEFAULT_GEMINI_CONFIG } from "src/Services/GeminiService";
+import {
+	DEFAULT_OPENAI_CONFIG,
+	DEFAULT_OPENROUTER_CONFIG,
+	DEFAULT_OLLAMA_CONFIG,
+	DEFAULT_LMSTUDIO_CONFIG,
+	DEFAULT_ANTHROPIC_CONFIG,
+	DEFAULT_GEMINI_CONFIG,
+} from "src/Services/DefaultConfigs";
 import { getDefaultToolWhitelist } from "src/Services/ToolSupportDetector";
 
 /**

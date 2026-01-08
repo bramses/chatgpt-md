@@ -11,21 +11,8 @@ import { ErrorService } from "src/Services/ErrorService";
 import { ApiService } from "src/Services/ApiService";
 import { ApiAuthService } from "src/Services/ApiAuthService";
 import { ApiResponseParser } from "src/Services/ApiResponseParser";
-import { BaseAiService, IAiApiService } from "src/Services/AiService";
-import { OpenAiService } from "src/Services/OpenAiService";
-import { OllamaService } from "src/Services/OllamaService";
-import { OpenRouterService } from "src/Services/OpenRouterService";
-import { LmStudioService } from "src/Services/LmStudioService";
-import { AnthropicService } from "src/Services/AnthropicService";
-import { GeminiService } from "src/Services/GeminiService";
-import {
-  AI_SERVICE_ANTHROPIC,
-  AI_SERVICE_GEMINI,
-  AI_SERVICE_LMSTUDIO,
-  AI_SERVICE_OLLAMA,
-  AI_SERVICE_OPENAI,
-  AI_SERVICE_OPENROUTER,
-} from "src/Constants";
+import { IAiApiService } from "src/Services/AiService";
+import { AiProviderService } from "src/Services/AiProviderService";
 import { SettingsService } from "src/Services/SettingsService";
 import { VaultTools } from "src/Services/VaultTools";
 import { WebSearchService } from "src/Services/WebSearchService";
@@ -33,18 +20,6 @@ import { ToolRegistry } from "src/Services/ToolRegistry";
 import { ToolExecutor } from "src/Services/ToolExecutor";
 import { ToolService } from "src/Services/ToolService";
 import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
-
-/**
- * Registry mapping service types to their constructors
- */
-const AI_SERVICE_REGISTRY: Map<string, new (cache?: ModelCapabilitiesCache) => IAiApiService> = new Map([
-  [AI_SERVICE_OPENAI, OpenAiService],
-  [AI_SERVICE_ANTHROPIC, AnthropicService],
-  [AI_SERVICE_GEMINI, GeminiService],
-  [AI_SERVICE_OLLAMA, OllamaService],
-  [AI_SERVICE_LMSTUDIO, LmStudioService],
-  [AI_SERVICE_OPENROUTER, OpenRouterService],
-] as [string, new (cache?: ModelCapabilitiesCache) => IAiApiService][]);
 
 /**
  * ServiceLocator is responsible for creating and providing access to services
@@ -117,7 +92,7 @@ export class ServiceLocator {
 
     // Set the save settings callback for AI services
     // This allows AI services to persist model capability info
-    BaseAiService.setSaveSettingsCallback(this.settingsService.saveSettings.bind(this.settingsService));
+    AiProviderService.setSaveSettingsCallback(this.settingsService.saveSettings.bind(this.settingsService));
 
     // Initialize web search service
     this.webSearchService = new WebSearchService(this.notificationService);
@@ -130,16 +105,11 @@ export class ServiceLocator {
   }
 
   /**
-   * Get an AI API service based on the service type
+   * Get the unified AI API service
+   * The service determines the provider from the model string (e.g., "openai@gpt-4")
    */
-  getAiApiService(serviceType: string): IAiApiService {
-    const ServiceClass = AI_SERVICE_REGISTRY.get(serviceType);
-
-    if (!ServiceClass) {
-      throw new Error(`Unknown AI service type: ${serviceType}`);
-    }
-
-    return new ServiceClass(this.modelCapabilities);
+  getAiApiService(): IAiApiService {
+    return new AiProviderService(this.modelCapabilities);
   }
 
   // Getters for all services

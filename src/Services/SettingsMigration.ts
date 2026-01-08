@@ -1,9 +1,11 @@
 import { ChatGPT_MDSettings } from "src/Models/Config";
-import { DEFAULT_OPENAI_CONFIG } from "./OpenAiService";
-import { DEFAULT_ANTHROPIC_CONFIG } from "./AnthropicService";
-import { DEFAULT_GEMINI_CONFIG } from "./GeminiService";
-import { DEFAULT_OPENROUTER_CONFIG } from "./OpenRouterService";
-import { DEFAULT_LMSTUDIO_CONFIG } from "./LmStudioService";
+import {
+	DEFAULT_OPENAI_CONFIG,
+	DEFAULT_ANTHROPIC_CONFIG,
+	DEFAULT_GEMINI_CONFIG,
+	DEFAULT_OPENROUTER_CONFIG,
+	DEFAULT_LMSTUDIO_CONFIG,
+} from "./DefaultConfigs";
 import { PLUGIN_SYSTEM_MESSAGE } from "src/Constants";
 
 // Original plugin system message for migration comparison

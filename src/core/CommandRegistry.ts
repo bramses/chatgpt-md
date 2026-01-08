@@ -3,12 +3,14 @@ import { ServiceLocator } from "./ServiceLocator";
 import { SettingsService } from "../Services/SettingsService";
 import { IAiApiService } from "src/Services/AiService";
 import { AiModelSuggestModal } from "src/Views/AiModelSuggestModel";
-import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
-import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
-import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
-import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
-import { DEFAULT_ANTHROPIC_CONFIG } from "src/Services/AnthropicService";
-import { DEFAULT_GEMINI_CONFIG } from "src/Services/GeminiService";
+import {
+	DEFAULT_OPENAI_CONFIG,
+	DEFAULT_OPENROUTER_CONFIG,
+	DEFAULT_OLLAMA_CONFIG,
+	DEFAULT_LMSTUDIO_CONFIG,
+	DEFAULT_ANTHROPIC_CONFIG,
+	DEFAULT_GEMINI_CONFIG,
+} from "src/Services/DefaultConfigs";
 import {
   ADD_COMMENT_BLOCK_COMMAND_ID,
   ADD_HR_COMMAND_ID,
@@ -82,7 +84,7 @@ export class CommandRegistry {
         const settings = this.settingsService.getSettings();
         const frontmatter = await editorService.getFrontmatter(view, settings, this.plugin.app);
 
-        this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
+        this.aiService = this.serviceLocator.getAiApiService();
 
         try {
           // get messages from editor
@@ -335,7 +337,7 @@ export class CommandRegistry {
 
         // get frontmatter
         const frontmatter = await editorService.getFrontmatter(view, settings, this.plugin.app);
-        this.aiService = this.serviceLocator.getAiApiService(frontmatter.aiService);
+        this.aiService = this.serviceLocator.getAiApiService();
 
         // Ensure model is set
         if (!frontmatter.model) {
@@ -480,18 +482,13 @@ export class CommandRegistry {
     try {
       const promises: Promise<string[]>[] = [];
 
-      // Get service instances from service locator
-      const ollamaService = this.serviceLocator.getAiApiService(AI_SERVICE_OLLAMA);
-      const lmstudioService = this.serviceLocator.getAiApiService(AI_SERVICE_LMSTUDIO);
-      const openaiService = this.serviceLocator.getAiApiService(AI_SERVICE_OPENAI);
-      const openrouterService = this.serviceLocator.getAiApiService(AI_SERVICE_OPENROUTER);
-      const anthropicService = this.serviceLocator.getAiApiService(AI_SERVICE_ANTHROPIC);
-      const geminiService = this.serviceLocator.getAiApiService(AI_SERVICE_GEMINI);
+      // Get unified service instance
+      const aiService = this.serviceLocator.getAiApiService();
 
       // Add Ollama promise (always fetched)
       promises.push(
         withTimeout(
-          ollamaService.fetchAvailableModels(urls[AI_SERVICE_OLLAMA], undefined, settings),
+          aiService.fetchAvailableModels(urls[AI_SERVICE_OLLAMA], undefined, settings, "ollama"),
           FETCH_MODELS_TIMEOUT_MS,
           []
         )
@@ -500,7 +497,7 @@ export class CommandRegistry {
       // Add LM Studio promise (always fetched, no API key required)
       promises.push(
         withTimeout(
-          lmstudioService.fetchAvailableModels(urls[AI_SERVICE_LMSTUDIO], undefined, settings),
+          aiService.fetchAvailableModels(urls[AI_SERVICE_LMSTUDIO], undefined, settings, "lmstudio"),
           FETCH_MODELS_TIMEOUT_MS,
           []
         )
@@ -510,7 +507,7 @@ export class CommandRegistry {
       if (isValidApiKey(apiKey)) {
         promises.push(
           withTimeout(
-            openaiService.fetchAvailableModels(urls[AI_SERVICE_OPENAI], apiKey, settings),
+            aiService.fetchAvailableModels(urls[AI_SERVICE_OPENAI], apiKey, settings, "openai"),
             FETCH_MODELS_TIMEOUT_MS,
             []
           )
@@ -521,7 +518,7 @@ export class CommandRegistry {
       if (isValidApiKey(openrouterApiKey)) {
         promises.push(
           withTimeout(
-            openrouterService.fetchAvailableModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey, settings),
+            aiService.fetchAvailableModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey, settings, "openrouter"),
             FETCH_MODELS_TIMEOUT_MS,
             []
           )
@@ -533,7 +530,7 @@ export class CommandRegistry {
       if (isValidApiKey(anthropicApiKey)) {
         promises.push(
           withTimeout(
-            anthropicService.fetchAvailableModels(urls[AI_SERVICE_ANTHROPIC], anthropicApiKey, settings),
+            aiService.fetchAvailableModels(urls[AI_SERVICE_ANTHROPIC], anthropicApiKey, settings, "anthropic"),
             FETCH_MODELS_TIMEOUT_MS,
             []
           )
@@ -545,7 +542,7 @@ export class CommandRegistry {
       if (isValidApiKey(geminiApiKey)) {
         promises.push(
           withTimeout(
-            geminiService.fetchAvailableModels(urls[AI_SERVICE_GEMINI], geminiApiKey, settings),
+            aiService.fetchAvailableModels(urls[AI_SERVICE_GEMINI], geminiApiKey, settings, "gemini"),
             FETCH_MODELS_TIMEOUT_MS,
             []
           )
