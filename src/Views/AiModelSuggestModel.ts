@@ -41,12 +41,13 @@ export class AiModelSuggestModal extends SuggestModal<string> {
 
     container.createEl("span", { text: model });
 
-    // Add tool icon if tool calling is enabled and model supports tools
+    // Enhanced tool indicator badge if tool calling is enabled and model supports tools
     if (this.settings?.enableToolCalling && isModelWhitelisted(model, this.settings.toolEnabledModels)) {
-      const toolIcon = container.createEl("span", { cls: "ai-model-tool-icon" });
-      toolIcon.title = "This model supports tool calling";
-      // Use Obsidian's wrench icon from Lucide
-      setIcon(toolIcon, "wrench");
+      const badge = container.createEl("span", {
+        cls: "ai-model-tool-badge",
+        text: "Tools"
+      });
+      badge.title = "This model supports tool calling (vault search, file read, web search)";
     }
   }
 

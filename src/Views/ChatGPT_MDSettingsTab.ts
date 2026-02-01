@@ -352,9 +352,20 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         id: "toolEnabledModels",
         name: "Tool-Enabled Models",
         description:
-          "Whitelist of models that can use tools. One pattern per line. " +
-          "Date-suffixed versions are matched automatically (e.g., 'o3' matches 'o3-2025-04-16'). " +
-          "Use * suffix for prefix matching. Lines starting with # are comments.",
+          "Whitelist of models that can use tools (vault search, file read, web search).\n\n" +
+          "📝 Pattern Syntax:\n" +
+          "  • Exact match: 'gpt-4o' matches only 'gpt-4o'\n" +
+          "  • Date auto-match: 'gpt-4o' matches 'gpt-4o-2025-04-16'\n" +
+          "  • Wildcard: 'gpt-4*' matches 'gpt-4o', 'gpt-4-turbo', etc.\n\n" +
+          "🔧 Current Coverage:\n" +
+          "  • OpenAI: 36 patterns (GPT-3.5/4/5, o-series)\n" +
+          "  • Anthropic: 9 patterns (Claude 3/3.5/4/4.5)\n" +
+          "  • Gemini: 7 patterns (Flash 2.5/3.0)\n" +
+          "  • OpenRouter: 109 patterns (DeepSeek, Qwen, Mistral, etc.)\n\n" +
+          "💡 Tips:\n" +
+          "  • Use 'Reset to Recommended' to restore tested whitelist\n" +
+          "  • Lines starting with # are comments\n" +
+          "  • One pattern per line or comma-separated",
         type: "textarea",
         placeholder: "gpt-5.2\ngpt-5.2-chat-latest\no3\nclaude-opus-4-5",
         group: "Tool Calling",
@@ -463,8 +474,8 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         }
 
         if (schema.id === "toolEnabledModels") {
-          text.inputEl.style.height = "320px";
-          text.inputEl.style.minHeight = "320px";
+          text.inputEl.style.height = "280px";
+          text.inputEl.style.minHeight = "280px";
         }
 
         return text;

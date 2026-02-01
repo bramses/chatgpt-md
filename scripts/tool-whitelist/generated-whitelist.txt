@@ -1,77 +1,4 @@
-/**
- * Minimal whitelist-based tool support detection
- *
- * Matching rules:
- * - Exact match: "o3" matches "o3"
- * - Date suffix match: "o3" matches "o3-2025-04-16" or "o3-20251101"
- * - Wildcard: "o3*" matches anything starting with "o3"
- */
-
-import { getModelName } from "src/Utilities/ModelFilteringHelper";
-
-/**
- * Check if a model matches any pattern in the whitelist
- */
-export function isModelWhitelisted(modelId: string, whitelist: string): boolean {
-  if (!whitelist || typeof whitelist !== "string") {
-    return false;
-  }
-
-  const modelName = getModelName(modelId);
-  const patterns = whitelist
-    .split(/[,\n]/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith("#"));
-
-  return patterns.some((pattern) => {
-    // Wildcard matching
-    if (pattern.endsWith("*")) {
-      return modelName.startsWith(pattern.slice(0, -1));
-    }
-
-    // Exact match
-    if (modelName === pattern) {
-      return true;
-    }
-
-    // Date suffix match: "o3" matches "o3-20251101" or "o3-2025-04-16"
-    if (modelName.startsWith(pattern)) {
-      const suffix = modelName.slice(pattern.length);
-      // Match -YYYYMMDD or -YYYY-MM-DD
-      return /^-\d{8}$/.test(suffix) || /^-\d{4}-\d{2}-\d{2}$/.test(suffix);
-    }
-
-    return false;
-  });
-}
-
-/**
- * Get the default whitelist value
- *
- * Generated from live API testing on 2026-02-01
- * Models tested: 503 | Tool support confirmed: 194 (38.6%)
- *
- * Pattern matching rules:
- * - Exact match: "o3" matches "o3"
- * - Date suffix match: "o3" matches "o3-2025-04-16" or "o3-20251101"
- * - Wildcard: "gpt-4*" matches anything starting with "gpt-4"
- *
- * For updates, see: scripts/tool-whitelist/README-WHITELIST-MAINTENANCE.md
- */
-export function getDefaultToolWhitelist(): string {
-  return `# Tool-Enabled Models Whitelist
-# Generated: 2026-02-01 from live API testing
-# Models tested: 503 | Tool support confirmed: 194 (38.6%)
-#
-# Pattern Matching:
-#   - Exact match: "o3" matches "o3"
-#   - Date suffix: "o3" matches "o3-2025-04-16" or "o3-20251101"
-#   - Wildcard: "gpt-4*" matches anything starting with "gpt-4"
-#   - Comments: Lines starting with # are ignored
-#
-# Last updated: See scripts/tool-whitelist/README-WHITELIST-MAINTENANCE.md
-
-# OpenAI (36 patterns)
+# OpenAI
 codex-mini-latest
 gpt-3.5-turbo
 gpt-3.5-turbo-0125
@@ -109,7 +36,7 @@ o3-mini
 o3-pro
 o4-mini
 
-# Anthropic (9 patterns)
+# Anthropic
 claude-3-5-haiku
 claude-3-7-sonnet
 claude-3-haiku
@@ -120,7 +47,7 @@ claude-opus-4-5
 claude-sonnet-4
 claude-sonnet-4-5
 
-# Gemini (7 patterns)
+# Gemini
 gemini-2.5-flash
 gemini-2.5-flash-lite-preview-09-2025
 gemini-2.5-flash-preview-09-2025
@@ -129,7 +56,7 @@ gemini-flash-latest
 gemini-flash-lite-latest
 gemini-robotics-er-1.5-preview
 
-# OpenRouter (109 patterns)
+# OpenRouter
 ai21/jamba-mini-1.7
 alibaba/tongyi-deepresearch-30b-a3b
 allenai/olmo-3.1-32b-instruct
@@ -249,5 +176,4 @@ z-ai/glm-4.6
 z-ai/glm-4.6:exacto
 z-ai/glm-4.6v
 z-ai/glm-4.7
-z-ai/glm-4.7-flash`;
-}
+z-ai/glm-4.7-flash
