@@ -2,23 +2,39 @@
 
 All user interface components and modals.
 
-## v3.0.0 Updates
+## Tool Calling Modals
 
-**New Tool Calling Modals**: v3.0.0 introduces new UI components for tool calling:
+### BaseApprovalModal.ts
 
-- `ToolApprovalModal.ts` - Interactive modal for approving tool execution requests
-- `SearchResultsApprovalModal.ts` - Review and filter vault search results
-- `WebSearchApprovalModal.ts` - Review and filter web search results
+**Abstract base class for approval modals**
 
-These modals implement the three-layer approval system:
+Common functionality for all tool approval flows.
 
-1. Tool execution approval
-2. Results review
-3. Selective sharing
+### ToolApprovalModal.ts
 
-See [`planning/code-review/`](planning/code-review/) for detailed analysis.
+**Interactive modal for approving tool execution requests**
 
-## AiModelSuggestModal.ts
+Shown when AI requests to use a tool. User can:
+
+- Approve execution
+- Modify parameters (e.g., search query)
+- Reject the request
+
+### SearchResultsApprovalModal.ts
+
+**Review and filter vault search results**
+
+After vault search executes, user selects which files to share with AI.
+
+### WebSearchApprovalModal.ts
+
+**Review and filter web search results**
+
+After web search executes, user selects which results to share with AI.
+
+## Model Selection
+
+### AiModelSuggestModel.ts
 
 **Model selection modal**
 
@@ -28,37 +44,30 @@ Features:
 
 - Shows all available models from configured services
 - Supports fuzzy search
-- Prefixes models with service name (e.g., `ollama@llama3.2`, `openrouter@anthropic/claude-3.5-sonnet`)
+- Prefixes models with service name (e.g., `ollama@llama3.2`)
 - Updates note frontmatter when model selected
 
 Behavior:
 
-- Opens immediately with cached models (instant UX)
+- Opens immediately with cached models
 - Fetches fresh models in background
 - Refreshes modal if models changed
-- 6 second timeout per service
 
-## ChatTemplatesSuggestModal.ts
+## Templates
+
+### ChatTemplatesSuggestModal.ts
 
 **Template selection modal**
 
 Extends `SuggestModal<TFile>`
 
-Features:
-
-- Lists templates from configured folder (`settings.chatTemplateFolder`)
-- Shows template filenames
+- Lists templates from configured folder
 - Creates new note from selected template
 - Merges template frontmatter with defaults
 
-Flow:
+## Settings
 
-1. User selects template
-2. New note created with timestamp name (or custom)
-3. Template content + frontmatter copied
-4. Note opened in editor
-
-## ChatGPT_MDSettingsTab.ts
+### ChatGPT_MDSettingsTab.ts
 
 **Plugin settings UI**
 
@@ -66,133 +75,64 @@ Extends `PluginSettingTab`
 
 Settings organized in sections:
 
-### API Keys
+**API Keys**: OpenAI, OpenRouter, Anthropic, Gemini
 
-- OpenAI API key
-- OpenRouter API key
-- Anthropic API key
-- Gemini API key
+**Service URLs**: Per-provider base URLs with defaults
 
-### Service URLs
+**Default Models**: Per-provider default model selection
 
-- OpenAI URL (default: `https://api.openai.com`)
-- OpenRouter URL (default: `https://openrouter.ai`)
-- Ollama URL (default: `http://localhost:11434`)
-- LM Studio URL (default: `http://localhost:1234`)
-- Anthropic URL
-- Gemini URL
+**Default Parameters**: Temperature, max_tokens, top_p per provider
 
-### Default Models per Provider
+**Chat Behavior**: Stream toggle, cursor position, auto title inference
 
-- OpenAI default model
-- OpenRouter default model
-- Ollama default model
-- LM Studio default model
-- Anthropic default model
-- Gemini default model
+**Tool Calling**: Enable/disable, Brave API key, custom provider URL
 
-### Default Parameters per Provider
+**Folders**: Chat folder, template folder paths
 
-- Temperature, max_tokens, top_p
-- Presence/frequency penalty (if supported)
+**Formatting**: Date format, heading level, title inference language
 
-### Chat Behavior
+## Utility Modals
 
-- Stream responses (toggle)
-- Generate at cursor vs end of file (toggle)
-- Auto infer title after 4 messages (toggle)
-- Plugin system message (textarea)
-
-### Folders
-
-- Chat folder path (for new chats)
-- Template folder path (for templates)
-
-### Formatting
-
-- Date format (for timestamp chat names)
-- Heading level (1-6, for messages)
-- Title inference language
-
-## FolderCreationModal.ts
+### FolderCreationModal.ts
 
 **Folder creation prompt**
 
-Extends `Modal`
+Asks user to create missing folders when chat/template folder doesn't exist.
 
-Features:
-
-- Asks user to create missing folders
-- Used when chat folder or template folder doesn't exist
-- Validates folder paths
-- Creates folders on confirmation
-
-Used by:
-
-- EditorService when creating new chats
-- TemplateService when accessing templates
-
-## Platform-Specific UI Considerations
-
-### Desktop
-
-- Status bar updates for operations
-- Notice popups for important messages
-- Full modal support
-- Console logging available
-
-### Mobile
-
-- Primarily Notice popups (status bar less visible)
-- Modal support with touch optimization
-- Limited console access
-
-### Implementation Pattern
-
-```typescript
-import { Platform } from "obsidian";
-
-if (Platform.isMobile) {
-  new Notice(`[ChatGPT MD] ${message}`);
-} else {
-  this.updateStatusBar(message);
-}
-```
-
-## Modal Usage Patterns
+## Modal Patterns
 
 ### SuggestModal Pattern
 
-1. Extend `SuggestModal<T>`
-2. Implement `getSuggestions(query)` - Return filtered items
-3. Implement `renderSuggestion(item, el)` - Render item in list
-4. Implement `onChooseSuggestion(item, evt)` - Handle selection
+```typescript
+class MyModal extends SuggestModal<T> {
+  getSuggestions(query: string): T[];
+  renderSuggestion(item: T, el: HTMLElement): void;
+  onChooseSuggestion(item: T, evt: MouseEvent | KeyboardEvent): void;
+}
+```
 
 ### Standard Modal Pattern
 
-1. Extend `Modal`
-2. Implement `onOpen()` - Build UI
-3. Implement `onClose()` - Cleanup
-4. Use `this.contentEl` for content
+```typescript
+class MyModal extends Modal {
+  onOpen(): void; // Build UI
+  onClose(): void; // Cleanup
+}
+```
 
-## Obsidian API Integration
+## Obsidian API Quick Reference
 
-### Editor Manipulation
+**Editor**:
 
-- `editor.getCursor()` - Current cursor position
-- `editor.setCursor(pos)` - Move cursor
-- `editor.replaceRange(text, from, to)` - Insert/replace text
-- `editor.getValue()` - Get all content
-- `editor.lastLine()` - Last line number
+- `editor.getCursor()` / `setCursor(pos)`
+- `editor.replaceRange(text, from, to)`
+- `editor.getValue()` / `getLine(n)`
 
-### File Operations
+**Vault**:
 
-- `app.vault.read(file)` - Read file
-- `app.vault.modify(file, content)` - Update file
-- `app.vault.create(path, content)` - Create file
-- `app.vault.rename(file, newPath)` - Rename file
+- `app.vault.read(file)` / `modify(file, content)`
+- `app.vault.create(path, content)`
 
-### Metadata Cache
+**Metadata**:
 
-- `app.metadataCache.getFileCache(file)` - Get frontmatter
-- Updates automatically when files change
+- `app.metadataCache.getFileCache(file)`

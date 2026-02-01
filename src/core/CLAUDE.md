@@ -1,88 +1,57 @@
 # Core Infrastructure
 
-This directory contains the core architectural components of the plugin.
+This directory contains the core architectural component of the plugin.
 
-## v3.0.0 Updates
+## ServiceContainer.ts
 
-**New Tool Calling System**: Core infrastructure now supports AI tool calling with approval workflows:
+**Simple dependency injection container with readonly service instances.**
 
-- `ToolService` - Orchestrates tool calling with approval workflow
-- `ToolRegistry` - Manages available tools and configurations
-- `ToolExecutor` - Executes approved tools with security checks
-- `ToolSupportDetector` - Whitelist-based tool support detection
+**Design philosophy**: NOT a service locator pattern - services are accessed directly as readonly properties, not through string-based lookups. Uses constructor injection with explicit dependency wiring.
 
-See [`planning/code-review/`](planning/code-review/) for detailed analysis and implementation guidance.
+### Factory Method
 
-## ServiceLocator.ts
+`ServiceContainer.create(app, plugin)` - The ONLY place where service dependencies are defined.
 
-**Central dependency injection container**
+**Service instantiation order** (leaf nodes first):
 
-Creates and manages all service instances:
+1. **Leaf services** (no dependencies):
+   - NotificationService
+   - ErrorService → NotificationService
+   - ApiService → ErrorService, NotificationService
+   - ApiAuthService → NotificationService
 
-- Instantiates services once at plugin load
-- Provides getter methods for all services
-- Factory method `getAiApiService(serviceType)` returns appropriate AI service
+2. **Content services**:
+   - FileService → App
+   - FrontmatterManager → App
+   - MessageService → FileService, NotificationService
 
-**Service instantiation order**:
+3. **Settings service**:
+   - SettingsService → Plugin, FrontmatterManager, NotificationService, ErrorService
 
-1. NotificationService, ErrorService
-2. ApiService, ApiAuthService, ApiResponseParser
-3. FileService, FrontmatterManager, EditorContentService
-4. MessageService, FrontmatterService, TemplateService
-5. EditorService (orchestrates multiple services)
-6. SettingsService
+4. **Editor service** (composite):
+   - EditorService → App, FileService, MessageService, TemplateService, SettingsService
+   - TemplateService → App, FileService, EditorService
 
-**AI service factory**:
-Returns service based on type:
+5. **AI service factory**:
+   - `aiProviderService: () => AiProviderService` - Factory function creating new instances per request
 
-- `AI_SERVICE_OPENAI` → OpenAiService
-- `AI_SERVICE_OLLAMA` → OllamaService
-- `AI_SERVICE_OPENROUTER` → OpenRouterService
-- `AI_SERVICE_LMSTUDIO` → LmStudioService
-- `AI_SERVICE_ANTHROPIC` → AnthropicService
-- `AI_SERVICE_GEMINI` → GeminiService
+6. **Tool services**:
+   - VaultSearchService → App, FileService
+   - WebSearchService → NotificationService
+   - ToolService → App, FileService, NotificationService, Settings, VaultSearchService, WebSearchService
 
-## CommandRegistry.ts
+### Service Access
 
-**Manages all Obsidian commands**
+All services exposed as readonly properties:
 
-### Main Command: Chat
+```typescript
+container.editorService; // Direct access
+container.aiProviderService(); // Factory - creates new instance
+container.toolService; // Direct access
+```
 
-Location: `registerChatCommand()`
+### Key Differences from Old Architecture
 
-Flow:
-
-1. Get EditorService and settings
-2. Parse frontmatter
-3. Extract messages from editor via MessageService
-4. Move cursor if needed
-5. Get appropriate AI service from ServiceLocator
-6. Call AI API with messages + config
-7. Stream response to editor
-8. Optional auto title inference
-
-### Other Commands
-
-- `registerSelectModelCommand()` - Opens model selection modal, fetches fresh models
-- `registerAddDividerCommand()` - Adds `<hr class="__chatgpt_plugin">`
-- `registerAddCommentBlockCommand()` - Inserts comment block
-- `registerStopStreamingCommand()` - Aborts streaming request
-- `registerInferTitleCommand()` - Generate title from conversation
-- `registerMoveToNewChatCommand()` - Create chat from highlighted text
-- `registerChooseChatTemplateCommand()` - Create chat from template
-- `registerClearChatCommand()` - Clear messages, keep frontmatter
-
-### Model Initialization
-
-`initializeAvailableModels()`:
-
-- Runs in background on plugin load (non-blocking)
-- Fetches models from all configured services in parallel
-- 6 second timeout per service
-- Cached for instant model selection modal
-- Refreshed on-demand when modal opens
-
-### Platform Handling
-
-Desktop: Status bar updates
-Mobile: Notice popups
+- **ServiceLocator.ts** → **ServiceContainer.ts**: No longer uses string-based lookups
+- **CommandRegistry.ts** → Moved to `src/Commands/` directory
+- **Individual AI services** → Consolidated into `AiProviderService` with adapter pattern

@@ -2,43 +2,47 @@
 
 All service implementations following single responsibility principle.
 
-## v3.0.0 Updates
+## AI Provider Architecture (Refactored)
 
-**Refactored Tool Calling Services**: Tool services split into focused, composable components:
+### AiProviderService.ts
 
-- `ToolService.ts` (~537 lines) - Pure orchestration: approval workflow, result processing, tool execution
-- `ToolRegistry.ts` (~90 lines) - Tool registration and lookup (from 769-line ToolService)
-- `VaultSearchService.ts` (~175 lines) - Vault operations: searchVault, readFiles
-- `WebSearchService.ts` (~169 lines) - Web search: Brave API, custom endpoints
+**Unified AI provider service using adapter pattern.** Replaces the old `BaseAiService` + 6 individual provider services.
 
-**Benefits:**
+Key responsibilities:
 
-- 30% reduction in ToolService size (769 → 537 lines)
-- Each service under 200 lines with single responsibility
-- Maintains three-layer human-in-the-loop approval workflow
-- Zero breaking changes to public API
-- All services independently testable
-
-All AI services updated to support tool calling with consistent interface.
-
-## Service Architecture
-
-### Base Classes
-
-**BaseAiService** (AiService.ts) - Abstract base for all AI services
-
-Implements `IAiApiService` interface:
-
-- `callAIAPI()` - Main API call method
+- `callAiAPI()` - Main API call method (streaming and non-streaming)
 - `inferTitle()` - Generate title from conversation
+- `fetchAvailableModels()` - Get models from any provider
+- `stopStreaming()` - Abort in-progress streams
 
-Subclasses must implement:
+Uses Vercel AI SDK (`ai` package) with provider factories:
 
-- `serviceType` - Service identifier
-- `getSystemMessageRole()` - Role for system messages
-- `supportsSystemField()` - Whether API supports system field
+- `createOpenAI` - OpenAI
+- `createAnthropic` - Anthropic
+- `createGoogleGenerativeAI` - Gemini
+- `createOpenRouter` - OpenRouter
+- `createOpenAICompatible` - Ollama, LM Studio
 
-Each service has `DEFAULT_*_CONFIG` with defaults for model, temperature, max_tokens, etc.
+### Adapters/ Subdirectory
+
+Provider-specific adapters implementing `ProviderAdapter` interface:
+
+- `BaseProviderAdapter.ts` - Abstract base with common functionality
+- `OpenAIAdapter.ts` - OpenAI API
+- `AnthropicAdapter.ts` - Anthropic API (supports system field)
+- `GeminiAdapter.ts` - Google Gemini API
+- `OllamaAdapter.ts` - Local Ollama (no API key required)
+- `LmStudioAdapter.ts` - Local LM Studio (no API key required)
+- `OpenRouterAdapter.ts` - OpenRouter proxy
+
+Each adapter defines:
+
+- `type` - Provider identifier (e.g., "openai", "ollama")
+- `displayName` - Human-readable name
+- `getDefaultBaseUrl()` - Default API endpoint
+- `getAuthHeaders()` - Authentication headers
+- `fetchModels()` - Model listing implementation
+- `requiresApiKey()` - Whether API key is needed
 
 ## Message Processing
 
@@ -52,13 +56,15 @@ Key methods:
 - `extractRoleAndMessage(message)` - Parse `role::assistant` format
 - `findLinksInMessage(message)` - Find `[[Wiki]]` and `[Markdown](links)`
 - `removeYAMLFrontMatter(note)` - Strip YAML section
-- `removeCommentsFromMessages(message)` - Filter `=begin-chatgpt-md-comment` blocks
+- `removeCommentsFromMessages(message)` - Filter comment blocks
 
-Link detection:
+### StreamingHandler.ts
 
-- Matches `[[Title]]` and `[Text](path)`
-- Skips http:// and https:// URLs
-- Returns unique links only
+**Handles real-time streaming to editor**
+
+- Buffered text insertion for smooth UX
+- Cursor position management
+- Abort handling
 
 ## Editor Operations
 
@@ -66,18 +72,14 @@ Link detection:
 
 **Orchestrates all editor operations**
 
-Dependencies: FileService, EditorContentService, MessageService, TemplateService, FrontmatterService
-
 Main responsibilities:
 
 - `getMessagesFromEditor()` - Extract and parse messages
 - `processResponse()` - Insert AI response into editor
 - `getFrontmatter()` - Get merged frontmatter + settings
-- `moveCursorToEnd()` / cursor positioning
 - `createNewChatFromTemplate()` - Template-based chat creation
 - `createNewChatWithHighlightedText()` - Chat from selection
 - `clearChat()` - Remove messages, keep frontmatter
-- `addHorizontalRule()` - Insert message separator
 
 ## API Layer
 
@@ -85,131 +87,82 @@ Main responsibilities:
 
 **HTTP request handling**
 
-Methods:
-
-- `streamSSE()` - Streaming Server-Sent Events
-- `makeApiRequest()` - Non-streaming requests
-- Uses `requestStream()` on desktop (Node.js http/https)
+- `makeGetRequest()` - Non-streaming GET requests
+- `createFetchAdapter()` - Custom fetch for AI SDK
+- `setAbortController()` / `stopStreaming()` - Stream control
+- Uses `requestStream.ts` on desktop (Node.js http/https)
 - Falls back to `fetch()` on mobile
-
-Handles abort signals and error states.
 
 ### ApiAuthService.ts
 
 **API key management**
 
-`getApiKey(settings, serviceType)` - Returns appropriate key:
-
-- `AI_SERVICE_OPENAI` → settings.apiKey
-- `AI_SERVICE_OPENROUTER` → settings.openrouterApiKey
-- `AI_SERVICE_ANTHROPIC` → settings.anthropicApiKey
-- `AI_SERVICE_GEMINI` → settings.geminiApiKey
-
-`isValidApiKey(apiKey)` - Validates format (not empty/null)
-
-### ApiResponseParser.ts
-
-**Parse API responses**
-
-Handles different formats per service:
-
-- OpenAI: `choices[0].delta.content`
-- Ollama: `message.content`
-- OpenRouter: Similar to OpenAI
-- Anthropic: `content[0].text`
-- Gemini: `candidates[0].content.parts[0].text`
-
-Detects truncation: `finish_reason: 'length'`
-
-### requestStream.ts
-
-**Custom streaming for desktop**
-
-Desktop:
-
-- Dynamic imports: `http`, `https`, `url` modules
-- Creates Node.js HTTP request directly
-- Bypasses CORS restrictions
-- Converts to Web Streams API
-
-Mobile:
-
-- Falls back to `fetch()`
-- Subject to CORS policies
-
-Why: Enables local services (Ollama, LM Studio) on desktop without CORS issues.
+`getApiKey(settings, providerType)` - Returns appropriate key based on provider.
 
 ## Configuration
 
-### FrontmatterService.ts & FrontmatterManager.ts
+### FrontmatterManager.ts
 
 **YAML frontmatter handling**
 
-Responsibilities:
-
 - Parse note frontmatter
 - Merge with global settings (frontmatter takes precedence)
-- Support service-specific URLs: `openaiUrl`, `openrouterUrl`, `ollamaUrl`, `lmstudioUrl`, `anthropicUrl`, `geminiUrl`
-- Extract model and determine AI service from model prefix
+- Support service-specific URLs
 
 Model prefix parsing:
 
-- `ollama@model` → AI_SERVICE_OLLAMA
-- `openrouter@model` → AI_SERVICE_OPENROUTER
-- `lmstudio@model` → AI_SERVICE_LMSTUDIO
-- `anthropic@model` → AI_SERVICE_ANTHROPIC
-- `gemini@model` → AI_SERVICE_GEMINI
-- No prefix → AI_SERVICE_OPENAI (default)
+- `ollama@model` → Ollama
+- `openrouter@model` → OpenRouter
+- `lmstudio@model` → LM Studio
+- `anthropic@model` → Anthropic
+- `gemini@model` → Gemini
+- No prefix → OpenAI (default)
 
 ### SettingsService.ts
 
 **Plugin settings management**
 
-Methods:
-
-- `loadSettings()` - Load from Obsidian data
-- `saveSettings()` - Persist to disk
-- `migrateSettings()` - Uses SettingsMigration.ts
-- `addSettingTab()` - Register UI tab
+- `loadSettings()` / `saveSettings()` - Persistence
+- `migrateSettings()` - Version upgrades via SettingsMigration.ts
 - `getSettings()` - Provide settings to other services
 
-## AI Service Implementations
+### DefaultConfigs.ts
 
-### OpenAiService.ts
+**Default configuration values for each provider**
 
-- Supports OpenAI API (`/v1/chat/completions`)
-- System messages via `role: "system"`
-- Default model: `gpt-5-mini`
+## Tool Services
 
-### OllamaService.ts
+### ToolService.ts
 
-- Local Ollama (`/api/chat`)
-- Default URL: `http://localhost:11434`
-- No API key required
+**Orchestrates tool calling with approval workflow**
 
-### OpenRouterService.ts
+- `getToolsForRequest()` - Get enabled tools for AI request
+- `handleToolCalls()` - Process AI tool call requests
+- `processToolResults()` - Format results for continuation
 
-- OpenRouter proxy (`/api/v1/chat/completions`)
-- Access to multiple providers
-- Requires OpenRouter API key
+### ToolSupportDetector.ts
 
-### LmStudioService.ts
+**Whitelist-based tool support detection**
 
-- Local LM Studio (`/v1/chat/completions`)
-- Default URL: `http://localhost:1234`
-- No API key required
+- `isModelWhitelisted()` - Check if model supports tools
 
-### AnthropicService.ts
+### VaultSearchService.ts
 
-- Direct Anthropic API (`/v1/messages`)
-- Different message format (system field)
-- Requires Anthropic API key
+**Vault operations**
 
-### GeminiService.ts
+- `searchVault()` - Full-text search across vault
+- `readFiles()` - Read specific files
 
-- Google Gemini API
-- Different request/response structure
-- Requires Gemini API key
+### WebSearchService.ts
+
+**Web search via Brave API**
+
+- `search()` - Execute web search
+- Supports custom provider endpoints
+
+### WhitelistValidator.ts
+
+**Model whitelist validation utilities**
 
 ## Utility Services
 
@@ -228,8 +181,7 @@ Methods:
 ### NotificationService.ts
 
 - Show Obsidian notices
-- Error/warning/info messages
-- Platform-aware
+- Platform-aware (Notice vs status bar)
 
 ### ErrorService.ts
 
