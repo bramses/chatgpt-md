@@ -1,45 +1,15 @@
 # ChatGPT MD
 
-🚀 A seamless integration of ChatGPT, OpenRouter.ai and local LLMs via Ollama into Obsidian.
+🚀 A seamless integration of ChatGPT, OpenRouter.ai and local LLMs via Ollama/LM Studio into Obsidian.
 
 ![Chatting with links about vacation plans](images/chat-with-link.gif)
 
-## 🚀 What's New in v3.0.0: Privacy-First AI Tool Calling
+## 🚀 What's New in v3.0.0: Privacy-First AI Tool Calling (off by default - Settings → ChatGPT MD → Tool Calling)
 
-**Your AI assistant can now search your vault, read files, and search the web—with explicit approval at every step.**
+**Your AI assistant can now actively search your vault, read files, and query the web—with a human-in-the-loop architecture that keeps you in control.**
 
-### Key Features
+v3.0.0 introduces a **tool calling system** built on privacy-first principles. When your AI needs information, it requests permission to use tools—you approve execution, review results, and control exactly what gets shared back to the model. Nothing leaves your vault without explicit consent.
 
-- **🔍 Vault Search**: AI discovers relevant notes in your vault (you approve which files to share)
-- **📄 File Reading**: AI can request access to specific files (you select which ones)
-- **🌐 Web Search**: AI searches the web via Brave Search API (1,000 free queries/month)
-- **✅ Three-Layer Approval System**: 
-  1. Approve what the AI wants to do
-  2. Review what it found
-  3. Select exactly which results to share
-- **🔒 Privacy-First Design**: No data reaches the AI without your explicit consent
-- **🎯 All Providers Supported**: OpenAI, Anthropic, Gemini, OpenRouter, Ollama, LM Studio
-- **⚙️ Disabled by Default**: Opt-in feature only—enable in Settings → Tool Calling
-
-### Why This Matters
-
-For privacy-conscious note-takers, this is a game-changer. You get the power of AI with full control over your data. Your vault stays yours.
-
-### Getting Started with Tool Calling
-
-1. **Install the beta**: Use [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) and select version **2.12.0-beta**
-2. **Enable in settings**: Go to Settings → ChatGPT MD → Tool Calling
-3. **Optional**: Add Brave Search API key for web search (1,000 free queries/month)
-4. **Start chatting**: Your AI will ask for approval when it wants to use tools
-
-⚠️ **Beta Warning**: Test on a backup/test vault first. This is a beta release with active development.
-
-### Use Cases
-
-- **Research Assistant**: "Search my vault for notes about quantum computing and find recent papers"
-- **Knowledge Synthesis**: "Find all my Q3 meeting notes and summarize key decisions"
-- **Web-Enhanced Writing**: "Search the web for latest statistics and incorporate them"
-- **Note Discovery**: "Find connections between notes I might have missed"
 
 ## A simple and quick Start 🏁
 Get started in just a few simple steps:
@@ -159,6 +129,77 @@ openaiUrl: https://api.openai.com
 ```
 💡 Pro tip: Increasing `max_tokens` to a higher value e.g. `4096` for more complex tasks like reasoning, coding or text creation.
 The default model `gpt-5-mini` is optimized for speed and efficiency. Upgrade to `gpt-5` for enhanced reasoning capabilities or use `gpt-5-nano` for ultra-lightweight responses.
+
+### Tools
+
+1. **Install**: Update or install v3.0.0+ from Obsidian
+2. **Configure**: Settings → ChatGPT MD → Tool Calling → Enable,
+3. **Optional**: Add [Brave Search API key](https://brave.com/search/api/) (free tier: 1,000 queries/month)
+4. **Chat**: Use the `ChatGPT MD: Chat` command. AI will request tool use when needed.
+
+The implementation follows a three-layer approval pattern:
+
+1. **Execution Layer**: AI requests tool use with parameters
+2. **Processing Layer**: Tool executes locally in your vault using Obsidian's API (full-text search across filenames and content)
+3. **Approval Layer**: Interactive modals let you filter results before they're returned to the AI
+
+### Available Tools
+
+**Vault Search** (`vault_search`)
+- Multi-word OR search: matches ANY query term across your vault
+- Searches both filenames and file content simultaneously
+- Excludes current file to prevent recursion
+- Configurable result limits (default: 5 files)
+- Query editing: refine search terms before execution
+
+**File Read** (`file_read`)
+- Direct file access when AI knows specific file paths
+- Batch reading support for multiple files
+- Full content extraction with your approval
+- Useful for targeted lookups once files are discovered
+
+**Web Search** (`web_search`)
+- Powered by Brave Search API (privacy-focused, 1,000 free queries/month)
+- Custom search provider support for self-hosted endpoints
+- Optional full-page content fetching
+- Automatic API key validation—tool only appears when configured
+- Query editing: modify web search queries before execution
+
+### Privacy & Security
+
+- **Local-First Execution**: All vault operations run entirely within Obsidian's API
+- **Selective Sharing**: Multi-select modals let you choose exactly which results to share
+- **No Telemetry**: Zero tracking or analytics—tool usage stays private
+
+### Configuration
+
+Enable tool calling in **Settings → ChatGPT MD → Tool Calling**:
+
+- **Enable Tool Calling**: Master switch (default: disabled)
+- **Brave Search API Key**: Your Brave Search API key
+- **Custom Provider URL**: Self-hosted search endpoint
+- **Max Web Results**: Number of web results to return (1-10)
+
+### Use Cases
+
+**Research Assistant**: "Search my vault for notes about quantum computing algorithms and recent papers on the topic"
+
+→ AI discovers relevant notes → You approve which files to share → AI synthesizes information with proper attribution
+
+**Knowledge Synthesis**: "Find all my Q3 meeting notes and summarize key decisions about product roadmap"
+
+→ Vault search returns meeting files → You select the relevant ones → AI extracts and summarizes decisions
+
+**Web-Enhanced Writing**: "Search the web for latest climate change statistics and incorporate them into my article"
+
+→ Web search fetches current data → You filter reliable sources → AI integrates citations into your draft
+
+**Cross-Reference Discovery**: "Find notes that mention both machine learning and productivity techniques"
+
+→ Multi-word OR search finds intersections → You approve interesting connections → AI highlights patterns you might have missed
+
+⚠️ **Note**: Tool support depends on model capabilities. Older models may not support function calling. You can check tool capabilities in the tool selection list after enabling tool support in the settings.
+
 
 ### Multi Model Chats
 You can set and change the model for each request in your note. 

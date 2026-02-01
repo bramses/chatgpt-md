@@ -161,6 +161,24 @@ export class ToolService {
   }
 
   /**
+   * Check if web search tool is available based on settings
+   * - Brave provider: requires API key
+   * - Custom provider: requires API URL
+   *
+   * @param settings - Plugin settings containing web search configuration
+   * @returns true if web search is properly configured, false otherwise
+   */
+  private isWebSearchAvailable(settings: ChatGPT_MDSettings): boolean {
+    if (settings.webSearchProvider === "brave") {
+      return !!settings.webSearchApiKey && settings.webSearchApiKey.trim().length > 0;
+    }
+    if (settings.webSearchProvider === "custom") {
+      return !!settings.webSearchApiUrl && settings.webSearchApiUrl.trim().length > 0;
+    }
+    return false;
+  }
+
+  /**
    * Get a specific tool by name
    */
   getTool(name: string): any | undefined {
@@ -180,13 +198,36 @@ export class ToolService {
 
   /**
    * Get tools enabled for a request based on settings
-   * Returns all tools if enableToolCalling is true, undefined otherwise
+   * Filters tools based on configuration requirements:
+   * - vault_search/file_read: always available if tool calling enabled
+   * - web_search: only if API key/URL configured
+   *
+   * @param settings - Plugin settings containing tool and web search configuration
+   * @returns Object containing enabled tools, or undefined if no tools available
    */
   getEnabledTools(settings: ChatGPT_MDSettings): Record<string, any> | undefined {
     if (!settings.enableToolCalling) {
       return undefined;
     }
-    return this.getAllTools();
+
+    const allTools = this.getAllTools();
+    const enabledTools: Record<string, any> = {};
+
+    // Vault tools - always available when tool calling is enabled
+    if (allTools.vault_search) {
+      enabledTools.vault_search = allTools.vault_search;
+    }
+    if (allTools.file_read) {
+      enabledTools.file_read = allTools.file_read;
+    }
+
+    // Web search - only if properly configured
+    if (allTools.web_search && this.isWebSearchAvailable(settings)) {
+      enabledTools.web_search = allTools.web_search;
+    }
+
+    // Return undefined if no tools are enabled (prevents passing empty object to AI SDK)
+    return Object.keys(enabledTools).length > 0 ? enabledTools : undefined;
   }
 
   // ========== Tool Orchestration and Approval ==========

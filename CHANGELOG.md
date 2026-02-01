@@ -1,6 +1,6 @@
 # ChatGPT MD Changelog
 
-## v3.0.0 (December 2025) - Privacy-First AI Tool Calling
+## v3.0.0 - Privacy-First AI Tool Calling
 
 ### 🎯 Major Features
 
@@ -22,6 +22,11 @@
   - Review and filter web results before sharing
   - Custom search provider support for self-hosted solutions
   - Optional full page content fetching
+  - Tool only available to LLM when Brave Search API key is configured
+- **Editable Search Queries**: Users can now edit vault search and web search queries before tool execution
+  - Textarea in tool approval modal for query modification
+  - Real-time validation prevents empty queries
+  - Supports multi-line queries and special characters
 
 ### 🔒 Privacy & Control
 

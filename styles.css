@@ -51,11 +51,14 @@
 
 /* Model suggestion tool badge */
 .ai-model-tool-badge {
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent);
+  background-color: var(--interactive-accent, #7b6cd9);
+  color: var(--text-on-accent, #ffffff);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 11px;
   font-weight: 500;
   flex-shrink: 0;
+  white-space: nowrap;
+  display: inline-block;
+  line-height: 1.4;
 }
