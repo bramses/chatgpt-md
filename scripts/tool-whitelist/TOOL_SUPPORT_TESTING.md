@@ -11,16 +11,18 @@ Comprehensive validation and testing of the default tool whitelist against **act
 ## Available Models Analysis
 
 ### Summary
+
 - **157 total models** available from cloud providers
 - **23 models (14.6%)** matched the whitelist
 - **134 models (85.4%)** not whitelisted
 
 ### By Provider
-| Provider | Whitelisted | Total | Coverage |
-|----------|-------------|-------|----------|
-| OpenAI | 15 | 119 | 12.6% |
-| Anthropic | 3 | 9 | 33.3% |
-| Gemini | 5 | 29 | 17.2% |
+
+| Provider  | Whitelisted | Total | Coverage |
+| --------- | ----------- | ----- | -------- |
+| OpenAI    | 15          | 119   | 12.6%    |
+| Anthropic | 3           | 9     | 33.3%    |
+| Gemini    | 5           | 29    | 17.2%    |
 
 ## Live API Testing Results
 
@@ -51,6 +53,7 @@ All OpenAI whitelisted models **successfully called tools**:
 ### Anthropic Models - 0/3 ⚠️ (Unable to test)
 
 Could not test due to insufficient API credits:
+
 - ⚠️ anthropic@claude-opus-4-5-20251101
 - ⚠️ anthropic@claude-haiku-4-5-20251001
 - ⚠️ anthropic@claude-sonnet-4-5-20250929
@@ -60,12 +63,14 @@ Could not test due to insufficient API credits:
 ### Gemini Models - 4/5 ✅ (80% success)
 
 Tool calling confirmed for:
+
 - ✅ gemini@gemini-2.5-flash
 - ✅ gemini@gemini-flash-latest
 - ✅ gemini@gemini-flash-lite-latest
 - ✅ gemini@gemini-3-flash-preview
 
 Did NOT call tools (but succeeded without error):
+
 - ⚠️ gemini@gemini-2.5-flash-lite
 
 **Analysis**: `gemini-2.5-flash-lite` may not support tools, or the test prompt didn't trigger tool usage. Recommend investigation.
@@ -73,21 +78,25 @@ Did NOT call tools (but succeeded without error):
 ## Whitelist Coverage Analysis
 
 ### Models in Whitelist but NOT Available
+
 None detected - all whitelist patterns matched available models.
 
 ### Available Models NOT in Whitelist
 
 **OpenAI** (104 models not whitelisted):
+
 - Many GPT-4 variants (gpt-4, gpt-4-turbo, gpt-4o, etc.)
 - GPT-3.5 models
 - Older o-series variants
 - Embedding models (not relevant for tool calling)
 
 **Anthropic** (6 models not whitelisted):
+
 - Claude 3.5 variants (claude-3-5-sonnet, etc.)
 - Older Claude 3 models
 
 **Gemini** (24 models not whitelisted):
+
 - gemini-1.5-pro variants
 - gemini-2.0-flash variants
 - Many experimental/preview models
@@ -95,42 +104,52 @@ None detected - all whitelist patterns matched available models.
 ## Recommendations
 
 ### ✅ Keep Current Whitelist
+
 The whitelist is **accurate and conservative**:
+
 - 95% verified success rate (19/20 testable models)
 - Only includes latest/flagship models
 - Matches official documentation
 
 ### 🔍 Investigate gemini-2.5-flash-lite
+
 - Didn't call tools in testing
 - May need removal from whitelist or further investigation
 
 ### 💡 Consider Adding
+
 These models are available and likely support tools:
 
 **OpenAI**:
+
 - `gpt-4o*` - Latest GPT-4 Omni series
 - `gpt-4-turbo*` - GPT-4 Turbo series
 
 **Anthropic**:
+
 - `claude-3-5-*` - Claude 3.5 series (well-documented tool support)
 
 **Gemini**:
+
 - `gemini-1.5-pro*` - Pro series (documented tool support)
 - `gemini-2.0-flash*` - Latest 2.0 Flash series
 
 ## Testing Scripts
 
 ### 1. Pattern Validation (No API calls)
+
 ```bash
 node scripts/validate-tool-whitelist.mjs
 ```
 
 ### 2. Live API Testing (Limited sample)
+
 ```bash
 node scripts/test-available-models.mjs
 ```
 
 ### 3. Full Testing (All whitelisted models)
+
 ```bash
 node scripts/test-available-models.mjs --test-all
 ```
@@ -144,6 +163,7 @@ node scripts/test-available-models.mjs --test-all
 ## Conclusion
 
 **The default whitelist is well-configured and conservative**:
+
 - ✅ 95% verified success rate with live API testing
 - ✅ All patterns match available models
 - ✅ Focuses on latest/flagship models with documented tool support

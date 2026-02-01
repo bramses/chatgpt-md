@@ -21,29 +21,27 @@
  *   scripts/generated-whitelist.txt (or custom path)
  */
 
-import { readFileSync, writeFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, writeFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Parse command line arguments
 const args = process.argv.slice(2);
-const minRateIndex = args.indexOf('--min-success-rate');
+const minRateIndex = args.indexOf("--min-success-rate");
 const MIN_SUCCESS_RATE = minRateIndex !== -1 ? parseFloat(args[minRateIndex + 1]) : 1.0;
-const outputIndex = args.indexOf('--output');
-const OUTPUT_PATH = outputIndex !== -1
-  ? args[outputIndex + 1]
-  : join(__dirname, 'generated-whitelist.txt');
+const outputIndex = args.indexOf("--output");
+const OUTPUT_PATH = outputIndex !== -1 ? args[outputIndex + 1] : join(__dirname, "generated-whitelist.txt");
 
 // Load test results
 function loadTestResults() {
   try {
-    const resultsPath = join(__dirname, 'tool-test-results.json');
-    return JSON.parse(readFileSync(resultsPath, 'utf8'));
+    const resultsPath = join(__dirname, "tool-test-results.json");
+    return JSON.parse(readFileSync(resultsPath, "utf8"));
   } catch (error) {
-    console.error('❌ Error loading tool-test-results.json:', error.message);
-    console.error('   Run test-models-tools.mjs first');
+    console.error("❌ Error loading tool-test-results.json:", error.message);
+    console.error("   Run test-models-tools.mjs first");
     process.exit(1);
   }
 }
@@ -53,8 +51,8 @@ const testResults = loadTestResults();
 // Group models by base pattern
 function getBasePattern(modelId) {
   // Remove date suffixes
-  let base = modelId.replace(/-\d{8}$/, '');          // -YYYYMMDD
-  base = base.replace(/-\d{4}-\d{2}-\d{2}$/, '');    // -YYYY-MM-DD
+  let base = modelId.replace(/-\d{8}$/, ""); // -YYYYMMDD
+  base = base.replace(/-\d{4}-\d{2}-\d{2}$/, ""); // -YYYY-MM-DD
 
   // For versioned models, keep the version
   // e.g., "gpt-5.2" stays "gpt-5.2"
@@ -106,10 +104,10 @@ function generateWhitelist(groups) {
 
   // Provider display names and order
   const providerConfig = {
-    openai: { name: 'OpenAI', order: 1 },
-    anthropic: { name: 'Anthropic', order: 2 },
-    gemini: { name: 'Gemini', order: 3 },
-    openrouter: { name: 'OpenRouter', order: 4 },
+    openai: { name: "OpenAI", order: 1 },
+    anthropic: { name: "Anthropic", order: 2 },
+    gemini: { name: "Gemini", order: 3 },
+    openrouter: { name: "OpenRouter", order: 4 },
   };
 
   // Sort providers
@@ -143,16 +141,16 @@ function generateWhitelist(groups) {
     }
 
     stats.byProvider[provider] = providerCount;
-    lines.push(''); // Empty line after each provider
+    lines.push(""); // Empty line after each provider
   }
 
-  return { content: lines.join('\n'), stats };
+  return { content: lines.join("\n"), stats };
 }
 
 // Main
 function main() {
-  console.log('📝 Generating Tool Whitelist\n');
-  console.log('='.repeat(80));
+  console.log("📝 Generating Tool Whitelist\n");
+  console.log("=".repeat(80));
   console.log();
 
   console.log(`Configuration:`);
@@ -161,7 +159,7 @@ function main() {
   console.log();
 
   // Filter models that support tools
-  const toolSupportingModels = testResults.models.filter(m => m.supportsTools);
+  const toolSupportingModels = testResults.models.filter((m) => m.supportsTools);
 
   console.log(`Source data:`);
   console.log(`  Total models tested: ${testResults.summary.totalTested}`);
@@ -177,8 +175,8 @@ function main() {
   // Write to file
   writeFileSync(OUTPUT_PATH, content);
 
-  console.log('='.repeat(80));
-  console.log('\n📊 GENERATED WHITELIST\n');
+  console.log("=".repeat(80));
+  console.log("\n📊 GENERATED WHITELIST\n");
   console.log(`Total patterns: ${stats.totalPatterns}`);
   Object.entries(stats.byProvider).forEach(([provider, count]) => {
     console.log(`  ${provider}: ${count} patterns`);
@@ -187,61 +185,61 @@ function main() {
   console.log(`\n✅ Whitelist written to: ${OUTPUT_PATH}\n`);
 
   // Show preview
-  console.log('Preview (first 20 lines):');
-  console.log('-'.repeat(80));
-  console.log(content.split('\n').slice(0, 20).join('\n'));
-  if (content.split('\n').length > 20) {
-    console.log('...');
+  console.log("Preview (first 20 lines):");
+  console.log("-".repeat(80));
+  console.log(content.split("\n").slice(0, 20).join("\n"));
+  if (content.split("\n").length > 20) {
+    console.log("...");
   }
-  console.log('-'.repeat(80));
+  console.log("-".repeat(80));
   console.log();
 
   // Show comparison with current whitelist
   try {
-    const currentWhitelist = readFileSync(
-      join(__dirname, '..', 'src', 'Services', 'ToolSupportDetector.ts'),
-      'utf8'
-    );
-    const currentPatterns = currentWhitelist
-      .match(/return `([^`]+)`/s)?.[1]
-      ?.split(/[,\n]/)
-      .map(l => l.trim())
-      .filter(l => l && !l.startsWith('#')) || [];
+    const currentWhitelist = readFileSync(join(__dirname, "..", "src", "Services", "ToolSupportDetector.ts"), "utf8");
+    const currentPatterns =
+      currentWhitelist
+        .match(/return `([^`]+)`/s)?.[1]
+        ?.split(/[,\n]/)
+        .map((l) => l.trim())
+        .filter((l) => l && !l.startsWith("#")) || [];
 
     const newPatterns = content
       .split(/[,\n]/)
-      .map(l => l.trim())
-      .filter(l => l && !l.startsWith('#'));
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith("#"));
 
-    console.log('📊 COMPARISON WITH CURRENT WHITELIST\n');
+    console.log("📊 COMPARISON WITH CURRENT WHITELIST\n");
     console.log(`Current: ${currentPatterns.length} patterns`);
     console.log(`Generated: ${newPatterns.length} patterns`);
-    console.log(`Difference: ${newPatterns.length - currentPatterns.length > 0 ? '+' : ''}${newPatterns.length - currentPatterns.length}`);
+    console.log(
+      `Difference: ${newPatterns.length - currentPatterns.length > 0 ? "+" : ""}${newPatterns.length - currentPatterns.length}`
+    );
     console.log();
 
     // Find new patterns
-    const newOnes = newPatterns.filter(p => !currentPatterns.includes(p));
+    const newOnes = newPatterns.filter((p) => !currentPatterns.includes(p));
     if (newOnes.length > 0) {
       console.log(`New patterns (${newOnes.length}):`);
-      newOnes.forEach(p => console.log(`  + ${p}`));
+      newOnes.forEach((p) => console.log(`  + ${p}`));
       console.log();
     }
 
     // Find removed patterns
-    const removed = currentPatterns.filter(p => !newPatterns.includes(p));
+    const removed = currentPatterns.filter((p) => !newPatterns.includes(p));
     if (removed.length > 0) {
       console.log(`Removed patterns (${removed.length}):`);
-      removed.forEach(p => console.log(`  - ${p}`));
+      removed.forEach((p) => console.log(`  - ${p}`));
       console.log();
     }
   } catch (error) {
     // Ignore if can't read current whitelist
   }
 
-  console.log('💡 NEXT STEPS:\n');
-  console.log('1. Review the generated whitelist');
-  console.log('2. Update src/Services/ToolSupportDetector.ts:getDefaultToolWhitelist()');
-  console.log('3. Update src/Models/Config.ts:DEFAULT_SETTINGS.toolEnabledModels');
+  console.log("💡 NEXT STEPS:\n");
+  console.log("1. Review the generated whitelist");
+  console.log("2. Update src/Services/ToolSupportDetector.ts:getDefaultToolWhitelist()");
+  console.log("3. Update src/Models/Config.ts:DEFAULT_SETTINGS.toolEnabledModels");
   console.log();
 }
 

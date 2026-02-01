@@ -4,7 +4,7 @@ import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
 import { requestStream } from "./requestStream";
 import { parseNonStreamingResponse } from "src/Utilities/ResponseHelpers";
-import { validateUrl, validateNonEmpty } from "src/Utilities/InputValidator";
+import { validateNonEmpty, validateUrl } from "src/Utilities/InputValidator";
 
 /**
  * ApiService handles all API communication for the application

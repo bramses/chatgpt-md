@@ -37,10 +37,7 @@ export async function executeAsync<T>(
  * @param label - Label for logging purposes
  * @returns Promise that resolves to the result or throws the error
  */
-export async function executeAsyncWithLogging<T>(
-  asyncFn: AsyncFunction<T>,
-  label: string
-): Promise<T> {
+export async function executeAsyncWithLogging<T>(asyncFn: AsyncFunction<T>, label: string): Promise<T> {
   try {
     return await asyncFn();
   } catch (error) {
@@ -87,9 +84,7 @@ export function executeAsyncWithTimeout<T>(
 ): Promise<T> {
   return Promise.race([
     asyncFn(),
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(timeoutError)), timeoutMs)
-    ),
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(timeoutError)), timeoutMs)),
   ]);
 }
 
@@ -134,10 +129,7 @@ export async function executeAsyncWithRetry<T>(
  * @param fallback - Fallback value if the function fails (optional)
  * @returns Promise that always resolves (never rejects)
  */
-export function createSafeAsync<T>(
-  asyncFn: AsyncFunction<T>,
-  fallback?: T
-): AsyncFunction<T | undefined> {
+export function createSafeAsync<T>(asyncFn: AsyncFunction<T>, fallback?: T): AsyncFunction<T | undefined> {
   return async () => {
     try {
       return await asyncFn();

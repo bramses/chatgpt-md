@@ -32,15 +32,9 @@ export class WebSearchService {
    * @param limit - Maximum number of results (capped at MAX_WEB_RESULTS)
    * @returns Array of web search results
    */
-  private async searchBrave(
-    query: string,
-    apiKey: string,
-    limit: number = 5
-  ): Promise<WebSearchResult[]> {
+  private async searchBrave(query: string, apiKey: string, limit: number = 5): Promise<WebSearchResult[]> {
     try {
-      const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(
-        query
-      )}&count=${limit}`;
+      const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${limit}`;
 
       const response = await requestUrl({
         url,
@@ -109,9 +103,7 @@ export class WebSearchService {
       );
     } catch (error) {
       console.error("[ChatGPT MD] Custom search error:", error);
-      this.notificationService.showWarning(
-        "Custom web search failed. Check your endpoint configuration."
-      );
+      this.notificationService.showWarning("Custom web search failed. Check your endpoint configuration.");
       return [];
     }
   }
@@ -143,26 +135,20 @@ export class WebSearchService {
     switch (provider) {
       case "brave":
         if (!apiKey) {
-          this.notificationService.showWarning(
-            "Brave Search requires an API key. Please configure in settings."
-          );
+          this.notificationService.showWarning("Brave Search requires an API key. Please configure in settings.");
           return [];
         }
         return this.searchBrave(query, apiKey, maxLimit);
 
       case "custom":
         if (!customUrl) {
-          this.notificationService.showWarning(
-            "Custom search requires an API URL. Please configure in settings."
-          );
+          this.notificationService.showWarning("Custom search requires an API URL. Please configure in settings.");
           return [];
         }
         return this.searchCustom(query, customUrl, apiKey, maxLimit);
 
       default:
-        this.notificationService.showWarning(
-          "Unknown search provider. Please configure in settings."
-        );
+        this.notificationService.showWarning("Unknown search provider. Please configure in settings.");
         return [];
     }
   }

@@ -1,4 +1,4 @@
-import { App, Editor, Notice, setIcon, SuggestModal } from "obsidian";
+import { App, Editor, Notice, SuggestModal } from "obsidian";
 import { EditorService } from "../Services/EditorService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { isModelWhitelisted } from "src/Services/ToolSupportDetector";
@@ -45,7 +45,7 @@ export class AiModelSuggestModal extends SuggestModal<string> {
     if (this.settings?.enableToolCalling && isModelWhitelisted(model, this.settings.toolEnabledModels)) {
       const badge = container.createEl("span", {
         cls: "ai-model-tool-badge",
-        text: "Tools"
+        text: "Tools",
       });
       badge.title = "This model supports tool calling (vault search, file read, web search)";
     }

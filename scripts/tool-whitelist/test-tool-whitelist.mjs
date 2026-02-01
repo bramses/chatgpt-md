@@ -13,30 +13,30 @@
  *   node scripts/test-tool-whitelist.mjs
  */
 
-import { createOpenAI } from '@ai-sdk/openai';
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { generateText, tool, zodSchema } from 'ai';
-import { z } from 'zod';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { generateText, tool, zodSchema } from "ai";
+import { z } from "zod";
+import { readFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Load API keys from data.json
 function loadApiKeys() {
   try {
-    const dataPath = join(__dirname, '..', 'data.json');
-    const data = JSON.parse(readFileSync(dataPath, 'utf8'));
+    const dataPath = join(__dirname, "..", "data.json");
+    const data = JSON.parse(readFileSync(dataPath, "utf8"));
     return {
       openai: data.apiKey,
       anthropic: data.anthropicApiKey,
       gemini: data.geminiApiKey,
     };
   } catch (error) {
-    console.error('❌ Error loading data.json:', error.message);
-    console.error('   Make sure data.json exists in the plugin root directory');
+    console.error("❌ Error loading data.json:", error.message);
+    console.error("   Make sure data.json exists in the plugin root directory");
     process.exit(1);
   }
 }
@@ -72,42 +72,42 @@ gemini-3-flash-preview`;
 function parseWhitelist(whitelist) {
   return whitelist
     .split(/[,\n]/)
-    .map(line => line.trim())
-    .filter(line => line.length > 0 && !line.startsWith('#'));
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"));
 }
 
 // Determine provider from model name
 function getProvider(modelPattern) {
-  if (modelPattern.startsWith('gpt-') || modelPattern.startsWith('o')) {
-    return 'openai';
+  if (modelPattern.startsWith("gpt-") || modelPattern.startsWith("o")) {
+    return "openai";
   }
-  if (modelPattern.startsWith('claude-')) {
-    return 'anthropic';
+  if (modelPattern.startsWith("claude-")) {
+    return "anthropic";
   }
-  if (modelPattern.startsWith('gemini-')) {
-    return 'gemini';
+  if (modelPattern.startsWith("gemini-")) {
+    return "gemini";
   }
-  return 'unknown';
+  return "unknown";
 }
 
 // Create provider instance
 function createProvider(providerType) {
   switch (providerType) {
-    case 'openai':
+    case "openai":
       if (!API_KEYS.openai) {
-        throw new Error('OpenAI API key not found in data.json');
+        throw new Error("OpenAI API key not found in data.json");
       }
       return createOpenAI({ apiKey: API_KEYS.openai });
 
-    case 'anthropic':
+    case "anthropic":
       if (!API_KEYS.anthropic) {
-        throw new Error('Anthropic API key not found in data.json');
+        throw new Error("Anthropic API key not found in data.json");
       }
       return createAnthropic({ apiKey: API_KEYS.anthropic });
 
-    case 'gemini':
+    case "gemini":
       if (!API_KEYS.gemini) {
-        throw new Error('Gemini API key not found in data.json');
+        throw new Error("Gemini API key not found in data.json");
       }
       return createGoogleGenerativeAI({ apiKey: API_KEYS.gemini });
 
@@ -118,7 +118,7 @@ function createProvider(providerType) {
 
 // Simple test tool matching plugin's schema format
 const testTool = tool({
-  description: 'Get the current time. Returns the current time in ISO format.',
+  description: "Get the current time. Returns the current time in ISO format.",
   inputSchema: zodSchema(
     z.object({
       timezone: z.string().optional().describe('Optional timezone (e.g., "UTC", "America/New_York")'),
@@ -128,7 +128,7 @@ const testTool = tool({
     const now = new Date();
     return {
       time: now.toISOString(),
-      timezone: args.timezone || 'UTC',
+      timezone: args.timezone || "UTC",
       unix: now.getTime(),
     };
   },
@@ -138,12 +138,12 @@ const testTool = tool({
 async function testModel(modelPattern) {
   const providerType = getProvider(modelPattern);
 
-  if (providerType === 'unknown') {
+  if (providerType === "unknown") {
     return {
       model: modelPattern,
       provider: providerType,
-      status: 'skipped',
-      error: 'Unknown provider',
+      status: "skipped",
+      error: "Unknown provider",
     };
   }
 
@@ -154,9 +154,7 @@ async function testModel(modelPattern) {
     // Make a minimal request with tool
     const result = await generateText({
       model,
-      messages: [
-        { role: 'user', content: 'What time is it?' }
-      ],
+      messages: [{ role: "user", content: "What time is it?" }],
       tools: {
         get_time: testTool,
       },
@@ -169,15 +167,15 @@ async function testModel(modelPattern) {
     return {
       model: modelPattern,
       provider: providerType,
-      status: 'success',
+      status: "success",
       toolCalled: toolWasCalled,
-      text: result.text?.slice(0, 100) || '',
+      text: result.text?.slice(0, 100) || "",
     };
   } catch (error) {
     return {
       model: modelPattern,
       provider: providerType,
-      status: 'error',
+      status: "error",
       error: error.message,
       errorCode: error.code,
     };
@@ -186,8 +184,8 @@ async function testModel(modelPattern) {
 
 // Main test runner
 async function main() {
-  console.log('🧪 Testing Tool Support for Whitelisted Models\n');
-  console.log('='.repeat(80));
+  console.log("🧪 Testing Tool Support for Whitelisted Models\n");
+  console.log("=".repeat(80));
   console.log();
 
   const models = parseWhitelist(DEFAULT_WHITELIST);
@@ -202,13 +200,13 @@ async function main() {
       const result = await testModel(modelPattern);
       results.push(result);
 
-      if (result.status === 'success') {
+      if (result.status === "success") {
         if (result.toolCalled) {
-          console.log('✅ TOOL CALLED');
+          console.log("✅ TOOL CALLED");
         } else {
-          console.log('⚠️  NO TOOL CALL (but no error)');
+          console.log("⚠️  NO TOOL CALL (but no error)");
         }
-      } else if (result.status === 'skipped') {
+      } else if (result.status === "skipped") {
         console.log(`⏭️  SKIPPED (${result.error})`);
       } else {
         console.log(`❌ ERROR: ${result.error}`);
@@ -217,19 +215,19 @@ async function main() {
       console.log(`❌ UNEXPECTED ERROR: ${err.message}`);
       results.push({
         model: modelPattern,
-        status: 'error',
+        status: "error",
         error: err.message,
       });
     }
 
     // Small delay to avoid rate limits
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
   // Print summary
   console.log();
-  console.log('='.repeat(80));
-  console.log('\n📊 SUMMARY\n');
+  console.log("=".repeat(80));
+  console.log("\n📊 SUMMARY\n");
 
   const byStatus = results.reduce((acc, r) => {
     acc[r.status] = (acc[r.status] || 0) + 1;
@@ -241,14 +239,14 @@ async function main() {
   console.log(`  ❌ Errors: ${byStatus.error || 0}`);
   console.log(`  ⏭️  Skipped: ${byStatus.skipped || 0}`);
 
-  const toolCalled = results.filter(r => r.toolCalled).length;
+  const toolCalled = results.filter((r) => r.toolCalled).length;
   console.log(`  🔧 Tool called: ${toolCalled}`);
 
   // Show errors
-  const errors = results.filter(r => r.status === 'error');
+  const errors = results.filter((r) => r.status === "error");
   if (errors.length > 0) {
-    console.log('\n⚠️  MODELS WITH ERRORS:\n');
-    errors.forEach(e => {
+    console.log("\n⚠️  MODELS WITH ERRORS:\n");
+    errors.forEach((e) => {
       console.log(`  ${e.model} (${e.provider}): ${e.error}`);
       if (e.errorCode) {
         console.log(`    Code: ${e.errorCode}`);
@@ -257,10 +255,10 @@ async function main() {
   }
 
   // Show models that didn't call tools
-  const noToolCall = results.filter(r => r.status === 'success' && !r.toolCalled);
+  const noToolCall = results.filter((r) => r.status === "success" && !r.toolCalled);
   if (noToolCall.length > 0) {
-    console.log('\n⚠️  MODELS THAT DID NOT CALL TOOLS:\n');
-    noToolCall.forEach(m => {
+    console.log("\n⚠️  MODELS THAT DID NOT CALL TOOLS:\n");
+    noToolCall.forEach((m) => {
       console.log(`  ${m.model} (${m.provider})`);
       if (m.text) {
         console.log(`    Response: ${m.text}`);
@@ -271,7 +269,7 @@ async function main() {
   console.log();
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err);
+main().catch((err) => {
+  console.error("Fatal error:", err);
   process.exit(1);
 });

@@ -12,6 +12,7 @@ All service implementations following single responsibility principle.
 - `WebSearchService.ts` (~169 lines) - Web search: Brave API, custom endpoints
 
 **Benefits:**
+
 - 30% reduction in ToolService size (769 → 537 lines)
 - Each service under 200 lines with single responsibility
 - Maintains three-layer human-in-the-loop approval workflow

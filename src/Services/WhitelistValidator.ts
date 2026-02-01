@@ -38,10 +38,7 @@ export interface UnmatchedModelDetail {
  * @param whitelist - The whitelist patterns to match against
  * @returns Validation result with statistics and suggestions
  */
-export function validateWhitelist(
-  configuredModels: string[],
-  whitelist: string
-): WhitelistValidationResult {
+export function validateWhitelist(configuredModels: string[], whitelist: string): WhitelistValidationResult {
   const matchedModelIds: string[] = [];
   const unmatchedModelDetails: UnmatchedModelDetail[] = [];
 
@@ -145,7 +142,9 @@ export function formatValidationResult(result: WhitelistValidationResult): strin
   const lines: string[] = [];
 
   lines.push(`Tool Support Summary:`);
-  lines.push(`  ${result.matchedModels} of ${result.totalModels} models support tools (${result.matchRate.toFixed(0)}%)`);
+  lines.push(
+    `  ${result.matchedModels} of ${result.totalModels} models support tools (${result.matchRate.toFixed(0)}%)`
+  );
 
   if (result.unmatchedModelDetails.length > 0) {
     lines.push(``);

@@ -31,8 +31,7 @@ export const ErrorMessages = {
   VALIDATION: {
     REQUIRED_FIELD: (field: string) => `${field} is required`,
     INVALID_URL: (url: string) => `Invalid URL: ${url}`,
-    INVALID_FORMAT: (field: string, format: string) =>
-      `Invalid ${field} format. Expected: ${format}`,
+    INVALID_FORMAT: (field: string, format: string) => `Invalid ${field} format. Expected: ${format}`,
     EMPTY_CONTENT: "Content cannot be empty",
   },
   SETTINGS: {

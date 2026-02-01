@@ -1,6 +1,6 @@
 import { NotificationService } from "./NotificationService";
 import { ERROR_NO_CONNECTION } from "src/Constants";
-import { ErrorMessages, getHttpErrorMessage, formatErrorForLogging } from "src/Utilities/ErrorMessageFormatter";
+import { ErrorMessages, formatErrorForLogging, getHttpErrorMessage } from "src/Utilities/ErrorMessageFormatter";
 
 /**
  * Error types that can be handled by the ErrorService

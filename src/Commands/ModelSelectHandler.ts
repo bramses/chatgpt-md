@@ -87,13 +87,7 @@ export class ModelSelectHandler {
 
           // Close the initial modal and open a new one with fresh data
           initialModal.close();
-          new AiModelSuggestModal(
-            this.services.app,
-            editor,
-            editorService,
-            this.availableModels,
-            settings
-          ).open();
+          new AiModelSuggestModal(this.services.app, editor, editorService, this.availableModels, settings).open();
         }
       } catch (e) {
         // Don't close the initial modal here, as it might still be useful

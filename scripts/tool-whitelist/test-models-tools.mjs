@@ -21,30 +21,30 @@
  *   scripts/tool-test-results.json
  */
 
-import { createOpenAI } from '@ai-sdk/openai';
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { generateText, tool, zodSchema } from 'ai';
-import { z } from 'zod';
-import { readFileSync, writeFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { generateText, tool, zodSchema } from "ai";
+import { z } from "zod";
+import { readFileSync, writeFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Parse command line arguments
 const args = process.argv.slice(2);
-const limitIndex = args.indexOf('--limit');
+const limitIndex = args.indexOf("--limit");
 const LIMIT = limitIndex !== -1 ? parseInt(args[limitIndex + 1]) : null;
-const providerIndex = args.indexOf('--provider');
+const providerIndex = args.indexOf("--provider");
 const PROVIDER_FILTER = providerIndex !== -1 ? args[providerIndex + 1] : null;
 
 // Load configuration
 function loadConfig() {
   try {
-    const dataPath = join(__dirname, '..', 'data.json');
-    const data = JSON.parse(readFileSync(dataPath, 'utf8'));
+    const dataPath = join(__dirname, "..", "data.json");
+    const data = JSON.parse(readFileSync(dataPath, "utf8"));
     return {
       openai: data.apiKey,
       anthropic: data.anthropicApiKey,
@@ -52,7 +52,7 @@ function loadConfig() {
       openrouter: data.openrouterApiKey,
     };
   } catch (error) {
-    console.error('❌ Error loading data.json:', error.message);
+    console.error("❌ Error loading data.json:", error.message);
     process.exit(1);
   }
 }
@@ -60,11 +60,11 @@ function loadConfig() {
 // Load available models
 function loadAvailableModels() {
   try {
-    const modelsPath = join(__dirname, 'available-models.json');
-    return JSON.parse(readFileSync(modelsPath, 'utf8'));
+    const modelsPath = join(__dirname, "available-models.json");
+    return JSON.parse(readFileSync(modelsPath, "utf8"));
   } catch (error) {
-    console.error('❌ Error loading available-models.json:', error.message);
-    console.error('   Run fetch-available-models.mjs first');
+    console.error("❌ Error loading available-models.json:", error.message);
+    console.error("   Run fetch-available-models.mjs first");
     process.exit(1);
   }
 }
@@ -74,15 +74,15 @@ const availableModels = loadAvailableModels();
 
 // Test tool definition
 const testTool = tool({
-  description: 'Get the current time in ISO format',
+  description: "Get the current time in ISO format",
   inputSchema: zodSchema(
     z.object({
-      timezone: z.string().optional().describe('Optional timezone'),
+      timezone: z.string().optional().describe("Optional timezone"),
     })
   ),
   execute: async (args) => ({
     time: new Date().toISOString(),
-    timezone: args.timezone || 'UTC',
+    timezone: args.timezone || "UTC",
   }),
 });
 
@@ -93,19 +93,19 @@ async function testModel(modelInfo) {
   try {
     let providerInstance;
 
-    if (provider === 'openai') {
+    if (provider === "openai") {
       providerInstance = createOpenAI({ apiKey: apiKeys.openai });
-    } else if (provider === 'anthropic') {
+    } else if (provider === "anthropic") {
       providerInstance = createAnthropic({ apiKey: apiKeys.anthropic });
-    } else if (provider === 'gemini') {
+    } else if (provider === "gemini") {
       providerInstance = createGoogleGenerativeAI({ apiKey: apiKeys.gemini });
-    } else if (provider === 'openrouter') {
+    } else if (provider === "openrouter") {
       providerInstance = createOpenRouter({ apiKey: apiKeys.openrouter });
     } else {
       return {
         ...modelInfo,
-        status: 'skipped',
-        reason: 'Unknown provider',
+        status: "skipped",
+        reason: "Unknown provider",
         testedAt: new Date().toISOString(),
       };
     }
@@ -113,7 +113,7 @@ async function testModel(modelInfo) {
     const model = providerInstance(id);
     const result = await generateText({
       model,
-      messages: [{ role: 'user', content: 'What time is it right now?' }],
+      messages: [{ role: "user", content: "What time is it right now?" }],
       tools: { get_time: testTool },
       maxTokens: 100,
     });
@@ -122,7 +122,7 @@ async function testModel(modelInfo) {
 
     return {
       ...modelInfo,
-      status: 'success',
+      status: "success",
       supportsTools: toolCalled,
       response: {
         text: result.text?.slice(0, 100),
@@ -133,7 +133,7 @@ async function testModel(modelInfo) {
   } catch (error) {
     return {
       ...modelInfo,
-      status: 'error',
+      status: "error",
       supportsTools: false,
       error: {
         message: error.message,
@@ -146,8 +146,8 @@ async function testModel(modelInfo) {
 
 // Main
 async function main() {
-  console.log('🧪 Testing Models for Tool Support\n');
-  console.log('='.repeat(80));
+  console.log("🧪 Testing Models for Tool Support\n");
+  console.log("=".repeat(80));
   console.log();
 
   if (LIMIT) {
@@ -209,40 +209,40 @@ async function main() {
     const providerSummary = results.summary.byProvider[modelInfo.provider];
     providerSummary.tested++;
 
-    if (result.status === 'success') {
+    if (result.status === "success") {
       results.summary.successful++;
       if (result.supportsTools) {
         results.summary.supportsTools++;
         providerSummary.supportsTools++;
-        console.log('✅ TOOLS');
+        console.log("✅ TOOLS");
       } else {
-        console.log('⚪ NO TOOLS');
+        console.log("⚪ NO TOOLS");
       }
-    } else if (result.status === 'error') {
+    } else if (result.status === "error") {
       results.summary.errors++;
       providerSummary.errors++;
       console.log(`❌ ${result.error.message.slice(0, 40)}`);
     } else {
-      console.log('⏭️  SKIPPED');
+      console.log("⏭️  SKIPPED");
     }
 
     // Rate limiting delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
   // Write results
-  const outputPath = join(__dirname, 'tool-test-results.json');
+  const outputPath = join(__dirname, "tool-test-results.json");
   writeFileSync(outputPath, JSON.stringify(results, null, 2));
 
   console.log();
-  console.log('='.repeat(80));
-  console.log('\n📊 SUMMARY\n');
+  console.log("=".repeat(80));
+  console.log("\n📊 SUMMARY\n");
   console.log(`Total tested: ${results.summary.totalTested}`);
   console.log(`  ✅ Success: ${results.summary.successful}`);
   console.log(`  🔧 Supports tools: ${results.summary.supportsTools}`);
   console.log(`  ❌ Errors: ${results.summary.errors}`);
 
-  console.log('\nBy provider:');
+  console.log("\nBy provider:");
   Object.entries(results.summary.byProvider).forEach(([provider, summary]) => {
     console.log(`  ${provider}: ${summary.supportsTools}/${summary.tested} support tools`);
   });
@@ -250,7 +250,7 @@ async function main() {
   console.log(`\n✅ Results written to: ${outputPath}\n`);
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err);
+main().catch((err) => {
+  console.error("Fatal error:", err);
   process.exit(1);
 });

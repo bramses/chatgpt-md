@@ -1,10 +1,6 @@
 import { App, TFile } from "obsidian";
 import { FileService } from "./FileService";
-import {
-  FileReadResult,
-  ToolExecutionContext,
-  VaultSearchResult,
-} from "src/Models/Tool";
+import { FileReadResult, ToolExecutionContext, VaultSearchResult } from "src/Models/Tool";
 
 /**
  * Maximum number of vault search results to return
@@ -128,10 +124,7 @@ export class VaultSearchService {
    * @param context - Execution context (for abort signal)
    * @returns Array of file read results
    */
-  async readFiles(
-    args: { filePaths: string[] },
-    context: ToolExecutionContext
-  ): Promise<FileReadResult[]> {
+  async readFiles(args: { filePaths: string[] }, context: ToolExecutionContext): Promise<FileReadResult[]> {
     const { filePaths } = args;
     const results: FileReadResult[] = [];
 

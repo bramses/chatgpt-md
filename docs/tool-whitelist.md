@@ -15,6 +15,7 @@ Tools are capabilities that allow AI models to interact with your vault and the 
 - **Web Search**: Search the web via Brave Search API
 
 **Privacy Guarantee**: All tool calls require your explicit approval at three layers:
+
 1. Approve the tool execution request
 2. Review the results before sharing with AI
 3. Select exactly what data to share
@@ -25,12 +26,12 @@ See [v3.0.0 Release Notes](https://github.com/obsidian-chatgpt-md/obsidian-chatg
 
 The default whitelist includes **161 patterns** covering models from live API testing:
 
-| Provider | Patterns | Models Tested | Tool Support |
-|----------|----------|---------------|--------------|
-| OpenAI | 36 | 119 | 56 models |
-| Anthropic | 9 | 9 | 9 models (100%) |
-| Gemini | 7 | 29 | 7 models |
-| OpenRouter | 109 | 346 | 122 models |
+| Provider   | Patterns | Models Tested | Tool Support    |
+| ---------- | -------- | ------------- | --------------- |
+| OpenAI     | 36       | 119           | 56 models       |
+| Anthropic  | 9        | 9             | 9 models (100%) |
+| Gemini     | 7        | 29            | 7 models        |
+| OpenRouter | 109      | 346           | 122 models      |
 
 **Test Date**: 2026-02-01
 **Total Tested**: 503 models
@@ -47,6 +48,7 @@ The whitelist uses flexible pattern matching to handle model versioning:
 ```
 gpt-4o
 ```
+
 Matches only `gpt-4o`
 
 ### Date Suffix Auto-Match
@@ -54,7 +56,9 @@ Matches only `gpt-4o`
 ```
 gpt-4o
 ```
+
 Matches:
+
 - `gpt-4o`
 - `gpt-4o-2025-04-16`
 - `gpt-4o-20251101`
@@ -66,7 +70,9 @@ Date suffixes are automatically matched, so you don't need to list every version
 ```
 gpt-4*
 ```
+
 Matches anything starting with `gpt-4`:
+
 - `gpt-4`
 - `gpt-4-turbo`
 - `gpt-4o`
@@ -78,6 +84,7 @@ Matches anything starting with `gpt-4`:
 # This is a comment
 gpt-4o
 ```
+
 Lines starting with `#` are ignored.
 
 ## Configuration
@@ -185,6 +192,7 @@ toolEnabledModels: |
 ### OpenRouter
 
 **Tool Support**: 109 confirmed patterns including:
+
 - DeepSeek (V3, R1 series)
 - Qwen (2.5, 3 series)
 - Mistral (Large, Ministral)
@@ -215,10 +223,7 @@ Use the **WhitelistValidator** to see which of your configured models support to
 ```typescript
 import { validateWhitelist } from "src/Services/WhitelistValidator";
 
-const result = validateWhitelist(
-  ["gpt-4o", "claude-3-haiku", "unknown-model"],
-  whitelist
-);
+const result = validateWhitelist(["gpt-4o", "claude-3-haiku", "unknown-model"], whitelist);
 
 console.log(result.matchRate); // Percentage supporting tools
 console.log(result.unmatchedModelDetails); // Models not on whitelist
@@ -231,6 +236,7 @@ console.log(result.unmatchedModelDetails); // Models not on whitelist
 **Cause**: Model returned an error when tools were in the API request.
 
 **Solutions**:
+
 1. Check if model is actually on whitelist
 2. Try a confirmed model from default whitelist
 3. Enable Debug Mode to see API response
@@ -238,12 +244,14 @@ console.log(result.unmatchedModelDetails); // Models not on whitelist
 #### Tools not offered when expected
 
 **Cause**: Multiple possible reasons:
+
 1. Tool calling disabled in settings
 2. Model not on whitelist
 3. Model doesn't understand it can use tools
 4. No relevant tools for the query
 
 **Solutions**:
+
 1. Check `enableToolCalling` is on
 2. Verify model is in whitelist
 3. Try explicit query: "Search my notes for..."
@@ -254,6 +262,7 @@ console.log(result.unmatchedModelDetails); // Models not on whitelist
 **Cause**: Whitelist needs full `provider/model` format.
 
 **Solution**:
+
 ```yaml
 # Correct
 toolEnabledModels: |
@@ -383,6 +392,7 @@ Note: The `!` exclusion syntax is not currently supported. You must explicitly l
 ### Q: Why isn't my model on the whitelist?
 
 **A**: The model either:
+
 1. Hasn't been tested yet (new models added regularly)
 2. Failed tool support testing (errors or inconsistent behavior)
 3. Is too old and doesn't support modern tool calling
@@ -396,6 +406,7 @@ Test it yourself and add it if it works!
 ### Q: How often is the whitelist updated?
 
 **A**: The whitelist is updated when:
+
 - Major providers release new models
 - Community testing confirms additional models
 - Bug reports indicate false positives/negatives
@@ -405,6 +416,7 @@ Check the test date in the whitelist header for last update.
 ### Q: What if a model stops supporting tools?
 
 **A**: This is rare but possible. If you encounter this:
+
 1. Enable Debug Mode to confirm the error
 2. Remove the model from your whitelist
 3. Report it as an issue

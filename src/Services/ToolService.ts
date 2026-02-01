@@ -9,12 +9,7 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { SearchResultsApprovalModal } from "src/Views/SearchResultsApprovalModal";
 import { WebSearchApprovalModal } from "src/Views/WebSearchApprovalModal";
 import { ToolApprovalModal } from "src/Views/ToolApprovalModal";
-import {
-  ToolApprovalDecision,
-  ToolApprovalRequest,
-  VaultSearchResult,
-  WebSearchResult,
-} from "src/Models/Tool";
+import { ToolApprovalDecision, ToolApprovalRequest, VaultSearchResult, WebSearchResult } from "src/Models/Tool";
 
 /**
  * Handler for processing tool results

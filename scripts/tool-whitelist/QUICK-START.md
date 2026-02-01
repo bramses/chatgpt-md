@@ -65,10 +65,12 @@ node scripts/tool-whitelist/generate-whitelist.mjs
 ## Options Cheat Sheet
 
 ### test-models-tools.mjs
+
 - `--limit N` - Test only N models per provider
 - `--provider name` - Test only: openai|anthropic|gemini|openrouter
 
 ### generate-whitelist.mjs
+
 - `--min-success-rate N` - Minimum rate 0-1 (default: 1.0)
 - `--output path` - Custom output path
 

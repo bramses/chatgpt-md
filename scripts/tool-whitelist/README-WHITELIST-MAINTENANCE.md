@@ -29,11 +29,13 @@ node scripts/tool-whitelist/fetch-available-models.mjs
 **Output**: `scripts/tool-whitelist/available-models.json`
 
 **What it does**:
+
 - Queries each provider's API for available models
 - Saves model metadata (id, name, created date, etc.)
 - No tool testing - just discovery
 
 **Example output**:
+
 ```json
 {
   "fetchedAt": "2026-02-01T12:00:00.000Z",
@@ -62,18 +64,21 @@ node scripts/tool-whitelist/test-models-tools.mjs --provider openai
 ```
 
 **Options**:
+
 - `--limit N` - Test only first N models per provider
 - `--provider name` - Test only specific provider (openai|anthropic|gemini|openrouter)
 
 **Output**: `scripts/tool-whitelist/tool-test-results.json`
 
 **What it does**:
+
 - Loads models from `available-models.json`
 - Makes actual API calls with tool definitions
 - Records which models successfully call tools
 - Saves detailed results including errors
 
 **Example output**:
+
 ```json
 {
   "testedAt": "2026-02-01T12:30:00.000Z",
@@ -107,12 +112,14 @@ node scripts/tool-whitelist/generate-whitelist.mjs --output my-whitelist.txt
 ```
 
 **Options**:
+
 - `--min-success-rate N` - Minimum success rate 0-1 (default: 1.0)
 - `--output path` - Custom output path (default: scripts/tool-whitelist/generated-whitelist.txt)
 
 **Output**: `scripts/tool-whitelist/generated-whitelist.txt`
 
 **What it does**:
+
 - Reads `tool-test-results.json`
 - Filters models that support tools
 - Groups by base pattern (removes date suffixes)
@@ -120,6 +127,7 @@ node scripts/tool-whitelist/generate-whitelist.mjs --output my-whitelist.txt
 - Shows comparison with current whitelist
 
 **Example output**:
+
 ```
 # OpenAI
 gpt-5.2
@@ -143,11 +151,11 @@ After reviewing the generated whitelist:
 
 ## Files Generated
 
-| File | Purpose | Created By |
-|------|---------|------------|
-| `available-models.json` | All available models from providers | Step 1 |
-| `tool-test-results.json` | Tool support test results | Step 2 |
-| `generated-whitelist.txt` | New default whitelist | Step 3 |
+| File                      | Purpose                             | Created By |
+| ------------------------- | ----------------------------------- | ---------- |
+| `available-models.json`   | All available models from providers | Step 1     |
+| `tool-test-results.json`  | Tool support test results           | Step 2     |
+| `generated-whitelist.txt` | New default whitelist               | Step 3     |
 
 ## Example Full Workflow
 
@@ -177,16 +185,19 @@ cat scripts/tool-whitelist/generated-whitelist.txt
 ### Testing Strategy
 
 **Quick validation** (fast, cheap):
+
 ```bash
 node scripts/tool-whitelist/test-models-tools.mjs --limit 5
 ```
 
 **Thorough validation** (slow, expensive):
+
 ```bash
 node scripts/tool-whitelist/test-models-tools.mjs
 ```
 
 **Provider-specific**:
+
 ```bash
 node scripts/tool-whitelist/test-models-tools.mjs --provider gemini
 ```
@@ -194,6 +205,7 @@ node scripts/tool-whitelist/test-models-tools.mjs --provider gemini
 ### Automation
 
 These scripts are **intentionally manual**:
+
 - No automatic updates to source code
 - Human review required
 - Prevents accidental whitelist corruption
@@ -203,6 +215,7 @@ These scripts are **intentionally manual**:
 ### "Error loading available-models.json"
 
 Run step 1 first:
+
 ```bash
 node scripts/tool-whitelist/fetch-available-models.mjs
 ```
@@ -210,6 +223,7 @@ node scripts/tool-whitelist/fetch-available-models.mjs
 ### "Error loading tool-test-results.json"
 
 Run step 2 first:
+
 ```bash
 node scripts/tool-whitelist/test-models-tools.mjs
 ```
@@ -223,6 +237,7 @@ node scripts/tool-whitelist/test-models-tools.mjs
 ## Maintenance Schedule
 
 **Recommended frequency**:
+
 - **Monthly**: Quick validation (`--limit 5`)
 - **Quarterly**: Full validation (all models)
 - **On-demand**: When new major models are released
