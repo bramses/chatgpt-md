@@ -1,9 +1,10 @@
 import { requestUrl } from "obsidian";
 import { ApiAuthService } from "./ApiAuthService";
-import { ApiResponseParser } from "./ApiResponseParser";
 import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
 import { requestStream } from "./requestStream";
+import { parseNonStreamingResponse } from "src/Utilities/ResponseHelpers";
+import { validateNonEmpty, validateUrl } from "src/Utilities/InputValidator";
 
 /**
  * ApiService handles all API communication for the application
@@ -15,18 +16,11 @@ export class ApiService {
   private errorService: ErrorService;
   private notificationService: NotificationService;
   private apiAuthService: ApiAuthService;
-  private apiResponseParser: ApiResponseParser;
 
-  constructor(
-    errorService?: ErrorService,
-    notificationService?: NotificationService,
-    apiAuthService?: ApiAuthService,
-    apiResponseParser?: ApiResponseParser
-  ) {
+  constructor(errorService?: ErrorService, notificationService?: NotificationService, apiAuthService?: ApiAuthService) {
     this.notificationService = notificationService || new NotificationService();
     this.errorService = errorService || new ErrorService(this.notificationService);
     this.apiAuthService = apiAuthService || new ApiAuthService();
-    this.apiResponseParser = apiResponseParser || new ApiResponseParser();
   }
 
   /**
@@ -44,7 +38,9 @@ export class ApiService {
     serviceType: string
   ): Promise<any> {
     try {
-      console.log(`[ChatGPT MD] Making non-streaming request to ${serviceType}`, payload);
+      // Validate input parameters
+      validateUrl(url);
+      validateNonEmpty(serviceType, "Service type");
 
       const responseUrl = await requestUrl({
         url,
@@ -65,7 +61,7 @@ export class ApiService {
         });
       }
 
-      return this.apiResponseParser.parseNonStreamingResponse(data, serviceType);
+      return parseNonStreamingResponse(data, serviceType);
     } catch (error) {
       return this.errorService.handleApiError(error, serviceType, {
         returnForChat: true,
@@ -84,8 +80,6 @@ export class ApiService {
    */
   async makeGetRequest(url: string, headers: Record<string, string>, serviceType: string): Promise<any> {
     try {
-      console.log(`[ChatGPT MD] Making GET request to ${serviceType}`);
-
       const responseObj = await requestUrl({
         url,
         method: "GET",

@@ -1,64 +1,51 @@
-import { App, Modal } from "obsidian";
+import { App } from "obsidian";
 import { SearchResultsApprovalDecision, VaultSearchResult } from "src/Models/Tool";
+import { BaseApprovalModal } from "./BaseApprovalModal";
 
 /**
  * Modal for approving search results before they are sent to the LLM
  */
-export class SearchResultsApprovalModal extends Modal {
-  private result: SearchResultsApprovalDecision | null = null;
-  private modalPromise: Promise<SearchResultsApprovalDecision>;
-  private resolveModalPromise: (value: SearchResultsApprovalDecision) => void;
-  private resultSelections: Map<string, boolean> = new Map();
+export class SearchResultsApprovalModal extends BaseApprovalModal<SearchResultsApprovalDecision> {
+  private query: string;
+  private results: VaultSearchResult[];
 
-  constructor(
-    app: App,
-    private query: string,
-    private results: VaultSearchResult[],
-    private modelName: string = "AI"
-  ) {
-    super(app);
-
-    // Create promise that will be resolved when user makes decision
-    this.modalPromise = new Promise((resolve) => {
-      this.resolveModalPromise = resolve;
-    });
+  constructor(app: App, query: string, results: VaultSearchResult[], modelName: string = "AI") {
+    super(app, modelName);
+    this.query = query;
+    this.results = results;
   }
 
-  onOpen(): void {
-    const { contentEl } = this;
-    contentEl.addClass("search-results-approval-modal");
+  protected getModalTitle(): string {
+    return "ChatGPT MD - Vault Search Results";
+  }
 
-    // Title
-    const header = contentEl.createEl("h2", { text: "ChatGPT MD - Vault Search Results" });
-    header.style.marginBottom = "12px";
-    header.style.fontWeight = "600";
+  protected getCssClass(): string {
+    return "search-results-approval-modal";
+  }
 
-    // Minimal description
-    const descriptionEl = contentEl.createEl("p", {
-      text: `${this.results.length} result${this.results.length !== 1 ? "s" : ""} have been found and can be shared with '${this.modelName}'.`,
-    });
-    descriptionEl.style.marginBottom = "16px";
-    descriptionEl.style.lineHeight = "1.5";
-    descriptionEl.style.fontSize = "0.95em";
+  protected getDescription(): string {
+    return `${this.results.length} result${this.results.length !== 1 ? "s" : ""} have been found and can be shared with '${this.modelName}'.`;
+  }
 
+  protected renderSelectionItems(container: HTMLElement): void {
     // Results label
-    const resultsLabel = contentEl.createEl("p", { text: "Select which files to share:" });
+    const resultsLabel = container.createEl("p", { text: "Select which files to share:" });
     resultsLabel.style.marginTop = "8px";
     resultsLabel.style.marginBottom = "8px";
     resultsLabel.style.fontWeight = "500";
     resultsLabel.style.opacity = "0.7";
 
     // Results selection container
-    const resultsContainer = contentEl.createDiv();
+    const resultsContainer = container.createDiv();
     resultsContainer.style.marginBottom = "12px";
 
     // Initialize all results as selected by default (if not already set)
     for (const result of this.results) {
-      if (!this.resultSelections.has(result.path)) {
-        this.resultSelections.set(result.path, true);
+      if (!this.selections.has(result.path)) {
+        this.selections.set(result.path, true);
       }
 
-      const currentValue = this.resultSelections.get(result.path) || false;
+      const currentValue = this.selections.get(result.path) || false;
 
       // Extract actual path from markdown link format if needed
       // Path may be formatted as "[basename](path)" or plain path
@@ -81,7 +68,7 @@ export class SearchResultsApprovalModal extends Modal {
       checkbox.checked = currentValue;
       checkbox.style.marginRight = "8px";
       checkbox.onchange = () => {
-        this.resultSelections.set(result.path, checkbox.checked);
+        this.selections.set(result.path, checkbox.checked);
       };
 
       const label = resultItem.createEl("label");
@@ -99,132 +86,43 @@ export class SearchResultsApprovalModal extends Modal {
 
       label.onclick = () => {
         checkbox.checked = !checkbox.checked;
-        this.resultSelections.set(result.path, checkbox.checked);
+        this.selections.set(result.path, checkbox.checked);
       };
     }
+  }
 
-    // Select/Deselect all buttons
-    const buttonRow = contentEl.createDiv();
-    buttonRow.style.display = "flex";
-    buttonRow.style.gap = "8px";
-    buttonRow.style.marginBottom = "16px";
+  protected getControlNoteText(): string {
+    return "You control what data is shared. The AI will only know about files you select. Deselected files remain private.";
+  }
 
-    const selectAllBtn = buttonRow.createEl("button", { text: "Select All" });
-    selectAllBtn.style.flex = "1";
-    selectAllBtn.style.padding = "6px 12px";
-    selectAllBtn.style.borderRadius = "4px";
-    selectAllBtn.style.border = "1px solid var(--background-modifier-border)";
-    selectAllBtn.style.backgroundColor = "transparent";
-    selectAllBtn.style.cursor = "pointer";
-    selectAllBtn.style.fontSize = "0.9em";
-    selectAllBtn.onclick = () => {
-      this.results.forEach((result) => this.resultSelections.set(result.path, true));
-      const { contentEl } = this;
-      contentEl.empty();
-      this.onOpen();
-    };
+  protected getCancelText(): string {
+    return "Cancel";
+  }
 
-    const deselectAllBtn = buttonRow.createEl("button", { text: "Deselect All" });
-    deselectAllBtn.style.flex = "1";
-    deselectAllBtn.style.padding = "6px 12px";
-    deselectAllBtn.style.borderRadius = "4px";
-    deselectAllBtn.style.border = "1px solid var(--background-modifier-border)";
-    deselectAllBtn.style.backgroundColor = "transparent";
-    deselectAllBtn.style.cursor = "pointer";
-    deselectAllBtn.style.fontSize = "0.9em";
-    deselectAllBtn.onclick = () => {
-      this.results.forEach((result) => this.resultSelections.set(result.path, false));
-      const { contentEl } = this;
-      contentEl.empty();
-      this.onOpen();
-    };
+  protected getApproveText(): string {
+    return "Approve and Continue";
+  }
 
-    // Data control note
-    const controlNote = contentEl.createEl("p", {
-      text: "You control what data is shared. The AI will only know about files you select. Deselected files remain private.",
-    });
-    controlNote.style.marginTop = "16px";
-    controlNote.style.marginBottom = "20px";
-    controlNote.style.padding = "12px";
-    controlNote.style.backgroundColor = "var(--background-secondary)";
-    controlNote.style.borderRadius = "6px";
-    controlNote.style.fontSize = "0.9em";
-    controlNote.style.lineHeight = "1.4";
-    controlNote.style.opacity = "0.85";
+  protected buildApprovedResult(): SearchResultsApprovalDecision {
+    const approvedResults = this.results.filter((result) => this.selections.get(result.path) === true);
 
-    // Buttons
-    const buttonContainer = contentEl.createDiv();
-    buttonContainer.style.display = "flex";
-    buttonContainer.style.gap = "8px";
-    buttonContainer.style.justifyContent = "flex-end";
-    buttonContainer.style.marginTop = "20px";
-
-    const cancelBtn = buttonContainer.createEl("button", { text: "Cancel" });
-    cancelBtn.style.padding = "8px 16px";
-    cancelBtn.style.borderRadius = "4px";
-    cancelBtn.style.border = "1px solid var(--background-modifier-border)";
-    cancelBtn.style.backgroundColor = "transparent";
-    cancelBtn.style.cursor = "pointer";
-    cancelBtn.onclick = () => {
-      this.result = {
-        approved: false,
-        approvedResults: [],
-      };
-      this.resolveModalPromise(this.result);
-      this.close();
-    };
-
-    const approveBtn = buttonContainer.createEl("button", { text: "Approve and Continue" });
-    approveBtn.style.padding = "8px 16px";
-    approveBtn.style.borderRadius = "4px";
-    approveBtn.style.border = "none";
-    approveBtn.style.backgroundColor = "var(--interactive-accent)";
-    approveBtn.style.color = "var(--text-on-accent)";
-    approveBtn.style.cursor = "pointer";
-    approveBtn.style.fontWeight = "500";
-    approveBtn.onclick = () => {
-      this.result = {
-        approved: true,
-        approvedResults: this.getApprovedResults(),
-      };
-      this.resolveModalPromise(this.result);
-      this.close();
+    return {
+      approved: true,
+      approvedResults: approvedResults,
     };
   }
 
-  /**
-   * Get the approved search results
-   */
-  private getApprovedResults(): VaultSearchResult[] {
-    const approved = this.results.filter((result) => this.resultSelections.get(result.path) === true);
-
-    console.log("[ChatGPT MD] Search results approval:", {
-      query: this.query,
-      totalResults: this.results.length,
-      approvedCount: approved.length,
-      approvedPaths: approved.map((r) => r.path),
-    });
-
-    return approved;
+  protected buildCancelledResult(): SearchResultsApprovalDecision {
+    return {
+      approved: false,
+      approvedResults: [],
+    };
   }
 
-  /**
-   * Wait for user decision
-   */
-  waitForResult(): Promise<SearchResultsApprovalDecision> {
-    return this.modalPromise;
-  }
-
-  onClose(): void {
+  protected refreshSelectionItems(): void {
+    // Re-render the modal
     const { contentEl } = this;
     contentEl.empty();
-
-    // If modal closed without decision, treat as cancel
-    if (!this.result) {
-      this.resolveModalPromise({
-        approved: false,
-        approvedResults: [],
-      });
-    }
+    this.onOpen();
   }
 }

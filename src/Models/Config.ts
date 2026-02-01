@@ -1,15 +1,18 @@
-import { DEFAULT_OPENAI_CONFIG } from "src/Services/OpenAiService";
 import {
   DEFAULT_DATE_FORMAT,
   DEFAULT_HEADING_LEVEL,
   DEFAULT_INFER_TITLE_LANGUAGE,
   PLUGIN_SYSTEM_MESSAGE,
 } from "../Constants";
-import { DEFAULT_OPENROUTER_CONFIG } from "src/Services/OpenRouterService";
-import { DEFAULT_OLLAMA_CONFIG } from "src/Services/OllamaService";
-import { DEFAULT_LMSTUDIO_CONFIG } from "src/Services/LmStudioService";
-import { DEFAULT_ANTHROPIC_CONFIG } from "src/Services/AnthropicService";
-import { DEFAULT_GEMINI_CONFIG } from "src/Services/GeminiService";
+import {
+  DEFAULT_ANTHROPIC_CONFIG,
+  DEFAULT_GEMINI_CONFIG,
+  DEFAULT_LMSTUDIO_CONFIG,
+  DEFAULT_OLLAMA_CONFIG,
+  DEFAULT_OPENAI_CONFIG,
+  DEFAULT_OPENROUTER_CONFIG,
+} from "src/Services/DefaultConfigs";
+import { getDefaultToolWhitelist } from "src/Services/ToolSupportDetector";
 
 /**
  * Generate default chat front matter using service provider defaults
@@ -28,15 +31,23 @@ temperature: ${DEFAULT_OPENAI_CONFIG.temperature}
 
 /**
  * API key settings
+ *
+ * All fields are actively used by ApiAuthService for provider authentication.
+ * See src/Services/ApiAuthService.ts::getApiKey() for usage.
+ *
+ * - apiKey: Used for OpenAI API authentication (Bearer token)
+ * - openrouterApiKey: Used for OpenRouter API authentication
+ * - anthropicApiKey: Used for Anthropic API authentication (x-api-key header)
+ * - geminiApiKey: Used for Gemini API authentication (x-goog-api-key header)
  */
 export interface ApiKeySettings {
-  /** API Key for OpenAI */
+  /** API Key for OpenAI - used for OpenAI API calls */
   apiKey: string;
-  /** API Key for OpenRouter */
+  /** API Key for OpenRouter - used for OpenRouter proxy API calls */
   openrouterApiKey: string;
-  /** API Key for Anthropic */
+  /** API Key for Anthropic - used for Claude models via Anthropic API */
   anthropicApiKey: string;
-  /** API Key for Gemini */
+  /** API Key for Gemini - used for Google Gemini models */
   geminiApiKey: string;
 }
 
@@ -173,8 +184,6 @@ export interface ServiceUrlSettings {
  * Web search settings
  */
 export interface WebSearchSettings {
-  /** Enable/disable web search tool */
-  enableWebSearch: boolean;
   /** Search provider ('brave' | 'custom') */
   webSearchProvider: "brave" | "custom";
   /** API key for providers that require it */
@@ -231,12 +240,11 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   generateAtCursor: false,
   autoInferTitle: false,
   enableToolCalling: false,
-  toolEnabledModels: "gpt-5.2*",
+  toolEnabledModels: getDefaultToolWhitelist(),
   debugMode: false,
   pluginSystemMessage: PLUGIN_SYSTEM_MESSAGE,
 
   // Web Search
-  enableWebSearch: false,
   webSearchProvider: "brave",
   webSearchApiKey: "",
   webSearchApiUrl: "",

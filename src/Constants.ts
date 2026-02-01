@@ -1,3 +1,8 @@
+// Plugin name constant
+export const PLUGIN_NAME = "ChatGPT MD";
+export const PLUGIN_PREFIX = `[${PLUGIN_NAME}]`;
+
+// AI service identifiers
 export const AI_SERVICE_OLLAMA = "ollama";
 export const AI_SERVICE_OPENAI = "openai";
 export const AI_SERVICE_OPENROUTER = "openrouter";
@@ -61,6 +66,8 @@ export const ROLE_SYSTEM = "system";
 export const ROLE_USER = "user";
 
 export const FETCH_MODELS_TIMEOUT_MS = 6000;
+export const NOTICE_DURATION_SHORT_MS = 6000; // Short notification duration (6 seconds)
+export const NOTICE_DURATION_LONG_MS = 9000; // Long notification duration (9 seconds)
 
 // Plugin-specific system message to help LLM understand the context
 export const PLUGIN_SYSTEM_MESSAGE = `You're chatting with a user in Obsidian, a knowledge management system where they organize notes in interconnected Markdown files. This conversation appears as a chat within their active document.

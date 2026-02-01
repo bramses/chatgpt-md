@@ -8,6 +8,7 @@ import {
 } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { NotificationService } from "./NotificationService";
+import { validateApiKey as validateApiKeyFormat } from "src/Utilities/InputValidator";
 
 /**
  * Checks if an API key is valid (not empty or undefined)
@@ -66,7 +67,9 @@ export class ApiAuthService {
       return;
     }
 
-    if (!isValidApiKey(apiKey)) {
+    try {
+      validateApiKeyFormat(apiKey, serviceName);
+    } catch (_error) {
       const errorMessage = `${serviceName} API key is missing or invalid. Please add your ${serviceName} API key in the settings or set your default model in the settings if you use Ollama or LM Studio.`;
       this.notificationService.showError(errorMessage);
       throw new Error(errorMessage);

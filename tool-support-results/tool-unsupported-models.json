@@ -1,0 +1,32 @@
+{
+  "description": "Models that do not support tool/function calling",
+  "timestamp": "2025-12-26T17:18:13.283Z",
+  "count": 9,
+  "models": [
+    "openai@chatgpt-4o-latest",
+    "openai@o4-mini-deep-research",
+    "openai@o3-deep-research",
+    "openai@o3-deep-research-2025-06-26",
+    "openai@o4-mini-deep-research-2025-06-26",
+    "gemini@gemini-2.5-flash-preview-tts",
+    "gemini@gemini-embedding-exp-03-07",
+    "gemini@gemini-embedding-exp",
+    "gemini@gemini-embedding-001"
+  ],
+  "byProvider": {
+    "openai": [
+      "openai@chatgpt-4o-latest",
+      "openai@o4-mini-deep-research",
+      "openai@o3-deep-research",
+      "openai@o3-deep-research-2025-06-26",
+      "openai@o4-mini-deep-research-2025-06-26"
+    ],
+    "anthropic": [],
+    "gemini": [
+      "gemini@gemini-2.5-flash-preview-tts",
+      "gemini@gemini-embedding-exp-03-07",
+      "gemini@gemini-embedding-exp",
+      "gemini@gemini-embedding-001"
+    ]
+  }
+}

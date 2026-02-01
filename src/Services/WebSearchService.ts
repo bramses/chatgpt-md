@@ -1,18 +1,38 @@
 import { requestUrl } from "obsidian";
-import { WebSearchResult } from "src/Models/Tool";
 import { NotificationService } from "./NotificationService";
+import { WebSearchResult } from "src/Models/Tool";
 
 /**
- * Service for performing web searches using external APIs
+ * Maximum number of web search results to return
+ */
+const MAX_WEB_RESULTS = 10;
+
+/**
+ * Web Search Service
+ *
+ * Handles external web search integration for AI tools:
+ * - Brave Search API (free tier: 1,000 queries/month)
+ * - Custom search endpoints
+ *
+ * Features:
+ * - Provider-specific implementations
+ * - Error handling with user notifications
+ * - Configurable result limits
  */
 export class WebSearchService {
   constructor(private notificationService: NotificationService) {}
 
   /**
    * Search using Brave Search API
-   * Requires API key (free tier: 1,000 queries/month)
+   *
+   * Requires API key (free tier available at https://api.search.brave.com/app/keys)
+   *
+   * @param query - Search query string
+   * @param apiKey - Brave Search API key
+   * @param limit - Maximum number of results (capped at MAX_WEB_RESULTS)
+   * @returns Array of web search results
    */
-  async searchBrave(query: string, apiKey: string, limit: number = 5): Promise<WebSearchResult[]> {
+  private async searchBrave(query: string, apiKey: string, limit: number = 5): Promise<WebSearchResult[]> {
     try {
       const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${limit}`;
 
@@ -43,9 +63,22 @@ export class WebSearchService {
 
   /**
    * Search using a custom API endpoint
-   * Expected response format: { results: [{ title, url, snippet }] }
+   *
+   * Supports any custom endpoint that returns:
+   * { results: [{ title, url, snippet }] }
+   *
+   * @param query - Search query string
+   * @param apiUrl - Custom API endpoint URL
+   * @param apiKey - Optional API key for authentication
+   * @param limit - Maximum number of results (capped at MAX_WEB_RESULTS)
+   * @returns Array of web search results
    */
-  async searchCustom(query: string, apiUrl: string, apiKey?: string, limit: number = 5): Promise<WebSearchResult[]> {
+  private async searchCustom(
+    query: string,
+    apiUrl: string,
+    apiKey?: string,
+    limit: number = 5
+  ): Promise<WebSearchResult[]> {
     try {
       const url = `${apiUrl}?q=${encodeURIComponent(query)}&limit=${limit}`;
 
@@ -77,6 +110,16 @@ export class WebSearchService {
 
   /**
    * Main search method that routes to the appropriate provider
+   *
+   * Supports two providers:
+   * - "brave": Official Brave Search API
+   * - "custom": User-defined endpoint
+   *
+   * @param args - Search parameters (query, limit)
+   * @param provider - Search provider to use
+   * @param apiKey - API key for the provider
+   * @param customUrl - Custom endpoint URL (for "custom" provider)
+   * @returns Array of web search results
    */
   async searchWeb(
     args: { query: string; limit?: number },
@@ -85,7 +128,7 @@ export class WebSearchService {
     customUrl?: string
   ): Promise<WebSearchResult[]> {
     const { query, limit = 5 } = args;
-    const maxLimit = Math.min(limit, 10); // Cap at 10 results
+    const maxLimit = Math.min(limit, MAX_WEB_RESULTS); // Cap at MAX_WEB_RESULTS
 
     console.log(`[ChatGPT MD] Web search: "${query}" using ${provider}`);
 

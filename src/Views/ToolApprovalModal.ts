@@ -1,100 +1,49 @@
-import { App, Modal } from "obsidian";
+import { App } from "obsidian";
 import { ToolApprovalDecision } from "src/Models/Tool";
+import { BaseApprovalModal } from "./BaseApprovalModal";
 
 /**
  * Modal for approving AI tool calls
  */
-export class ToolApprovalModal extends Modal {
-  private result: ToolApprovalDecision | null = null;
-  private modalPromise: Promise<ToolApprovalDecision>;
-  private resolveModalPromise: (value: ToolApprovalDecision) => void;
-  private fileSelections: Map<string, boolean> = new Map();
+export class ToolApprovalModal extends BaseApprovalModal<ToolApprovalDecision> {
+  private toolName: string;
+  private args: Record<string, any>;
+  private editedQuery: string | null = null;
+  private queryTextarea: HTMLTextAreaElement | null = null;
+  private approveBtn: HTMLButtonElement | null = null;
 
-  constructor(
-    app: App,
-    private toolName: string,
-    private args: Record<string, any>,
-    private modelName: string = "AI"
-  ) {
-    super(app);
-
-    // Create promise that will be resolved when user makes decision
-    this.modalPromise = new Promise((resolve) => {
-      this.resolveModalPromise = resolve;
-    });
+  constructor(app: App, toolName: string, args: Record<string, any>, modelName: string = "AI") {
+    super(app, modelName);
+    this.toolName = toolName;
+    this.args = args;
   }
 
-  onOpen(): void {
-    const { contentEl } = this;
-    contentEl.addClass("tool-approval-modal");
+  protected getModalTitle(): string {
+    const displayNames: Record<string, string> = {
+      vault_search: "ChatGPT MD - Vault Search",
+      file_read: "ChatGPT MD - File Read",
+      web_search: "ChatGPT MD - Web Search",
+    };
+    return displayNames[this.toolName] || this.toolName;
+  }
 
-    // Title with human-readable tool name
-    const header = contentEl.createEl("h2", { text: this.getToolDisplayName() });
-    header.style.marginBottom = "12px";
-    header.style.fontWeight = "600";
+  protected getCssClass(): string {
+    return "tool-approval-modal";
+  }
 
-    // Description with details
-    this.renderRequestDescription(contentEl);
+  protected getDescription(): string {
+    // Description is rendered separately in renderRequestDescription
+    return "";
+  }
+
+  protected renderSelectionItems(container: HTMLElement): void {
+    // First render the request description
+    this.renderRequestDescription(container);
 
     // File selection for file_read tool
     if (this.toolName === "file_read" && this.args && Array.isArray(this.args.filePaths)) {
-      this.renderFileSelection(contentEl, this.args.filePaths);
+      this.renderFileSelection(container, this.args.filePaths);
     }
-
-    // For search tools, explain there will be another approval for results
-    if (this.toolName === "vault_search" || this.toolName === "web_search") {
-      const searchApprovalNote = contentEl.createEl("p", {
-        text: "After the search completes, you'll review and approve the results before they're shared with the AI.",
-      });
-      searchApprovalNote.style.marginTop = "16px";
-      searchApprovalNote.style.marginBottom = "20px";
-      searchApprovalNote.style.padding = "12px";
-      searchApprovalNote.style.backgroundColor = "var(--background-secondary)";
-      searchApprovalNote.style.borderRadius = "4px";
-      searchApprovalNote.style.fontSize = "0.9em";
-      searchApprovalNote.style.lineHeight = "1.4";
-      searchApprovalNote.style.opacity = "0.85";
-    }
-
-    // Buttons
-    const buttonContainer = contentEl.createDiv();
-    buttonContainer.style.display = "flex";
-    buttonContainer.style.gap = "8px";
-    buttonContainer.style.justifyContent = "flex-end";
-    buttonContainer.style.marginTop = "20px";
-
-    const cancelBtn = buttonContainer.createEl("button", { text: "Cancel" });
-    cancelBtn.style.padding = "8px 16px";
-    cancelBtn.style.borderRadius = "4px";
-    cancelBtn.style.border = "1px solid var(--background-modifier-border)";
-    cancelBtn.style.backgroundColor = "transparent";
-    cancelBtn.style.cursor = "pointer";
-    cancelBtn.onclick = () => {
-      this.result = {
-        approvalId: this.toolName,
-        approved: false,
-      };
-      this.resolveModalPromise(this.result);
-      this.close();
-    };
-
-    const approveBtn = buttonContainer.createEl("button", { text: "Approve and Execute" });
-    approveBtn.style.padding = "8px 16px";
-    approveBtn.style.borderRadius = "4px";
-    approveBtn.style.border = "none";
-    approveBtn.style.backgroundColor = "var(--interactive-accent)";
-    approveBtn.style.color = "var(--text-on-accent)";
-    approveBtn.style.cursor = "pointer";
-    approveBtn.style.fontWeight = "500";
-    approveBtn.onclick = () => {
-      this.result = {
-        approvalId: this.toolName,
-        approved: true,
-        modifiedArgs: this.getModifiedArgs(),
-      };
-      this.resolveModalPromise(this.result);
-      this.close();
-    };
   }
 
   /**
@@ -113,12 +62,12 @@ export class ToolApprovalModal extends Modal {
     // Initialize all files as selected by default (if not already set)
     for (const path of filePaths) {
       // Only set to true if not already in the map (preserve user selections)
-      if (!this.fileSelections.has(path)) {
-        this.fileSelections.set(path, true);
+      if (!this.selections.has(path)) {
+        this.selections.set(path, true);
       }
 
       const fileName = path.split("/").pop() || path;
-      const currentValue = this.fileSelections.get(path) || false;
+      const currentValue = this.selections.get(path) || false;
 
       const fileItem = fileListContainer.createDiv();
       fileItem.style.display = "flex";
@@ -133,7 +82,7 @@ export class ToolApprovalModal extends Modal {
       checkbox.checked = currentValue;
       checkbox.style.marginRight = "8px";
       checkbox.onchange = () => {
-        this.fileSelections.set(path, checkbox.checked);
+        this.selections.set(path, checkbox.checked);
       };
 
       const label = fileItem.createEl("label");
@@ -151,45 +100,97 @@ export class ToolApprovalModal extends Modal {
 
       label.onclick = () => {
         checkbox.checked = !checkbox.checked;
-        this.fileSelections.set(path, checkbox.checked);
+        this.selections.set(path, checkbox.checked);
       };
     }
+  }
 
-    // Select/Deselect all buttons
-    const buttonRow = container.createDiv();
-    buttonRow.style.display = "flex";
-    buttonRow.style.gap = "8px";
-    buttonRow.style.marginBottom = "16px";
+  protected getControlNoteText(): string {
+    // For search tools, explain there will be another approval for results
+    if (this.toolName === "vault_search" || this.toolName === "web_search") {
+      return "After the search completes, you'll review and approve the results before they're shared with the AI.";
+    }
+    // Override renderControlNote to not show it for file_read
+    return "";
+  }
 
-    const selectAllBtn = buttonRow.createEl("button", { text: "Select All" });
-    selectAllBtn.style.flex = "1";
-    selectAllBtn.style.padding = "6px 12px";
-    selectAllBtn.style.borderRadius = "4px";
-    selectAllBtn.style.border = "1px solid var(--background-modifier-border)";
-    selectAllBtn.style.backgroundColor = "transparent";
-    selectAllBtn.style.cursor = "pointer";
-    selectAllBtn.style.fontSize = "0.9em";
-    selectAllBtn.onclick = () => {
-      filePaths.forEach((path) => this.fileSelections.set(path, true));
-      const { contentEl } = this;
-      contentEl.empty();
-      this.onOpen();
+  protected override renderControlNote(container: HTMLElement): void {
+    if (this.toolName === "vault_search" || this.toolName === "web_search") {
+      super.renderControlNote(container);
+    }
+    // No control note for file_read tool
+  }
+
+  protected getCancelText(): string {
+    return "Cancel";
+  }
+
+  protected getApproveText(): string {
+    return "Approve and Execute";
+  }
+
+  protected override renderActionButtons(container: HTMLElement): void {
+    const buttonContainer = container.createDiv();
+    buttonContainer.style.display = "flex";
+    buttonContainer.style.gap = "8px";
+    buttonContainer.style.justifyContent = "flex-end";
+    buttonContainer.style.marginTop = "20px";
+
+    const cancelBtn = buttonContainer.createEl("button", { text: this.getCancelText() });
+    this.styleCancelButton(cancelBtn);
+    cancelBtn.onclick = () => {
+      this.result = this.buildCancelledResult();
+      this.resolveModalPromise(this.result);
+      this.close();
     };
 
-    const deselectAllBtn = buttonRow.createEl("button", { text: "Deselect All" });
-    deselectAllBtn.style.flex = "1";
-    deselectAllBtn.style.padding = "6px 12px";
-    deselectAllBtn.style.borderRadius = "4px";
-    deselectAllBtn.style.border = "1px solid var(--background-modifier-border)";
-    deselectAllBtn.style.backgroundColor = "transparent";
-    deselectAllBtn.style.cursor = "pointer";
-    deselectAllBtn.style.fontSize = "0.9em";
-    deselectAllBtn.onclick = () => {
-      filePaths.forEach((path) => this.fileSelections.set(path, false));
-      const { contentEl } = this;
-      contentEl.empty();
-      this.onOpen();
+    this.approveBtn = buttonContainer.createEl("button", { text: this.getApproveText() });
+    this.styleApproveButton(this.approveBtn);
+
+    // Initial validation
+    this.validateApproveButton();
+
+    this.approveBtn.onclick = () => {
+      this.result = this.buildApprovedResult();
+      this.resolveModalPromise(this.result);
+      this.close();
     };
+  }
+
+  protected buildApprovedResult(): ToolApprovalDecision {
+    return {
+      approvalId: this.toolName,
+      approved: true,
+      modifiedArgs: this.getModifiedArgs(),
+    };
+  }
+
+  protected buildCancelledResult(): ToolApprovalDecision {
+    return {
+      approvalId: this.toolName,
+      approved: false,
+    };
+  }
+
+  /**
+   * Validate query and enable/disable approve button
+   */
+  private validateApproveButton(): void {
+    if (!this.approveBtn) return;
+
+    // For search tools, require non-empty query
+    if ((this.toolName === "vault_search" || this.toolName === "web_search") && this.queryTextarea) {
+      const query = this.queryTextarea.value.trim();
+      const isValid = query.length > 0;
+      this.approveBtn.disabled = !isValid;
+      this.approveBtn.style.opacity = isValid ? "1" : "0.5";
+      this.approveBtn.style.cursor = isValid ? "pointer" : "not-allowed";
+    } else {
+      // Other tools - always enabled
+      this.approveBtn.disabled = false;
+      this.approveBtn.style.opacity = "1";
+      this.approveBtn.style.cursor = "pointer";
+    }
   }
 
   /**
@@ -201,19 +202,21 @@ export class ToolApprovalModal extends Modal {
 
     // For file_read, filter to only selected files
     if (this.toolName === "file_read" && baseArgs.filePaths) {
-      const selectedFiles = Array.from(this.fileSelections.entries())
+      const selectedFiles = Array.from(this.selections.entries())
         .filter(([_, selected]) => selected)
         .map(([path, _]) => path);
-
-      console.log("[ChatGPT MD] File selections:", {
-        original: baseArgs.filePaths,
-        selected: selectedFiles,
-        selections: Array.from(this.fileSelections.entries()),
-      });
 
       return {
         ...baseArgs,
         filePaths: selectedFiles,
+      };
+    }
+
+    // For vault_search and web_search, include edited query if changed
+    if ((this.toolName === "vault_search" || this.toolName === "web_search") && this.editedQuery) {
+      return {
+        ...baseArgs,
+        query: this.editedQuery,
       };
     }
 
@@ -255,10 +258,33 @@ export class ToolApprovalModal extends Modal {
 
     // List for search queries
     if ((this.toolName === "vault_search" || this.toolName === "web_search") && query) {
-      const list = container.createEl("ul");
-      list.style.margin = "0 0 16px 20px";
-      list.style.lineHeight = "1.5";
-      list.createEl("li", { text: `"${query}"` });
+      // Label for textarea
+      const label = container.createEl("label", { text: "Search query:" });
+      label.style.display = "block";
+      label.style.marginBottom = "8px";
+      label.style.fontWeight = "500";
+      label.style.opacity = "0.7";
+
+      // Editable textarea for query
+      this.queryTextarea = container.createEl("textarea");
+      this.queryTextarea.value = query;
+      this.queryTextarea.style.width = "100%";
+      this.queryTextarea.style.minHeight = "80px";
+      this.queryTextarea.style.padding = "8px";
+      this.queryTextarea.style.borderRadius = "4px";
+      this.queryTextarea.style.border = "1px solid var(--background-modifier-border)";
+      this.queryTextarea.style.backgroundColor = "var(--background-secondary)";
+      this.queryTextarea.style.color = "var(--text-normal)";
+      this.queryTextarea.style.fontSize = "0.95em";
+      this.queryTextarea.style.fontFamily = "var(--font-interface)";
+      this.queryTextarea.style.resize = "vertical";
+      this.queryTextarea.style.marginBottom = "16px";
+
+      // Track query changes
+      this.queryTextarea.addEventListener("input", () => {
+        this.editedQuery = this.queryTextarea!.value.trim();
+        this.validateApproveButton();
+      });
     } else if (this.toolName === "file_read") {
       // For file_read, still just one line since files are shown in selection below
       const noteEl = container.createEl("p", {
@@ -273,35 +299,10 @@ export class ToolApprovalModal extends Modal {
     }
   }
 
-  /**
-   * Get display name for tool
-   */
-  private getToolDisplayName(): string {
-    const displayNames: Record<string, string> = {
-      vault_search: "ChatGPT MD - Vault Search",
-      file_read: "ChatGPT MD - File Read",
-      web_search: "ChatGPT MD - Web Search",
-    };
-    return displayNames[this.toolName] || this.toolName;
-  }
-
-  /**
-   * Wait for user decision
-   */
-  waitForResult(): Promise<ToolApprovalDecision> {
-    return this.modalPromise;
-  }
-
-  onClose(): void {
+  protected refreshSelectionItems(): void {
+    // Re-render the modal
     const { contentEl } = this;
     contentEl.empty();
-
-    // If modal closed without decision, treat as cancel
-    if (!this.result) {
-      this.resolveModalPromise({
-        approvalId: this.toolName,
-        approved: false,
-      });
-    }
+    this.onOpen();
   }
 }

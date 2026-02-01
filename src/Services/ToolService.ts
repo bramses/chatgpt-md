@@ -1,10 +1,15 @@
 import { App, TFile } from "obsidian";
-import { ToolRegistry } from "./ToolRegistry";
-import { ToolExecutor } from "./ToolExecutor";
+import { z } from "zod";
+import { tool, zodSchema } from "ai";
+import { FileService } from "./FileService";
+import { NotificationService } from "./NotificationService";
+import { VaultSearchService } from "./VaultSearchService";
+import { WebSearchService } from "./WebSearchService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { SearchResultsApprovalModal } from "src/Views/SearchResultsApprovalModal";
 import { WebSearchApprovalModal } from "src/Views/WebSearchApprovalModal";
-import { VaultSearchResult, WebSearchResult } from "src/Models/Tool";
+import { ToolApprovalModal } from "src/Views/ToolApprovalModal";
+import { ToolApprovalDecision, ToolApprovalRequest, VaultSearchResult, WebSearchResult } from "src/Models/Tool";
 
 /**
  * Handler for processing tool results
@@ -18,23 +23,225 @@ type ToolResultHandler = (
 ) => Promise<void>;
 
 /**
- * Service for orchestrating tool calling with AI SDK
- * Handles manual human-in-the-loop approval for tool calls
+ * Unified Tool Service
+ * Handles all tool-related functionality:
+ * - Tool registration and retrieval
+ * - Vault operations (delegates to VaultSearchService)
+ * - Web search (delegates to WebSearchService)
+ * - Tool orchestration and approval
  */
 export class ToolService {
   private approvalHandler?: (toolName: string, args: any) => Promise<any>;
   private readonly toolResultHandlers: Record<string, ToolResultHandler>;
+  private readonly tools: Map<string, any> = new Map();
+  private readonly vaultSearchService: VaultSearchService;
+  private readonly webSearchService: WebSearchService;
 
   constructor(
     private app: App,
-    private toolRegistry: ToolRegistry,
-    private toolExecutor: ToolExecutor
+    private fileService: FileService,
+    private notificationService: NotificationService,
+    private settingsService: ChatGPT_MDSettings,
+    vaultSearchService?: VaultSearchService,
+    webSearchService?: WebSearchService
   ) {
     this.toolResultHandlers = {
       vault_search: this.handleVaultSearchResult.bind(this),
       file_read: this.handleFileReadResult.bind(this),
       web_search: this.handleWebSearchResult.bind(this),
     };
+
+    this.vaultSearchService = vaultSearchService || new VaultSearchService(app, fileService);
+    this.webSearchService = webSearchService || new WebSearchService(notificationService);
+
+    // Register default tools
+    this.registerDefaultTools();
+  }
+
+  // ========== Tool Registration (from ToolRegistry) ==========
+
+  /**
+   * Register default tools with manual human-in-the-loop approval
+   */
+  private registerDefaultTools(): void {
+    // Vault search tool - approval handled manually before execution
+    const vaultSearchTool = tool({
+      description:
+        "Search the Obsidian vault for files by name or content. Returns file paths, names, and content previews. Use this to find relevant notes before reading them.",
+      inputSchema: zodSchema(
+        z.object({
+          query: z
+            .string()
+            .describe(
+              "The search query to find files. Can be keywords, topics, or phrases to search for in file names and content."
+            ),
+          limit: z
+            .number()
+            .optional()
+            .default(10)
+            .describe("Maximum number of search results to return. Default is 10, maximum is 50."),
+        })
+      ),
+      execute: async (args: { query: string; limit?: number }) => {
+        // Tool execution - approval is handled by the caller via requestApproval
+        const results = await this.vaultSearchService.searchVault(args, {
+          app: this.app,
+          toolCallId: "",
+          messages: [],
+        });
+
+        // Format results with markdown links for file paths
+        return results.map((result) => ({
+          ...result,
+          path: `[${result.basename}](${result.path})`,
+        }));
+      },
+    });
+    this.registerTool("vault_search", vaultSearchTool);
+
+    // File read tool - approval handled manually before execution
+    const fileReadTool = tool({
+      description:
+        "Read the full contents of specific files from the vault. User will be asked to approve which files to share. Use this after searching to get complete file contents.",
+      inputSchema: zodSchema(
+        z.object({
+          filePaths: z
+            .array(z.string())
+            .describe("Array of file paths to read. Use the paths returned from vault_search."),
+        })
+      ),
+      execute: async (args: { filePaths: string[] }) => {
+        // Tool execution - approval is handled by the caller via requestApproval
+        return await this.vaultSearchService.readFiles(args, {
+          app: this.app,
+          toolCallId: "",
+          messages: [],
+        });
+      },
+    });
+    this.registerTool("file_read", fileReadTool);
+
+    // Web search tool - approval handled manually before execution
+    const webSearchTool = tool({
+      description:
+        "Search the web for information on a topic. Returns titles, URLs, and snippets from search results. User will be asked to approve which results to share.",
+      inputSchema: zodSchema(
+        z.object({
+          query: z.string().describe("The search query to look up on the web"),
+          limit: z
+            .number()
+            .optional()
+            .default(5)
+            .describe("Maximum number of search results to return. Default is 5, maximum is 10."),
+        })
+      ),
+      execute: async (args: { query: string; limit?: number }) => {
+        // Tool execution - approval is handled by the caller via requestApproval
+        return await this.webSearchService.searchWeb(
+          args,
+          this.settingsService.webSearchProvider,
+          this.settingsService.webSearchApiKey,
+          this.settingsService.webSearchApiUrl
+        );
+      },
+    });
+    this.registerTool("web_search", webSearchTool);
+  }
+
+  /**
+   * Register a new tool
+   */
+  registerTool(name: string, toolDef: any): void {
+    this.tools.set(name, toolDef);
+  }
+
+  /**
+   * Check if web search tool is available based on settings
+   * - Brave provider: requires API key
+   * - Custom provider: requires API URL
+   *
+   * @param settings - Plugin settings containing web search configuration
+   * @returns true if web search is properly configured, false otherwise
+   */
+  private isWebSearchAvailable(settings: ChatGPT_MDSettings): boolean {
+    if (settings.webSearchProvider === "brave") {
+      return !!settings.webSearchApiKey && settings.webSearchApiKey.trim().length > 0;
+    }
+    if (settings.webSearchProvider === "custom") {
+      return !!settings.webSearchApiUrl && settings.webSearchApiUrl.trim().length > 0;
+    }
+    return false;
+  }
+
+  /**
+   * Get a specific tool by name
+   */
+  getTool(name: string): any | undefined {
+    return this.tools.get(name);
+  }
+
+  /**
+   * Get all registered tools
+   */
+  getAllTools(): Record<string, any> {
+    const toolsObject: Record<string, any> = {};
+    this.tools.forEach((toolDef, name) => {
+      toolsObject[name] = toolDef;
+    });
+    return toolsObject;
+  }
+
+  /**
+   * Get tools enabled for a request based on settings
+   * Filters tools based on configuration requirements:
+   * - vault_search/file_read: always available if tool calling enabled
+   * - web_search: only if API key/URL configured
+   *
+   * @param settings - Plugin settings containing tool and web search configuration
+   * @returns Object containing enabled tools, or undefined if no tools available
+   */
+  getEnabledTools(settings: ChatGPT_MDSettings): Record<string, any> | undefined {
+    if (!settings.enableToolCalling) {
+      return undefined;
+    }
+
+    const allTools = this.getAllTools();
+    const enabledTools: Record<string, any> = {};
+
+    // Vault tools - always available when tool calling is enabled
+    if (allTools.vault_search) {
+      enabledTools.vault_search = allTools.vault_search;
+    }
+    if (allTools.file_read) {
+      enabledTools.file_read = allTools.file_read;
+    }
+
+    // Web search - only if properly configured
+    if (allTools.web_search && this.isWebSearchAvailable(settings)) {
+      enabledTools.web_search = allTools.web_search;
+    }
+
+    // Return undefined if no tools are enabled (prevents passing empty object to AI SDK)
+    return Object.keys(enabledTools).length > 0 ? enabledTools : undefined;
+  }
+
+  // ========== Tool Orchestration and Approval ==========
+
+  /**
+   * Request approval from user for a tool call
+   * Merged from ToolExecutor
+   */
+  private async requestApproval(request: ToolApprovalRequest): Promise<ToolApprovalDecision> {
+    const modal = new ToolApprovalModal(this.app, request.toolName, request.args, request.modelName);
+    modal.open();
+
+    const decision = await modal.waitForResult();
+
+    if (!decision.approved) {
+      this.notificationService.showWarning(`Tool execution cancelled: ${request.toolName}`);
+    }
+
+    return decision;
   }
 
   /**
@@ -48,7 +255,7 @@ export class ToolService {
    * Get tools to pass to AI SDK based on settings
    */
   getToolsForRequest(settings: ChatGPT_MDSettings): Record<string, any> | undefined {
-    return this.toolRegistry.getEnabledTools(settings);
+    return this.getEnabledTools(settings);
   }
 
   /**
@@ -59,19 +266,14 @@ export class ToolService {
     results: VaultSearchResult[],
     modelName?: string
   ): Promise<VaultSearchResult[]> {
-    console.log(`[ChatGPT MD] Requesting approval for search results: "${query}" (${results.length} results)`);
-
     const modal = new SearchResultsApprovalModal(this.app, query, results, modelName);
     modal.open();
 
     const decision = await modal.waitForResult();
 
     if (!decision.approved) {
-      console.log(`[ChatGPT MD] Search results approval cancelled by user`);
       return [];
     }
-
-    console.log(`[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} search results`);
     return decision.approvedResults;
   }
 
@@ -83,19 +285,14 @@ export class ToolService {
     results: WebSearchResult[],
     modelName?: string
   ): Promise<WebSearchResult[]> {
-    console.log(`[ChatGPT MD] Requesting approval for web search results: "${query}" (${results.length} results)`);
-
     const modal = new WebSearchApprovalModal(this.app, query, results, modelName);
     modal.open();
 
     const decision = await modal.waitForResult();
 
     if (!decision.approved) {
-      console.log(`[ChatGPT MD] Web search results approval cancelled by user`);
       return [];
     }
-
-    console.log(`[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} web search results`);
     return decision.approvedResults;
   }
 
@@ -302,7 +499,7 @@ export class ToolService {
       const toolCallId = toolCall.toolCallId || toolCall.id || "unknown";
 
       // Request user approval for this tool call
-      const approved = await this.toolExecutor.requestApproval({
+      const approved = await this.requestApproval({
         toolCallId: toolCallId,
         toolName: toolName,
         args: toolArgs,
@@ -319,7 +516,7 @@ export class ToolService {
 
       // Execute the tool with approved arguments
       try {
-        const tool = this.toolRegistry.getTool(toolName);
+        const tool = this.getTool(toolName);
         if (!tool || !tool.execute) {
           results.push({
             toolCallId: toolCallId,
