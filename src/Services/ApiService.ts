@@ -37,8 +37,6 @@ export class ApiService {
     serviceType: string
   ): Promise<any> {
     try {
-      console.log(`[ChatGPT MD] Making non-streaming request to ${serviceType}`, payload);
-
       const responseUrl = await requestUrl({
         url,
         method: "POST",
@@ -77,8 +75,6 @@ export class ApiService {
    */
   async makeGetRequest(url: string, headers: Record<string, string>, serviceType: string): Promise<any> {
     try {
-      console.log(`[ChatGPT MD] Making GET request to ${serviceType}`);
-
       const responseObj = await requestUrl({
         url,
         method: "GET",

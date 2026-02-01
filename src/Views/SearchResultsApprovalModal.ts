@@ -106,13 +106,6 @@ export class SearchResultsApprovalModal extends BaseApprovalModal<SearchResultsA
   protected buildApprovedResult(): SearchResultsApprovalDecision {
     const approvedResults = this.results.filter((result) => this.selections.get(result.path) === true);
 
-    console.log("[ChatGPT MD] Search results approval:", {
-      query: this.query,
-      totalResults: this.results.length,
-      approvedCount: approvedResults.length,
-      approvedPaths: approvedResults.map((r) => r.path),
-    });
-
     return {
       approved: true,
       approvedResults: approvedResults,

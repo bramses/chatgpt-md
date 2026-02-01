@@ -107,7 +107,6 @@ export class ChatHandler {
 
         // Ensure model is set for title inference
         if (!settingsWithApiKey.model) {
-          console.log("[ChatGPT MD] Model not set for auto title inference");
           if (frontmatter.aiService === AI_SERVICE_OPENAI) {
             settingsWithApiKey.model = DEFAULT_OPENAI_CONFIG.model;
           } else if (frontmatter.aiService === AI_SERVICE_OPENROUTER) {
@@ -117,9 +116,6 @@ export class ChatHandler {
           } else if (frontmatter.aiService === AI_SERVICE_GEMINI) {
             settingsWithApiKey.model = DEFAULT_GEMINI_CONFIG.model;
           } else if (frontmatter.aiService === AI_SERVICE_OLLAMA || frontmatter.aiService === AI_SERVICE_LMSTUDIO) {
-            console.log(
-              `[ChatGPT MD] No model configured for ${frontmatter.aiService}. Skipping auto title inference. Please configure a model in settings.`
-            );
             new Notice(
               `Auto title inference skipped: No model configured for ${frontmatter.aiService}. Please set a model in settings.`,
               6000
@@ -128,18 +124,13 @@ export class ChatHandler {
           }
         }
 
-        console.log("[ChatGPT MD] Auto-inferring title with settings:", {
-          aiService: frontmatter.aiService,
-          model: settingsWithApiKey.model,
-        });
-
         await aiService.inferTitle(view, settingsWithApiKey, messages, editorService);
       }
     } catch (err) {
       if (Platform.isMobile) {
         new Notice(`[ChatGPT MD] Calling ${frontmatter.model}. ` + err, 9000);
       }
-      console.log(err);
+      this.services.errorService.handleApiError(err, "ChatHandler.execute", { showNotification: true });
     }
 
     this.updateStatusBar("");

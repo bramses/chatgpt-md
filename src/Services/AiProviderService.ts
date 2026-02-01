@@ -316,16 +316,12 @@ export class AiProviderService implements IAiApiService {
       };
 
       if (!config.model) {
-        console.log("[ChatGPT MD] Model not set for title inference, using default model");
         config.model = defaultConfig.model;
       }
 
       if (!config.url) {
-        console.log("[ChatGPT MD] URL not set for title inference, using default URL");
         config.url = defaultConfig.url;
       }
-
-      console.log("[ChatGPT MD] Inferring title with model:", config.model);
 
       try {
         const response = await this.callNonStreamingAPI(

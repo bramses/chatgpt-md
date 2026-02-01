@@ -154,12 +154,6 @@ export class ToolApprovalModal extends BaseApprovalModal<ToolApprovalDecision> {
         .filter(([_, selected]) => selected)
         .map(([path, _]) => path);
 
-      console.log("[ChatGPT MD] File selections:", {
-        original: baseArgs.filePaths,
-        selected: selectedFiles,
-        selections: Array.from(this.selections.entries()),
-      });
-
       return {
         ...baseArgs,
         filePaths: selectedFiles,

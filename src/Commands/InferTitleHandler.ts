@@ -1,4 +1,4 @@
-import { Editor, MarkdownView } from "obsidian";
+import { Editor, MarkdownView, Notice } from "obsidian";
 import { ServiceContainer } from "src/core/ServiceContainer";
 import { AI_SERVICE_OPENROUTER, INFER_TITLE_COMMAND_ID } from "src/Constants";
 import { getAiApiUrls } from "./CommandUtilities";
@@ -30,7 +30,7 @@ export class InferTitleHandler implements EditorViewCommandHandler {
 
     // Ensure model is set
     if (!frontmatter.model) {
-      console.log("[ChatGPT MD] Model not set in frontmatter, using default model");
+      new Notice("Model not set in frontmatter. Please configure a model in settings or frontmatter.");
       return;
     }
 

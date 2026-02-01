@@ -30,7 +30,6 @@ export class FileService {
       await this.app.fileManager.renameFile(file, newFileName);
     } catch (err) {
       new Notice("[ChatGPT MD] Error writing inferred title to editor");
-      console.log("[ChatGPT MD] Error writing inferred title to editor", err);
       throw err;
     }
   }

@@ -150,13 +150,7 @@ export function isModelInWhitelist(modelId: string, whitelist: string): boolean 
  * @returns true if the model matches the whitelist
  */
 export function detectToolSupport(modelId: string, whitelist: string): boolean {
-  if (isModelInWhitelist(modelId, whitelist)) {
-    console.log(`[ToolSupportDetector] Model ${modelId} matched whitelist`);
-    return true;
-  }
-
-  console.log(`[ToolSupportDetector] Model ${modelId} not in whitelist, tools disabled`);
-  return false;
+  return isModelInWhitelist(modelId, whitelist);
 }
 
 /**

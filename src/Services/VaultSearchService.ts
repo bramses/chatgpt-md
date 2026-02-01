@@ -113,7 +113,6 @@ export class VaultSearchService {
       }
     }
 
-    console.log(`[ChatGPT MD] Vault search: "${query}" found ${results.length} results`);
     return results;
   }
 
@@ -169,7 +168,6 @@ export class VaultSearchService {
       }
     }
 
-    console.log(`[ChatGPT MD] Read ${results.length} files`);
     return results;
   }
 }

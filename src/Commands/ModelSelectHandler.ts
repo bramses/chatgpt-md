@@ -84,7 +84,6 @@ export class ModelSelectHandler {
           ![...freshModelsSet].every((model) => currentModelsSet.has(model));
 
         if (areDifferent && freshModels.length > 0) {
-          console.log("[ChatGPT MD] Models updated. Refreshing modal.");
           this.availableModels = freshModels; // Update the stored models
 
           // Close the initial modal and open a new one with fresh data
@@ -110,7 +109,6 @@ export class ModelSelectHandler {
    * Initialize available models on plugin startup
    */
   async initializeAvailableModels(): Promise<void> {
-    console.log("[ChatGPT MD] Initializing available models...");
     try {
       const { settingsService, apiAuthService } = this.services;
       const settings = settingsService.getSettings();
@@ -136,7 +134,6 @@ export class ModelSelectHandler {
         apiAuthService,
         settingsService
       );
-      console.log(`[ChatGPT MD] Found ${this.availableModels.length} available models.`);
     } catch (error) {
       console.error("[ChatGPT MD] Error initializing available models:", error);
       this.availableModels = []; // Ensure it's an empty array on error

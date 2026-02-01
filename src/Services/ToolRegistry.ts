@@ -21,7 +21,6 @@ export class ToolRegistry {
     }
 
     this.tools.set(name, toolDef);
-    console.log(`[ChatGPT MD] Registered tool: ${name}`);
   }
 
   /**

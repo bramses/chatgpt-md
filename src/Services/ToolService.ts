@@ -200,8 +200,6 @@ export class ToolService {
    * Merged from ToolExecutor
    */
   private async requestApproval(request: ToolApprovalRequest): Promise<ToolApprovalDecision> {
-    console.log(`[ChatGPT MD] Requesting approval for tool: ${request.toolName}`);
-
     const modal = new ToolApprovalModal(this.app, request.toolName, request.args, request.modelName);
     modal.open();
 
@@ -209,9 +207,6 @@ export class ToolService {
 
     if (!decision.approved) {
       this.notificationService.showWarning(`Tool execution cancelled: ${request.toolName}`);
-      console.log(`[ChatGPT MD] Tool cancelled by user: ${request.toolName}`);
-    } else {
-      console.log(`[ChatGPT MD] Tool approved by user: ${request.toolName}`);
     }
 
     return decision;
@@ -239,19 +234,14 @@ export class ToolService {
     results: VaultSearchResult[],
     modelName?: string
   ): Promise<VaultSearchResult[]> {
-    console.log(`[ChatGPT MD] Requesting approval for search results: "${query}" (${results.length} results)`);
-
     const modal = new SearchResultsApprovalModal(this.app, query, results, modelName);
     modal.open();
 
     const decision = await modal.waitForResult();
 
     if (!decision.approved) {
-      console.log(`[ChatGPT MD] Search results approval cancelled by user`);
       return [];
     }
-
-    console.log(`[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} search results`);
     return decision.approvedResults;
   }
 
@@ -263,21 +253,14 @@ export class ToolService {
     results: WebSearchResult[],
     modelName?: string
   ): Promise<WebSearchResult[]> {
-    console.log(`[ChatGPT MD] Requesting approval for web search results: "${query}" (${results.length} results)`);
-
     const modal = new WebSearchApprovalModal(this.app, query, results, modelName);
     modal.open();
 
     const decision = await modal.waitForResult();
 
     if (!decision.approved) {
-      console.log(`[ChatGPT MD] Web search results approval cancelled by user`);
       return [];
     }
-
-    console.log(
-      `[ChatGPT MD] User approved ${decision.approvedResults.length} of ${results.length} web search results`
-    );
     return decision.approvedResults;
   }
 
