@@ -1,5 +1,6 @@
 import {
   AI_SERVICE_ANTHROPIC,
+  AI_SERVICE_COPILOT,
   AI_SERVICE_GEMINI,
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
@@ -104,4 +105,19 @@ export const DEFAULT_GEMINI_CONFIG = {
   title: "Untitled",
   top_p: 1,
   url: "https://generativelanguage.googleapis.com",
+};
+
+/**
+ * Default configuration for GitHub Copilot
+ */
+export const DEFAULT_COPILOT_CONFIG = {
+  aiService: AI_SERVICE_COPILOT,
+  max_tokens: 4096,
+  model: "copilot@gpt-4o",
+  stream: true,
+  system_commands: null,
+  tags: [],
+  temperature: 0.7,
+  title: "Untitled",
+  url: "https://api.githubcopilot.com",
 };

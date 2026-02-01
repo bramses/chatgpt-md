@@ -6,6 +6,7 @@ import {
 } from "../Constants";
 import {
   DEFAULT_ANTHROPIC_CONFIG,
+  DEFAULT_COPILOT_CONFIG,
   DEFAULT_GEMINI_CONFIG,
   DEFAULT_LMSTUDIO_CONFIG,
   DEFAULT_OLLAMA_CONFIG,
@@ -155,6 +156,18 @@ export interface LmStudioFrontmatterSettings {
 }
 
 /**
+ * Provider-specific settings for GitHub Copilot
+ */
+export interface CopilotSettings {
+  /** Enable GitHub Copilot integration (desktop only) */
+  copilotEnabled: boolean;
+  /** Custom path to GitHub CLI (optional, defaults to 'gh' in PATH) */
+  copilotCliPath: string;
+  /** Default model for Copilot chats */
+  copilotDefaultModel: string;
+}
+
+/**
  * Chat template settings
  */
 export interface TemplateSettings {
@@ -211,7 +224,8 @@ export interface ChatGPT_MDSettings
     GeminiFrontmatterSettings,
     OpenRouterFrontmatterSettings,
     OllamaFrontmatterSettings,
-    LmStudioFrontmatterSettings {}
+    LmStudioFrontmatterSettings,
+    CopilotSettings {}
 
 /**
  * Default settings
@@ -294,4 +308,9 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   lmstudioDefaultTopP: DEFAULT_LMSTUDIO_CONFIG.top_p,
   lmstudioDefaultPresencePenalty: DEFAULT_LMSTUDIO_CONFIG.presence_penalty,
   lmstudioDefaultFrequencyPenalty: DEFAULT_LMSTUDIO_CONFIG.frequency_penalty,
+
+  // GitHub Copilot Settings
+  copilotEnabled: false,
+  copilotCliPath: "",
+  copilotDefaultModel: DEFAULT_COPILOT_CONFIG.model,
 };

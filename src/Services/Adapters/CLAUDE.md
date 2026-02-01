@@ -13,7 +13,7 @@ Each adapter encapsulates provider-specific logic, allowing `AiProviderService` 
 ### ProviderType
 
 ```typescript
-type ProviderType = "openai" | "anthropic" | "ollama" | "openrouter" | "gemini" | "lmstudio";
+type ProviderType = "openai" | "anthropic" | "ollama" | "openrouter" | "gemini" | "lmstudio" | "copilot";
 ```
 
 ### AiProviderConfig
@@ -101,3 +101,23 @@ Default implementations:
 - Default URL: `https://openrouter.ai`
 - Auth: `Authorization: Bearer {key}`
 - Prefixes models with `openrouter@`
+
+### CopilotAdapter.ts
+
+- **Hybrid adapter**: Uses Copilot SDK instead of Vercel AI SDK
+- Default URL: `https://api.githubcopilot.com` (handled by SDK internally)
+- `requiresApiKey()` → false (uses CLI-based OAuth via `gh copilot auth`)
+- `supportsToolCalling()` → false (Copilot has built-in tools)
+- Desktop only - hidden on mobile (CLI not available)
+- Models are hardcoded (gpt-4o, gpt-5, claude-sonnet-4, etc.) - availability depends on subscription
+- Prefixes models with `copilot@`
+
+**Prerequisites**:
+1. Install GitHub CLI: https://cli.github.com/
+2. Install Copilot extension: `gh extension install github/gh-copilot`
+3. Authenticate: `gh auth login && gh copilot auth`
+
+**Key differences from other adapters**:
+- Session-based API instead of REST API
+- Event-based streaming (`session.on("assistant.message_delta")`)
+- Streaming is converted to async iterator format in `AiProviderService`

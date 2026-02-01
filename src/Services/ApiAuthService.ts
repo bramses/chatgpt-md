@@ -1,5 +1,6 @@
 import {
   AI_SERVICE_ANTHROPIC,
+  AI_SERVICE_COPILOT,
   AI_SERVICE_GEMINI,
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
@@ -50,6 +51,8 @@ export class ApiAuthService {
         return ""; // Ollama doesn't use an API key
       case AI_SERVICE_LMSTUDIO:
         return ""; // LM Studio doesn't use an API key
+      case AI_SERVICE_COPILOT:
+        return ""; // Copilot uses CLI-based OAuth, not API key
       default:
         return "";
     }
@@ -62,8 +65,8 @@ export class ApiAuthService {
    * @throws Error if the API key is invalid
    */
   validateApiKey(apiKey: string | undefined, serviceName: string): void {
-    // Skip validation for Ollama and LM Studio as they don't require an API key
-    if (serviceName === AI_SERVICE_OLLAMA || serviceName === AI_SERVICE_LMSTUDIO) {
+    // Skip validation for Ollama, LM Studio, and Copilot as they don't require an API key
+    if (serviceName === AI_SERVICE_OLLAMA || serviceName === AI_SERVICE_LMSTUDIO || serviceName === AI_SERVICE_COPILOT) {
       return;
     }
 
@@ -108,6 +111,9 @@ export class ApiAuthService {
         break;
       case AI_SERVICE_LMSTUDIO:
         // LM Studio doesn't require authentication headers
+        break;
+      case AI_SERVICE_COPILOT:
+        // Copilot uses CLI-based OAuth, handled by the SDK
         break;
     }
 

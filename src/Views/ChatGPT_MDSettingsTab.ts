@@ -3,12 +3,14 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 import {
   DEFAULT_ANTHROPIC_CONFIG,
+  DEFAULT_COPILOT_CONFIG,
   DEFAULT_GEMINI_CONFIG,
   DEFAULT_LMSTUDIO_CONFIG,
   DEFAULT_OLLAMA_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
 } from "src/Services/DefaultConfigs";
+import { Platform } from "obsidian";
 import { getDefaultToolWhitelist } from "src/Services/ToolSupportDetector";
 
 interface SettingDefinition {
@@ -303,6 +305,39 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         placeholder: "0.7",
         group: "LM Studio Defaults",
       },
+
+      // GitHub Copilot Settings (desktop only)
+      ...(Platform.isMobile
+        ? []
+        : [
+            {
+              id: "copilotEnabled" as keyof ChatGPT_MDSettings,
+              name: "Enable GitHub Copilot",
+              description:
+                "Use your GitHub Copilot subscription for AI conversations. " +
+                "Requires GitHub CLI with Copilot extension installed and authenticated.",
+              type: "toggle" as const,
+              group: "GitHub Copilot",
+            },
+            {
+              id: "copilotCliPath" as keyof ChatGPT_MDSettings,
+              name: "GitHub CLI Path (Optional)",
+              description:
+                "Custom path to GitHub CLI executable. Leave empty to use 'gh' from PATH. " +
+                "Example: /usr/local/bin/gh",
+              type: "text" as const,
+              placeholder: "gh",
+              group: "GitHub Copilot",
+            },
+            {
+              id: "copilotDefaultModel" as keyof ChatGPT_MDSettings,
+              name: "Default Copilot Model",
+              description: `Default model for Copilot chats. Available models depend on your subscription.\nDefault: ${DEFAULT_COPILOT_CONFIG.model}`,
+              type: "text" as const,
+              placeholder: DEFAULT_COPILOT_CONFIG.model,
+              group: "GitHub Copilot",
+            },
+          ]),
 
       // Folders
       {

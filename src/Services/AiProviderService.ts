@@ -28,6 +28,7 @@ import { OllamaAdapter } from "./Adapters/OllamaAdapter";
 import { OpenRouterAdapter } from "./Adapters/OpenRouterAdapter";
 import { GeminiAdapter } from "./Adapters/GeminiAdapter";
 import { LmStudioAdapter } from "./Adapters/LmStudioAdapter";
+import { CopilotAdapter } from "./Adapters/CopilotAdapter";
 
 // Constants
 import { NEWLINE, ROLE_USER, TITLE_INFERENCE_ERROR_HEADER, TRUNCATION_ERROR_INDICATOR } from "src/Constants";
@@ -67,6 +68,7 @@ export class AiProviderService implements IAiApiService {
       ["openrouter", new OpenRouterAdapter()],
       ["gemini", new GeminiAdapter()],
       ["lmstudio", new LmStudioAdapter()],
+      ["copilot", new CopilotAdapter()],
     ]);
 
     // Default to OpenAI
@@ -366,9 +368,20 @@ export class AiProviderService implements IAiApiService {
         return createOpenAICompatible;
       case "openrouter":
         return createOpenRouter;
+      case "copilot":
+        // Copilot uses its own SDK, not Vercel AI SDK
+        // Return null - handled separately in callStreamingAPI/callNonStreamingAPI
+        return null;
       default:
         throw new Error(`Unsupported provider: ${type}`);
     }
+  }
+
+  /**
+   * Check if current provider is Copilot
+   */
+  private isCopilotProvider(): boolean {
+    return this.currentAdapter.type === "copilot";
   }
 
   /**
@@ -391,6 +404,11 @@ export class AiProviderService implements IAiApiService {
     settings?: ChatGPT_MDSettings,
     toolService?: ToolService
   ): Promise<StreamingResponse> {
+    // Handle Copilot separately - uses its own SDK
+    if (this.isCopilotProvider()) {
+      return this.callCopilotStreamingAPI(messages, config, editor, headingPrefix, setAtCursor, settings);
+    }
+
     this.ensureProvider(apiKey, config);
     const modelName = this.extractModelName(config.model);
     const model = (this.provider as any)(modelName);
@@ -421,6 +439,11 @@ export class AiProviderService implements IAiApiService {
     settings?: ChatGPT_MDSettings,
     toolService?: ToolService
   ): Promise<any> {
+    // Handle Copilot separately - uses its own SDK
+    if (this.isCopilotProvider()) {
+      return this.callCopilotNonStreamingAPI(messages, config, settings);
+    }
+
     this.ensureProvider(apiKey, config);
     const modelName = this.extractModelName(config.model);
     const model = (this.provider as any)(modelName);
@@ -627,6 +650,157 @@ export class AiProviderService implements IAiApiService {
       const errorCursor = handler?.getCursor() || initialCursor;
       editor.replaceRange(errorMessage, errorCursor);
       return { fullString: errorMessage, mode: "streaming" };
+    }
+  }
+
+  /**
+   * Call the Copilot API in streaming mode
+   * Uses the GitHub CLI (gh copilot) for Copilot integration
+   */
+  private async callCopilotStreamingAPI(
+    messages: Message[],
+    config: AiProviderConfig,
+    editor: Editor,
+    headingPrefix: string,
+    setAtCursor?: boolean,
+    settings?: ChatGPT_MDSettings
+  ): Promise<StreamingResponse> {
+    const modelName = this.extractModelName(config.model);
+
+    // Check CLI availability
+    const copilotAdapter = this.adapters.get("copilot") as any;
+    const cliPath = settings?.copilotCliPath || undefined;
+    const isCliAvailable = await copilotAdapter.isCliAvailable(cliPath);
+
+    if (!isCliAvailable) {
+      throw new Error(copilotAdapter.getCliNotFoundError());
+    }
+
+    const cursorPositions = insertAssistantHeader(editor, headingPrefix, modelName);
+
+    const abortController = new AbortController();
+    this.apiService.setAbortController(abortController);
+
+    const initialCursor = setAtCursor ? cursorPositions.initialCursor : cursorPositions.newCursor;
+    let handler: StreamingHandler | undefined;
+
+    try {
+      handler = new StreamingHandler(editor, initialCursor, setAtCursor);
+      handler.startBuffering();
+
+      // Build the prompt from messages
+      const lastUserMessage = messages.filter((m) => m.role === "user").pop();
+      const prompt = lastUserMessage?.content || "";
+
+      // Use gh copilot suggest for code-related queries
+      const { spawn } = await import("child_process");
+      const ghCommand = cliPath || "gh";
+
+      let fullText = "";
+
+      const streamPromise = new Promise<string>((resolve, reject) => {
+        // Use gh copilot explain for general queries
+        const args = ["copilot", "explain", prompt];
+
+        const child = spawn(ghCommand, args, {
+          env: { ...process.env },
+          shell: true,
+        });
+
+        child.stdout.on("data", (data: Buffer) => {
+          if (this.apiService.wasAborted()) {
+            child.kill();
+            return;
+          }
+          const text = data.toString();
+          fullText += text;
+          handler?.appendText(text);
+        });
+
+        child.stderr.on("data", (data: Buffer) => {
+          const errorText = data.toString();
+          // gh copilot sometimes outputs progress to stderr, ignore non-errors
+          if (errorText.toLowerCase().includes("error")) {
+            console.error("[Copilot] stderr:", errorText);
+          }
+        });
+
+        child.on("close", (code: number | null) => {
+          if (code === 0 || code === null) {
+            resolve(fullText);
+          } else {
+            reject(new Error(`gh copilot exited with code ${code}`));
+          }
+        });
+
+        child.on("error", (err: Error) => {
+          reject(err);
+        });
+      });
+
+      try {
+        fullText = await streamPromise;
+      } finally {
+        handler.stopBuffering();
+      }
+
+      const finalCursor = handler.getCursor();
+      if (!setAtCursor) {
+        editor.setCursor(finalCursor);
+      }
+
+      return {
+        fullString: fullText,
+        mode: "streaming",
+        wasAborted: this.apiService.wasAborted(),
+      };
+    } catch (err) {
+      handler?.stopBuffering();
+      const errorMessage = `Error: ${err}`;
+      const errorCursor = handler?.getCursor() || initialCursor;
+      editor.replaceRange(errorMessage, errorCursor);
+      return { fullString: errorMessage, mode: "streaming" };
+    }
+  }
+
+  /**
+   * Call the Copilot API in non-streaming mode
+   * Uses the GitHub CLI (gh copilot) for Copilot integration
+   */
+  private async callCopilotNonStreamingAPI(
+    messages: Message[],
+    config: AiProviderConfig,
+    settings?: ChatGPT_MDSettings
+  ): Promise<{ fullString: string; model: string }> {
+    const modelName = this.extractModelName(config.model);
+
+    // Check CLI availability
+    const copilotAdapter = this.adapters.get("copilot") as any;
+    const cliPath = settings?.copilotCliPath || undefined;
+    const isCliAvailable = await copilotAdapter.isCliAvailable(cliPath);
+
+    if (!isCliAvailable) {
+      throw new Error(copilotAdapter.getCliNotFoundError());
+    }
+
+    // Build the prompt from messages
+    const lastUserMessage = messages.filter((m) => m.role === "user").pop();
+    const prompt = lastUserMessage?.content || "";
+
+    const { execSync } = await import("child_process");
+    const ghCommand = cliPath || "gh";
+
+    try {
+      // Use gh copilot explain for general queries
+      const result = execSync(`${ghCommand} copilot explain "${prompt.replace(/"/g, '\\"')}"`, {
+        encoding: "utf-8",
+        env: { ...process.env },
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      });
+
+      return { fullString: result, model: modelName };
+    } catch (err: any) {
+      throw new Error(`GitHub Copilot error: ${err.message || err}`);
     }
   }
 }
