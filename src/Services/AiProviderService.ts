@@ -412,7 +412,8 @@ export class AiProviderService implements IAiApiService {
     const modelName = this.extractModelName(config.model);
     const model = (this.provider as any)(modelName);
 
-    const tools = toolService?.getToolsForRequest(settings!);
+    // Get tools only if toolService is available and settings are provided
+    const tools = toolService && settings ? toolService.getToolsForRequest(settings) : undefined;
     return this.callAiSdkStreamText(
       model,
       config.model,
@@ -441,7 +442,8 @@ export class AiProviderService implements IAiApiService {
     const modelName = this.extractModelName(config.model);
     const model = (this.provider as any)(modelName);
 
-    const tools = toolService?.getToolsForRequest(settings!);
+    // Get tools only if toolService is available and settings are provided
+    const tools = toolService && settings ? toolService.getToolsForRequest(settings) : undefined;
     return this.callAiSdkGenerateText(model, config.model, messages, tools, toolService, settings);
   }
 

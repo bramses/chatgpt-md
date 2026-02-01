@@ -15,6 +15,7 @@ import {
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
 } from "src/Services/DefaultConfigs";
+import { extractProvider, getModelName } from "./ModelFilteringHelper";
 
 /**
  * Get the default configuration for a given AI service
@@ -67,22 +68,18 @@ export function buildModelId(model: string, provider: string): string {
 
 /**
  * Extract provider from model ID
+ * @deprecated Use extractProvider from ModelFilteringHelper instead
  */
 export function extractProviderFromModel(modelId: string): string {
-  if (modelId.includes("@")) {
-    return modelId.split("@")[0];
-  }
-  return "openai"; // Default provider
+  return extractProvider(modelId);
 }
 
 /**
  * Extract model name from full model ID
+ * @deprecated Use getModelName from ModelFilteringHelper instead
  */
 export function extractModelName(modelId: string): string {
-  if (modelId.includes("@")) {
-    return modelId.substring(modelId.indexOf("@") + 1);
-  }
-  return modelId;
+  return getModelName(modelId);
 }
 
 /**

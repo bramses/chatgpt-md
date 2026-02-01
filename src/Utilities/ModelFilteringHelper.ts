@@ -69,7 +69,19 @@ export function extractProvider(modelId: string): ProviderType {
  *
  * @param fullId - Full model ID
  * @returns Model name only
+ *
+ * @example
+ * getModelName("openai@gpt-4")                // "gpt-4"
+ * getModelName("openrouter@openai/gpt-5.2")   // "gpt-5.2"
+ * getModelName("gpt-4")                       // "gpt-4"
  */
 export function getModelName(fullId: string): string {
-  return parseModelId(fullId).modelId;
+  let modelId = parseModelId(fullId).modelId;
+
+  // Handle OpenRouter format "provider/model"
+  if (modelId.includes("/")) {
+    modelId = modelId.split("/")[1];
+  }
+
+  return modelId;
 }

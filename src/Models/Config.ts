@@ -31,15 +31,23 @@ temperature: ${DEFAULT_OPENAI_CONFIG.temperature}
 
 /**
  * API key settings
+ *
+ * All fields are actively used by ApiAuthService for provider authentication.
+ * See src/Services/ApiAuthService.ts::getApiKey() for usage.
+ *
+ * - apiKey: Used for OpenAI API authentication (Bearer token)
+ * - openrouterApiKey: Used for OpenRouter API authentication
+ * - anthropicApiKey: Used for Anthropic API authentication (x-api-key header)
+ * - geminiApiKey: Used for Gemini API authentication (x-goog-api-key header)
  */
 export interface ApiKeySettings {
-  /** API Key for OpenAI */
+  /** API Key for OpenAI - used for OpenAI API calls */
   apiKey: string;
-  /** API Key for OpenRouter */
+  /** API Key for OpenRouter - used for OpenRouter proxy API calls */
   openrouterApiKey: string;
-  /** API Key for Anthropic */
+  /** API Key for Anthropic - used for Claude models via Anthropic API */
   anthropicApiKey: string;
-  /** API Key for Gemini */
+  /** API Key for Gemini - used for Google Gemini models */
   geminiApiKey: string;
 }
 

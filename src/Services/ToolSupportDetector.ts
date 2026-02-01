@@ -10,6 +10,8 @@
  * - Explicit wildcard: "o3*" matches everything starting with "o3"
  */
 
+import { getModelName } from "src/Utilities/ModelFilteringHelper";
+
 /**
  * Check if a suffix is a date pattern (safe to match automatically)
  *
@@ -54,19 +56,14 @@ function isDateSuffix(suffix: string): boolean {
  * @returns true if model matches pattern
  */
 function matchesPattern(modelId: string, pattern: string): boolean {
-  // Extract model name (part after @) for matching
-  let modelName = modelId.includes("@") ? modelId.split("@")[1] : modelId;
-
-  // For OpenRouter models with format "openrouter@provider/model", extract just the model part
-  // e.g., "openrouter@openai/gpt-5.2" -> "gpt-5.2"
-  if (modelName.includes("/")) {
-    modelName = modelName.split("/")[1];
-  }
+  // Extract model name from full model ID (handles provider prefixes and OpenRouter format)
+  const modelName = getModelName(modelId);
 
   // Check if pattern includes provider prefix
   const patternHasProvider = pattern.includes("@");
   const patternName = patternHasProvider ? pattern.split("@")[1] : pattern;
   const patternProvider = patternHasProvider ? pattern.split("@")[0] : null;
+  // Extract provider from full model ID using centralized utility
   const modelProvider = modelId.includes("@") ? modelId.split("@")[0] : null;
 
   // If pattern has provider, it must match exactly

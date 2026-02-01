@@ -49,10 +49,14 @@ export class GeminiAdapter extends BaseProviderAdapter {
         return response.models
           .filter((model: GeminiModel) => model.name && model.name.includes("generate"))
           .map((model: GeminiModel) => {
-            // Extract model name from full resource path
+            // Extract model name from full resource path (e.g., "models/gemini-2.0-flash")
             const modelId = model.name.split("/").pop();
-            return this.prefixModelId(modelId!);
+            if (!modelId) {
+              return null; // Skip models without valid names
+            }
+            return this.prefixModelId(modelId);
           })
+          .filter((modelId: string | null): modelId is string => modelId !== null)
           .sort();
       }
 
