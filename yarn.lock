@@ -274,6 +274,57 @@
     "@eslint/core" "^0.17.0"
     levn "^0.4.1"
 
+"@github/copilot-darwin-arm64@0.0.399":
+  version "0.0.399"
+  resolved "https://registry.yarnpkg.com/@github/copilot-darwin-arm64/-/copilot-darwin-arm64-0.0.399.tgz#5ac45c90b3abbed585f3d460917ec4d7f2149018"
+  integrity sha512-8TQWPO9PrjR5g/y13nUmKBpk8oCHPpBPgHgp7hozIGedsbNJrcuABeNEsbkxowTwTiKgXEz5A5DGo5iN2AY+Ww==
+
+"@github/copilot-darwin-x64@0.0.399":
+  version "0.0.399"
+  resolved "https://registry.yarnpkg.com/@github/copilot-darwin-x64/-/copilot-darwin-x64-0.0.399.tgz#9d9da37126b558503fcf45deee7f86884e074fbf"
+  integrity sha512-Ge1a6zGpjTbVOUQyvT18NbphmyPidPoVERq7DOTTo3XdKDm8n2jFh6UjQl7atL0hnUaWsKOTx9qrgTPdQmqMDA==
+
+"@github/copilot-linux-arm64@0.0.399":
+  version "0.0.399"
+  resolved "https://registry.yarnpkg.com/@github/copilot-linux-arm64/-/copilot-linux-arm64-0.0.399.tgz#0090d8738a8b056dfc0446f93bd04d820e7af895"
+  integrity sha512-41TCc1zxSd6qI56xzOyVR91mW8i7SXQ6IrRbsDBAF8i1dbyzIDO2YZ4c23fn8IRJ3C0aCQvfMoFf/BpzHQ6igw==
+
+"@github/copilot-linux-x64@0.0.399":
+  version "0.0.399"
+  resolved "https://registry.yarnpkg.com/@github/copilot-linux-x64/-/copilot-linux-x64-0.0.399.tgz#fbacae3026f7df7c304ed32bc62ef5db932fe170"
+  integrity sha512-TNjJ/Kli74wdFycayvFW8mSmBc6ssURGxc+kiJkL+DYKloefBvViqz4I9Luwee7jrCdP1sgHwcelMrGbQ9fDHQ==
+
+"@github/copilot-sdk@^1.0.0":
+  version "0.1.20"
+  resolved "https://registry.yarnpkg.com/@github/copilot-sdk/-/copilot-sdk-0.1.20.tgz#13a2c6fef5219a4663cf160e632e0ab76a5594c6"
+  integrity sha512-wBFROeWRoItJ/275g0Kp1B3rTvn5ZkAlRdYk8x/Nl0bkYF9mwA7CbsEvJc3V8PIwJ7ftJxR2x8utgq8m/pdtng==
+  dependencies:
+    "@github/copilot" "^0.0.399"
+    vscode-jsonrpc "^8.2.1"
+    zod "^4.3.5"
+
+"@github/copilot-win32-arm64@0.0.399":
+  version "0.0.399"
+  resolved "https://registry.yarnpkg.com/@github/copilot-win32-arm64/-/copilot-win32-arm64-0.0.399.tgz#5fca70104c41679996b9399f07098df24e4738d3"
+  integrity sha512-VInXjz1gaQcP0PZ18FBT0wdCNJld1huhisxUcegRpYdGgKHfUxdwU1N/2LcoZZZ+iin1NPt3mNsBJiI5W24RCA==
+
+"@github/copilot-win32-x64@0.0.399":
+  version "0.0.399"
+  resolved "https://registry.yarnpkg.com/@github/copilot-win32-x64/-/copilot-win32-x64-0.0.399.tgz#a5b7881312dd7b8fc0cfe4d5c6ac8a21bd345755"
+  integrity sha512-ddIYUm+HPvwhTOcVFIZNoIH8a00Wp6PtE/Zq7slShSMMjzqWLuvY0s9NdNt6ijPqxtNgwuHWPfPVS4OvqfkwSA==
+
+"@github/copilot@^0.0.399":
+  version "0.0.399"
+  resolved "https://registry.yarnpkg.com/@github/copilot/-/copilot-0.0.399.tgz#6c41ab0283bb54867eb224dd3eb7a05db15e0f11"
+  integrity sha512-ULRmqkH6L6mdokjMTfLaJQDidJXDUy0EYE8lHsIDxXD4dUoGjfsNRswZ4We+JxIJiXuTF9U9KqQM55QRj/4kQA==
+  optionalDependencies:
+    "@github/copilot-darwin-arm64" "0.0.399"
+    "@github/copilot-darwin-x64" "0.0.399"
+    "@github/copilot-linux-arm64" "0.0.399"
+    "@github/copilot-linux-x64" "0.0.399"
+    "@github/copilot-win32-arm64" "0.0.399"
+    "@github/copilot-win32-x64" "0.0.399"
+
 "@humanfs/core@^0.19.1":
   version "0.19.1"
   resolved "https://registry.yarnpkg.com/@humanfs/core/-/core-0.19.1.tgz#17c55ca7d426733fe3c561906b8173c336b40a77"
@@ -1045,6 +1096,11 @@ uri-js@^4.2.2:
   dependencies:
     punycode "^2.1.0"
 
+vscode-jsonrpc@^8.2.1:
+  version "8.2.1"
+  resolved "https://registry.yarnpkg.com/vscode-jsonrpc/-/vscode-jsonrpc-8.2.1.tgz#a322cc0f1d97f794ffd9c4cd2a898a0bde097f34"
+  integrity sha512-kdjOSJ2lLIn7r1rtrMbbNCHjyMPfRnowdKjBQ+mGq6NAW5QY2bEZC/khaC5OR8svbbjvLEaIXkOq45e2X9BIbQ==
+
 w3c-keyname@^2.2.4:
   version "2.2.8"
   resolved "https://registry.yarnpkg.com/w3c-keyname/-/w3c-keyname-2.2.8.tgz#7b17c8c6883d4e8b86ac8aba79d39e880f8869c5"
@@ -1067,7 +1123,7 @@ yocto-queue@^0.1.0:
   resolved "https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz#0294eb3dee05028d31ee1a5fa2c556a6aaf10a1b"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
 
-zod@4.3.6:
+zod@4.3.6, zod@^4.3.5:
   version "4.3.6"
   resolved "https://registry.yarnpkg.com/zod/-/zod-4.3.6.tgz#89c56e0aa7d2b05107d894412227087885ab112a"
   integrity sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==

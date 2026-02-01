@@ -655,7 +655,7 @@ export class AiProviderService implements IAiApiService {
 
   /**
    * Call the Copilot API in streaming mode
-   * Uses the GitHub CLI (gh copilot) for Copilot integration
+   * Uses the @github/copilot-sdk with proper lifecycle management (2026 best practices)
    */
   private async callCopilotStreamingAPI(
     messages: Message[],
@@ -676,6 +676,15 @@ export class AiProviderService implements IAiApiService {
       throw new Error(copilotAdapter.getCliNotFoundError());
     }
 
+    // Import the Copilot SDK dynamically to avoid loading on mobile
+    let CopilotClient: any;
+    try {
+      const copilotSdk = await import("@github/copilot-sdk");
+      CopilotClient = copilotSdk.CopilotClient;
+    } catch (_err) {
+      throw new Error("GitHub Copilot SDK not available. Please ensure @github/copilot-sdk is installed.");
+    }
+
     const cursorPositions = insertAssistantHeader(editor, headingPrefix, modelName);
 
     const abortController = new AbortController();
@@ -683,57 +692,92 @@ export class AiProviderService implements IAiApiService {
 
     const initialCursor = setAtCursor ? cursorPositions.initialCursor : cursorPositions.newCursor;
     let handler: StreamingHandler | undefined;
+    let client: any = null;
+    let session: any = null;
 
     try {
       handler = new StreamingHandler(editor, initialCursor, setAtCursor);
       handler.startBuffering();
 
-      // Build the prompt from messages
+      // Create and start Copilot client
+      const clientOptions: any = {
+        autoStart: true,
+        autoRestart: true,
+      };
+      if (cliPath) {
+        clientOptions.cliPath = cliPath;
+      }
+      client = new CopilotClient(clientOptions);
+      await client.start();
+
+      // Extract system message if present and use "append" mode to preserve guardrails
+      const systemMessage = messages.find((m) => m.role === "system")?.content;
+
+      // Create session with streaming enabled
+      const sessionOptions: any = {
+        model: modelName,
+        streaming: true,
+      };
+      if (systemMessage) {
+        sessionOptions.systemMessage = {
+          mode: "append",
+          content: systemMessage,
+        };
+      }
+
+      session = await client.createSession(sessionOptions);
+
+      // Build the prompt from the last user message
       const lastUserMessage = messages.filter((m) => m.role === "user").pop();
       const prompt = lastUserMessage?.content || "";
 
-      // Use gh copilot suggest for code-related queries
-      const { spawn } = await import("child_process");
-      const ghCommand = cliPath || "gh";
-
       let fullText = "";
 
+      // Set up streaming with single event handler (2026 best practice)
       const streamPromise = new Promise<string>((resolve, reject) => {
-        // Use gh copilot explain for general queries
-        const args = ["copilot", "explain", prompt];
-
-        const child = spawn(ghCommand, args, {
-          env: { ...process.env },
-          shell: true,
-        });
-
-        child.stdout.on("data", (data: Buffer) => {
+        const unsubscribe = session.on((event: any) => {
           if (this.apiService.wasAborted()) {
-            child.kill();
+            session.abort?.();
+            unsubscribe?.();
+            resolve(fullText);
             return;
           }
-          const text = data.toString();
-          fullText += text;
-          handler?.appendText(text);
-        });
 
-        child.stderr.on("data", (data: Buffer) => {
-          const errorText = data.toString();
-          // gh copilot sometimes outputs progress to stderr, ignore non-errors
-          if (errorText.toLowerCase().includes("error")) {
-            console.error("[Copilot] stderr:", errorText);
+          switch (event.type) {
+            case "assistant.message.delta":
+              // Streaming delta content
+              const deltaContent = event.data?.deltaContent || "";
+              if (deltaContent) {
+                fullText += deltaContent;
+                handler?.appendText(deltaContent);
+              }
+              break;
+
+            case "assistant.message":
+              // Final complete message (always sent after deltas)
+              // Use this as fallback if no deltas were received
+              if (!fullText && event.data?.content) {
+                fullText = event.data.content;
+                handler?.appendText(fullText);
+              }
+              break;
+
+            case "session.idle":
+              // Processing complete
+              unsubscribe?.();
+              resolve(fullText);
+              break;
+
+            case "session.error":
+              unsubscribe?.();
+              reject(new Error(event.data?.message || "Copilot session error"));
+              break;
           }
         });
 
-        child.on("close", (code: number | null) => {
-          if (code === 0 || code === null) {
-            resolve(fullText);
-          } else {
-            reject(new Error(`gh copilot exited with code ${code}`));
-          }
-        });
-
-        child.on("error", (err: Error) => {
+        // Send the prompt
+        session.send({ prompt }).catch((err: any) => {
+          unsubscribe?.();
           reject(err);
         });
       });
@@ -760,12 +804,28 @@ export class AiProviderService implements IAiApiService {
       const errorCursor = handler?.getCursor() || initialCursor;
       editor.replaceRange(errorMessage, errorCursor);
       return { fullString: errorMessage, mode: "streaming" };
+    } finally {
+      // Clean up resources (always use try-finally per best practices)
+      if (session) {
+        try {
+          await session.destroy();
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+      if (client) {
+        try {
+          await client.stop();
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
     }
   }
 
   /**
    * Call the Copilot API in non-streaming mode
-   * Uses the GitHub CLI (gh copilot) for Copilot integration
+   * Uses the @github/copilot-sdk with proper lifecycle management (2026 best practices)
    */
   private async callCopilotNonStreamingAPI(
     messages: Message[],
@@ -783,24 +843,74 @@ export class AiProviderService implements IAiApiService {
       throw new Error(copilotAdapter.getCliNotFoundError());
     }
 
-    // Build the prompt from messages
-    const lastUserMessage = messages.filter((m) => m.role === "user").pop();
-    const prompt = lastUserMessage?.content || "";
+    // Import the Copilot SDK dynamically
+    let CopilotClient: any;
+    try {
+      const copilotSdk = await import("@github/copilot-sdk");
+      CopilotClient = copilotSdk.CopilotClient;
+    } catch (_err) {
+      throw new Error("GitHub Copilot SDK not available. Please ensure @github/copilot-sdk is installed.");
+    }
 
-    const { execSync } = await import("child_process");
-    const ghCommand = cliPath || "gh";
+    let client: any = null;
+    let session: any = null;
 
     try {
-      // Use gh copilot explain for general queries
-      const result = execSync(`${ghCommand} copilot explain "${prompt.replace(/"/g, '\\"')}"`, {
-        encoding: "utf-8",
-        env: { ...process.env },
-        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-      });
+      // Create and start Copilot client
+      const clientOptions: any = {
+        autoStart: true,
+        autoRestart: true,
+      };
+      if (cliPath) {
+        clientOptions.cliPath = cliPath;
+      }
+      client = new CopilotClient(clientOptions);
+      await client.start();
 
-      return { fullString: result, model: modelName };
-    } catch (err: any) {
-      throw new Error(`GitHub Copilot error: ${err.message || err}`);
+      // Extract system message if present and use "append" mode to preserve guardrails
+      const systemMessage = messages.find((m) => m.role === "system")?.content;
+
+      // Create session
+      const sessionOptions: any = {
+        model: modelName,
+      };
+      if (systemMessage) {
+        sessionOptions.systemMessage = {
+          mode: "append",
+          content: systemMessage,
+        };
+      }
+
+      session = await client.createSession(sessionOptions);
+
+      // Build the prompt from the last user message
+      const lastUserMessage = messages.filter((m) => m.role === "user").pop();
+      const prompt = lastUserMessage?.content || "";
+
+      // Use sendAndWait for non-streaming response (waits for session.idle)
+      const response = await session.sendAndWait({ prompt });
+
+      // sendAndWait returns a string directly in 2026 SDK
+      const responseText =
+        typeof response === "string" ? response : response?.content || response?.text || String(response);
+
+      return { fullString: responseText, model: modelName };
+    } finally {
+      // Clean up resources (always use try-finally per best practices)
+      if (session) {
+        try {
+          await session.destroy();
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+      if (client) {
+        try {
+          await client.stop();
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
     }
   }
 }

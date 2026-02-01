@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, Platform, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 import {
@@ -10,7 +10,6 @@ import {
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
 } from "src/Services/DefaultConfigs";
-import { Platform } from "obsidian";
 import { getDefaultToolWhitelist } from "src/Services/ToolSupportDetector";
 
 interface SettingDefinition {

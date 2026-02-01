@@ -66,7 +66,11 @@ export class ApiAuthService {
    */
   validateApiKey(apiKey: string | undefined, serviceName: string): void {
     // Skip validation for Ollama, LM Studio, and Copilot as they don't require an API key
-    if (serviceName === AI_SERVICE_OLLAMA || serviceName === AI_SERVICE_LMSTUDIO || serviceName === AI_SERVICE_COPILOT) {
+    if (
+      serviceName === AI_SERVICE_OLLAMA ||
+      serviceName === AI_SERVICE_LMSTUDIO ||
+      serviceName === AI_SERVICE_COPILOT
+    ) {
       return;
     }
 

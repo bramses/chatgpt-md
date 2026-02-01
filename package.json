@@ -21,6 +21,7 @@
   "keywords": [],
   "author": "",
   "dependencies": {
+    "@github/copilot-sdk": "^1.0.0",
     "@ai-sdk/anthropic": "^3.0.35",
     "@ai-sdk/google": "^3.0.20",
     "@ai-sdk/openai": "^3.0.25",

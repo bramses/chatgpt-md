@@ -57,6 +57,7 @@ Contract each adapter must implement:
 **Abstract base class with common functionality**
 
 Default implementations:
+
 - `getSystemMessageRole()` → "system"
 - `supportsSystemField()` → false
 - `supportsToolCalling()` → true
@@ -104,20 +105,80 @@ Default implementations:
 
 ### CopilotAdapter.ts
 
-- **Hybrid adapter**: Uses Copilot SDK instead of Vercel AI SDK
-- Default URL: `https://api.githubcopilot.com` (handled by SDK internally)
-- `requiresApiKey()` → false (uses CLI-based OAuth via `gh copilot auth`)
-- `supportsToolCalling()` → false (Copilot has built-in tools)
+- **Hybrid adapter**: Uses `@github/copilot-sdk` instead of Vercel AI SDK
+- Default URL: `https://api.githubcopilot.com` (handled by SDK internally via CLI)
+- `requiresApiKey()` → false (uses CLI-based OAuth)
+- `supportsToolCalling()` → false (Copilot has built-in tools, bridging can be added later)
 - Desktop only - hidden on mobile (CLI not available)
-- Models are hardcoded (gpt-4o, gpt-5, claude-sonnet-4, etc.) - availability depends on subscription
+- Falls back to known models (gpt-4.1, gpt-4o, claude-sonnet-4, o3-mini)
 - Prefixes models with `copilot@`
 
 **Prerequisites**:
+
+1. Install Copilot CLI: https://docs.github.com/en/copilot/github-copilot-in-the-cli
+2. Authenticate: `copilot auth login`
+
+Or via GitHub CLI:
+
 1. Install GitHub CLI: https://cli.github.com/
 2. Install Copilot extension: `gh extension install github/gh-copilot`
-3. Authenticate: `gh auth login && gh copilot auth`
+3. Authenticate: `gh auth login`
+
+**SDK API (2026 best practices)**:
+
+Client lifecycle:
+
+```typescript
+const client = new CopilotClient({ autoStart: true, cliPath: "copilot" });
+await client.start(); // Must call before createSession
+// ... use client
+await client.stop(); // Always cleanup
+```
+
+Session management:
+
+```typescript
+const session = await client.createSession({
+  model: "gpt-4.1",
+  streaming: true,
+  systemMessage: { mode: "append", content: "..." }, // "append" preserves guardrails
+});
+// ... use session
+await session.destroy(); // Always cleanup
+```
+
+Event handling (single callback pattern):
+
+```typescript
+const unsubscribe = session.on((event) => {
+  switch (event.type) {
+    case "assistant.message.delta":
+      // Streaming chunk: event.data.deltaContent
+      break;
+    case "assistant.message":
+      // Final message: event.data.content
+      break;
+    case "session.idle":
+      // Processing complete
+      unsubscribe();
+      break;
+    case "session.error":
+      // Error: event.data.message
+      break;
+  }
+});
+await session.send({ prompt: "..." });
+```
+
+Non-streaming:
+
+```typescript
+const response = await session.sendAndWait({ prompt: "..." }); // Returns string
+```
 
 **Key differences from other adapters**:
-- Session-based API instead of REST API
-- Event-based streaming (`session.on("assistant.message_delta")`)
-- Streaming is converted to async iterator format in `AiProviderService`
+
+- Session-based API via JSON-RPC instead of REST API
+- Event-based streaming with discriminated union event types
+- Always use try-finally for cleanup (client.stop, session.destroy)
+- System messages use "append" mode to preserve safety guardrails
