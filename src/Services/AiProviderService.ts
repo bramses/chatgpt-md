@@ -187,7 +187,7 @@ export class AiProviderService implements IAiApiService {
   /**
    * Call the AI API with the given parameters
    */
-  async callAIAPI(
+  async callAiAPI(
     messages: Message[],
     options: Record<string, any> = {},
     headingPrefix: string,

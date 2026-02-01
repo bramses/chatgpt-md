@@ -4,6 +4,7 @@ import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
 import { requestStream } from "./requestStream";
 import { parseNonStreamingResponse } from "src/Utilities/ResponseHelpers";
+import { validateUrl, validateNonEmpty } from "src/Utilities/InputValidator";
 
 /**
  * ApiService handles all API communication for the application
@@ -37,6 +38,10 @@ export class ApiService {
     serviceType: string
   ): Promise<any> {
     try {
+      // Validate input parameters
+      validateUrl(url);
+      validateNonEmpty(serviceType, "Service type");
+
       const responseUrl = await requestUrl({
         url,
         method: "POST",

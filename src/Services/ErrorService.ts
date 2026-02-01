@@ -1,5 +1,6 @@
 import { NotificationService } from "./NotificationService";
-import { AI_SERVICE_OLLAMA, ERROR_NO_CONNECTION } from "src/Constants";
+import { ERROR_NO_CONNECTION } from "src/Constants";
+import { ErrorMessages, getHttpErrorMessage, formatErrorForLogging } from "src/Utilities/ErrorMessageFormatter";
 
 /**
  * Error types that can be handled by the ErrorService
@@ -47,35 +48,46 @@ export class ErrorService {
     }
   ): string {
     const prefix = `[ChatGPT MD] ${serviceName}`;
-    let errorMessage = "";
 
     // Extract context information if available
     const model = options.context?.model || "";
     const url = options.context?.url || "";
     const contextInfo = this.formatContextInfo(model, url);
 
-    // Determine error type and messages
+    // Determine standardized error message
+    let userMessage = "";
+    let logMessage = "";
+
     if (error instanceof Object) {
       if (error.name === "AbortError") {
-        errorMessage = `${prefix}: Stream aborted`;
+        userMessage = "Request was cancelled";
       } else if (error.message === ERROR_NO_CONNECTION) {
-        errorMessage = `${prefix}: Network connection error`;
+        userMessage = ErrorMessages.API.NETWORK_ERROR;
       } else if (error.status === 401 || error.error?.status === 401) {
-        errorMessage = `${prefix}: Authentication failed (401)`;
+        userMessage = ErrorMessages.API.AUTH_FAILED;
       } else if (error.status === 404 || error.error?.status === 404) {
-        errorMessage = `${prefix}: Resource not found (404)${contextInfo ? ` - ${contextInfo}` : ""}`;
-      } else if (error.error) {
-        errorMessage = `${prefix}: ${error.error.message}${contextInfo ? ` - ${contextInfo}` : ""}`;
+        userMessage = ErrorMessages.API.INVALID_MODEL;
+      } else if (error.status === 429 || error.error?.status === 429) {
+        userMessage = ErrorMessages.API.RATE_LIMIT;
+      } else if (error.status && error.status >= 400) {
+        userMessage = getHttpErrorMessage(error.status || error.error?.status);
+      } else if (error.error?.message) {
+        userMessage = error.error.message;
+      } else if (error.message) {
+        userMessage = error.message;
       } else {
-        errorMessage = `${prefix}: ${JSON.stringify(error)}${contextInfo ? ` - ${contextInfo}` : ""}`;
+        userMessage = "An unexpected error occurred";
       }
     } else {
-      errorMessage = `${prefix}: ${error}${contextInfo ? ` - ${contextInfo}` : ""}`;
+      userMessage = typeof error === "string" ? error : "An unexpected error occurred";
     }
+
+    const errorMessage = `${prefix}: ${userMessage}${contextInfo ? ` - ${contextInfo}` : ""}`;
 
     // Log to console if requested
     if (options.logToConsole) {
-      console.error(errorMessage, error, options.context);
+      logMessage = formatErrorForLogging(error, serviceName);
+      console.error(logMessage);
     }
 
     // Show notification if requested
@@ -85,10 +97,9 @@ export class ErrorService {
 
     // Return message for chat if requested
     if (options.returnForChat) {
-      // Format the error message for chat display with proper URL formatting
       return `I am sorry, I could not answer your request because of an error, here is what went wrong-
 
-${error instanceof Object && error.error ? error.error.message : error?.message || error || "undefined"}
+${userMessage}
 
 Model- ${model}, URL- ${url}`;
     }
@@ -114,29 +125,30 @@ Model- ${model}, URL- ${url}`;
    * Handle URL configuration errors
    */
   handleUrlError(url: string, defaultUrl: string, serviceName: string): string {
-    const errorMessage = `[ChatGPT MD] Error calling specified URL: ${url}`;
+    const userMessage = ErrorMessages.API.CONNECTION_REFUSED;
+    const errorMessage = `[ChatGPT MD] ${userMessage} (${url})`;
 
     this.notificationService.showNotification(errorMessage);
-    console.error(errorMessage, { url, defaultUrl, serviceName });
+    console.error(`[ChatGPT MD] URL configuration error`, { url, defaultUrl, serviceName });
 
-    // Format the URL properly for display in the chat message
     return `I am sorry, I could not answer your request because of an error, here is what went wrong-
 
-Error connecting to the custom URL.
+${userMessage}
 
-Model- ${serviceName === AI_SERVICE_OLLAMA ? "llama2" : "unknown"}, URL- ${url}`;
+Please check your API URL settings.`;
   }
 
   /**
    * Handle model configuration errors
    */
   handleModelError(model: string, serviceName: string): string {
-    const errorMessage = `[ChatGPT MD] Error calling model: ${model}`;
+    const userMessage = ErrorMessages.SETTINGS.MISSING_MODEL;
+    const errorMessage = `[ChatGPT MD] ${userMessage}`;
 
     this.notificationService.showNotification(errorMessage);
-    console.error(errorMessage, { model, serviceName });
+    console.error(`[ChatGPT MD] Model configuration error`, { model, serviceName });
 
-    return `I am sorry, there was an error with the model: ${model}. Please check your settings or try a different model.`;
+    return `I am sorry, there was an error with the model configuration. ${userMessage}`;
   }
 
   /**
@@ -146,7 +158,7 @@ Model- ${serviceName === AI_SERVICE_OLLAMA ? "llama2" : "unknown"}, URL- ${url}`
     const errorMessage = `[ChatGPT MD] Validation Error: ${message}`;
 
     this.notificationService.showNotification(errorMessage);
-    console.error(errorMessage, context);
+    console.error(`[ChatGPT MD] Validation error`, { message, context });
 
     throw new Error(errorMessage);
   }

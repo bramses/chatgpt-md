@@ -18,7 +18,7 @@ export interface IAiApiService {
   /**
    * Call the AI API with the given parameters
    */
-  callAIAPI(
+  callAiAPI(
     messages: Message[],
     options: Record<string, any>,
     headingPrefix: string,

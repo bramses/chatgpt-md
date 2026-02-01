@@ -11,6 +11,9 @@ import {
   AI_SERVICE_OPENROUTER,
   CALL_CHATGPT_API_COMMAND_ID,
   MIN_AUTO_INFER_MESSAGES,
+  NOTICE_DURATION_SHORT_MS,
+  NOTICE_DURATION_LONG_MS,
+  PLUGIN_PREFIX,
 } from "src/Constants";
 import {
   DEFAULT_ANTHROPIC_CONFIG,
@@ -66,7 +69,7 @@ export class ChatHandler {
       }
 
       if (Platform.isMobile) {
-        new Notice(`[ChatGPT MD] Calling ${frontmatter.model}`);
+        new Notice(`${PLUGIN_PREFIX} Calling ${frontmatter.model}`);
       } else {
         this.updateStatusBar(`Calling ${frontmatter.model}`);
       }
@@ -77,7 +80,7 @@ export class ChatHandler {
       // Get tool service if tools are enabled
       const toolServiceToUse = settings.enableToolCalling ? toolService : undefined;
 
-      const response = await aiService.callAIAPI(
+      const response = await aiService.callAiAPI(
         messagesWithRoleAndMessage,
         frontmatter,
         getHeadingPrefix(settings.headingLevel),
@@ -118,7 +121,7 @@ export class ChatHandler {
           } else if (frontmatter.aiService === AI_SERVICE_OLLAMA || frontmatter.aiService === AI_SERVICE_LMSTUDIO) {
             new Notice(
               `Auto title inference skipped: No model configured for ${frontmatter.aiService}. Please set a model in settings.`,
-              6000
+              NOTICE_DURATION_SHORT_MS
             );
             return;
           }
@@ -128,7 +131,7 @@ export class ChatHandler {
       }
     } catch (err) {
       if (Platform.isMobile) {
-        new Notice(`[ChatGPT MD] Calling ${frontmatter.model}. ` + err, 9000);
+        new Notice(`${PLUGIN_PREFIX} Calling ${frontmatter.model}. ` + err, NOTICE_DURATION_LONG_MS);
       }
       this.services.errorService.handleApiError(err, "ChatHandler.execute", { showNotification: true });
     }
