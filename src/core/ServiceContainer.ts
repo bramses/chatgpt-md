@@ -11,10 +11,8 @@ import { ApiAuthService } from "src/Services/ApiAuthService";
 import { AiProviderService } from "src/Services/AiProviderService";
 import { SettingsService } from "src/Services/SettingsService";
 import { ToolService } from "src/Services/ToolService";
-import { ToolRegistry } from "src/Services/ToolRegistry";
 import { VaultSearchService } from "src/Services/VaultSearchService";
 import { WebSearchService } from "src/Services/WebSearchService";
-import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
 
 /**
  * Simple service container with readonly service instances.
@@ -30,7 +28,6 @@ export class ServiceContainer {
   // Core infrastructure
   readonly app: App;
   readonly plugin: Plugin;
-  readonly modelCapabilities: ModelCapabilitiesCache;
 
   // Utility services
   readonly notificationService: NotificationService;
@@ -52,7 +49,6 @@ export class ServiceContainer {
   readonly settingsService: SettingsService;
 
   // Tool services (consolidated into single ToolService)
-  readonly toolRegistry: ToolRegistry;
   readonly vaultSearchService: VaultSearchService;
   readonly webSearchService: WebSearchService;
   readonly toolService: ToolService;
@@ -60,7 +56,6 @@ export class ServiceContainer {
   private constructor(
     app: App,
     plugin: Plugin,
-    modelCapabilities: ModelCapabilitiesCache,
     notificationService: NotificationService,
     errorService: ErrorService,
     apiService: ApiService,
@@ -72,14 +67,12 @@ export class ServiceContainer {
     editorService: EditorService,
     aiProviderService: () => AiProviderService,
     settingsService: SettingsService,
-    toolRegistry: ToolRegistry,
     vaultSearchService: VaultSearchService,
     webSearchService: WebSearchService,
     toolService: ToolService
   ) {
     this.app = app;
     this.plugin = plugin;
-    this.modelCapabilities = modelCapabilities;
     this.notificationService = notificationService;
     this.errorService = errorService;
     this.apiService = apiService;
@@ -91,7 +84,6 @@ export class ServiceContainer {
     this.editorService = editorService;
     this.aiProviderService = aiProviderService;
     this.settingsService = settingsService;
-    this.toolRegistry = toolRegistry;
     this.vaultSearchService = vaultSearchService;
     this.webSearchService = webSearchService;
     this.toolService = toolService;
@@ -105,9 +97,6 @@ export class ServiceContainer {
    * to composite services (depend on other services).
    */
   static create(app: App, plugin: Plugin): ServiceContainer {
-    // Create model capabilities cache (shared state)
-    const modelCapabilities = new ModelCapabilitiesCache();
-
     // === Leaf services (no dependencies) ===
     const notificationService = new NotificationService();
     const errorService = new ErrorService(notificationService);
@@ -137,13 +126,12 @@ export class ServiceContainer {
 
     // === AI service factory ===
     // Using a factory function to create new instances when needed
-    const aiProviderService = () => new AiProviderService(modelCapabilities);
+    const aiProviderService = () => new AiProviderService();
 
     // Set the save settings callback for AI services
     AiProviderService.setSaveSettingsCallback(settingsService.saveSettings.bind(settingsService));
 
     // === Tool services (consolidated) ===
-    const toolRegistry = new ToolRegistry();
     const vaultSearchService = new VaultSearchService(app, fileService);
     const webSearchService = new WebSearchService(notificationService);
     const toolService = new ToolService(
@@ -151,7 +139,6 @@ export class ServiceContainer {
       fileService,
       notificationService,
       settingsService.getSettings(),
-      toolRegistry,
       vaultSearchService,
       webSearchService
     );
@@ -160,7 +147,6 @@ export class ServiceContainer {
     return new ServiceContainer(
       app,
       plugin,
-      modelCapabilities,
       notificationService,
       errorService,
       apiService,
@@ -172,7 +158,6 @@ export class ServiceContainer {
       editorService,
       aiProviderService,
       settingsService,
-      toolRegistry,
       vaultSearchService,
       webSearchService,
       toolService

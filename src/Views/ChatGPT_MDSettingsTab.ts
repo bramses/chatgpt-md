@@ -360,18 +360,7 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "Tool Calling",
       },
 
-      // Web Search (requires tool calling)
-      {
-        id: "enableWebSearch",
-        name: "Enable Web Search",
-        description:
-          "Allow the AI to search the web for information using Brave Search. " +
-          "Requires tool calling to be enabled. " +
-          "Requires a free Brave Search API key (1,000 queries/month). " +
-          "Get yours at: https://api.search.brave.com/",
-        type: "toggle",
-        group: "Tool Calling",
-      },
+      // Web Search configuration
       {
         id: "webSearchApiKey",
         name: "Brave Search API Key",

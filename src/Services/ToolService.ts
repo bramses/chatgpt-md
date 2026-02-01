@@ -3,7 +3,6 @@ import { z } from "zod";
 import { tool, zodSchema } from "ai";
 import { FileService } from "./FileService";
 import { NotificationService } from "./NotificationService";
-import { ToolRegistry } from "./ToolRegistry";
 import { VaultSearchService } from "./VaultSearchService";
 import { WebSearchService } from "./WebSearchService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
@@ -30,16 +29,16 @@ type ToolResultHandler = (
 
 /**
  * Unified Tool Service
- * Consolidates all tool-related functionality:
- * - Tool registration (delegates to ToolRegistry)
+ * Handles all tool-related functionality:
+ * - Tool registration and retrieval
  * - Vault operations (delegates to VaultSearchService)
  * - Web search (delegates to WebSearchService)
- * - Tool orchestration and approval (from ToolService)
+ * - Tool orchestration and approval
  */
 export class ToolService {
   private approvalHandler?: (toolName: string, args: any) => Promise<any>;
   private readonly toolResultHandlers: Record<string, ToolResultHandler>;
-  private readonly registry: ToolRegistry;
+  private readonly tools: Map<string, any> = new Map();
   private readonly vaultSearchService: VaultSearchService;
   private readonly webSearchService: WebSearchService;
 
@@ -48,7 +47,6 @@ export class ToolService {
     private fileService: FileService,
     private notificationService: NotificationService,
     private settingsService: ChatGPT_MDSettings,
-    registry?: ToolRegistry,
     vaultSearchService?: VaultSearchService,
     webSearchService?: WebSearchService
   ) {
@@ -58,13 +56,7 @@ export class ToolService {
       web_search: this.handleWebSearchResult.bind(this),
     };
 
-    // Use provided registry or create new one (for backward compatibility)
-    this.registry = registry || new ToolRegistry();
-
-    // Use provided vaultSearchService or create new one (for backward compatibility)
     this.vaultSearchService = vaultSearchService || new VaultSearchService(app, fileService);
-
-    // Use provided webSearchService or create new one (for backward compatibility)
     this.webSearchService = webSearchService || new WebSearchService(notificationService);
 
     // Register default tools
@@ -163,34 +155,38 @@ export class ToolService {
 
   /**
    * Register a new tool
-   * Delegates to ToolRegistry
    */
   registerTool(name: string, toolDef: any): void {
-    this.registry.registerTool(name, toolDef);
+    this.tools.set(name, toolDef);
   }
 
   /**
    * Get a specific tool by name
-   * Delegates to ToolRegistry
    */
   getTool(name: string): any | undefined {
-    return this.registry.getTool(name);
+    return this.tools.get(name);
   }
 
   /**
    * Get all registered tools
-   * Delegates to ToolRegistry
    */
   getAllTools(): Record<string, any> {
-    return this.registry.getAllTools();
+    const toolsObject: Record<string, any> = {};
+    this.tools.forEach((toolDef, name) => {
+      toolsObject[name] = toolDef;
+    });
+    return toolsObject;
   }
 
   /**
    * Get tools enabled for a request based on settings
-   * Delegates to ToolRegistry
+   * Returns all tools if enableToolCalling is true, undefined otherwise
    */
   getEnabledTools(settings: ChatGPT_MDSettings): Record<string, any> | undefined {
-    return this.registry.getEnabledTools(settings);
+    if (!settings.enableToolCalling) {
+      return undefined;
+    }
+    return this.getAllTools();
   }
 
   // ========== Tool Orchestration and Approval ==========

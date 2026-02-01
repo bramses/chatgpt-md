@@ -184,8 +184,6 @@ export interface ServiceUrlSettings {
  * Web search settings
  */
 export interface WebSearchSettings {
-  /** Enable/disable web search tool */
-  enableWebSearch: boolean;
   /** Search provider ('brave' | 'custom') */
   webSearchProvider: "brave" | "custom";
   /** API key for providers that require it */
@@ -247,7 +245,6 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   pluginSystemMessage: PLUGIN_SYSTEM_MESSAGE,
 
   // Web Search
-  enableWebSearch: false,
   webSearchProvider: "brave",
   webSearchApiKey: "",
   webSearchApiUrl: "",

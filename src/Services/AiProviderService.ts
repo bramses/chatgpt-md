@@ -8,8 +8,7 @@ import { ErrorService } from "./ErrorService";
 import { NotificationService } from "./NotificationService";
 import { ToolService } from "./ToolService";
 import { StreamingHandler } from "./StreamingHandler";
-import { ModelCapabilitiesCache } from "src/Models/ModelCapabilities";
-import { detectToolSupport } from "./ToolSupportDetector";
+import { isModelWhitelisted } from "./ToolSupportDetector";
 import { insertAssistantHeader } from "src/Utilities/ResponseHelpers";
 import { AiProvider, IAiApiService, StreamingResponse } from "src/Types/AiTypes";
 
@@ -43,7 +42,6 @@ export class AiProviderService implements IAiApiService {
   private apiAuthService: ApiAuthService;
   private readonly errorService: ErrorService;
   private readonly notificationService: NotificationService;
-  private capabilitiesCache?: ModelCapabilitiesCache;
 
   // Adapter registry
   private adapters: Map<ProviderType, ProviderAdapter>;
@@ -55,12 +53,11 @@ export class AiProviderService implements IAiApiService {
   // Static callback for saving settings
   private static saveSettingsCallback: (() => Promise<void>) | null = null;
 
-  constructor(capabilitiesCache?: ModelCapabilitiesCache) {
+  constructor() {
     this.notificationService = new NotificationService();
     this.errorService = new ErrorService(this.notificationService);
     this.apiService = new ApiService(this.errorService, this.notificationService);
     this.apiAuthService = new ApiAuthService(this.notificationService);
-    this.capabilitiesCache = capabilitiesCache;
 
     // Register all adapters
     this.adapters = new Map<ProviderType, ProviderAdapter>([
@@ -101,11 +98,10 @@ export class AiProviderService implements IAiApiService {
   }
 
   /**
-   * Check if a model is known to support tools (from cache only)
+   * Check if a model supports tools (whitelist check)
    */
   private modelSupportsTools(modelName: string, settings: ChatGPT_MDSettings): boolean {
-    const cachedSupport = this.capabilitiesCache?.supportsTools(modelName);
-    return cachedSupport === true;
+    return isModelWhitelisted(modelName, settings.toolEnabledModels || "");
   }
 
   /**
@@ -136,7 +132,7 @@ export class AiProviderService implements IAiApiService {
    * Fetch available models from a specific provider
    * @param url - Base URL for API
    * @param apiKey - API key for authentication (if required)
-   * @param settings - Plugin settings for tool support detection
+   * @param settings - Plugin settings (unused, kept for API compatibility)
    * @param providerType - Optional provider type (defaults to current adapter)
    */
   async fetchAvailableModels(
@@ -159,25 +155,12 @@ export class AiProviderService implements IAiApiService {
         return [];
       }
 
-      const models = await this.currentAdapter.fetchModels(
+      return await this.currentAdapter.fetchModels(
         url,
         apiKey,
         settings,
         this.apiService.makeGetRequest.bind(this.apiService)
       );
-
-      // Cache tool support for each model
-      if (settings && this.capabilitiesCache) {
-        const whitelist = settings.toolEnabledModels || "";
-        for (const fullModelId of models) {
-          const modelName = this.currentAdapter.extractModelName(fullModelId);
-          const supportsTools = detectToolSupport(modelName, whitelist);
-          this.capabilitiesCache.setSupportsTools(fullModelId, supportsTools);
-          console.log(`[${this.currentAdapter.displayName}] Cached: ${fullModelId} -> Tools: ${supportsTools}`);
-        }
-      }
-
-      return models;
     } catch (error) {
       console.error(`Error fetching ${this.currentAdapter.displayName} models:`, error);
       return [];

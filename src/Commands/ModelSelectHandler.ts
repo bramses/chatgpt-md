@@ -40,8 +40,7 @@ export class ModelSelectHandler {
       editor,
       editorService,
       this.availableModels, // Use potentially stale but instantly available models
-      settings,
-      this.services.modelCapabilities
+      settings
     );
     initialModal.open();
 
@@ -93,8 +92,7 @@ export class ModelSelectHandler {
             editor,
             editorService,
             this.availableModels,
-            settings,
-            this.services.modelCapabilities
+            settings
           ).open();
         }
       } catch (e) {
