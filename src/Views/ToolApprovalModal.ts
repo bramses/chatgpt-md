@@ -8,6 +8,9 @@ import { BaseApprovalModal } from "./BaseApprovalModal";
 export class ToolApprovalModal extends BaseApprovalModal<ToolApprovalDecision> {
   private toolName: string;
   private args: Record<string, any>;
+  private editedQuery: string | null = null;
+  private queryTextarea: HTMLTextAreaElement | null = null;
+  private approveBtn: HTMLButtonElement | null = null;
 
   constructor(app: App, toolName: string, args: Record<string, any>, modelName: string = "AI") {
     super(app, modelName);
@@ -126,6 +129,34 @@ export class ToolApprovalModal extends BaseApprovalModal<ToolApprovalDecision> {
     return "Approve and Execute";
   }
 
+  protected override renderActionButtons(container: HTMLElement): void {
+    const buttonContainer = container.createDiv();
+    buttonContainer.style.display = "flex";
+    buttonContainer.style.gap = "8px";
+    buttonContainer.style.justifyContent = "flex-end";
+    buttonContainer.style.marginTop = "20px";
+
+    const cancelBtn = buttonContainer.createEl("button", { text: this.getCancelText() });
+    this.styleCancelButton(cancelBtn);
+    cancelBtn.onclick = () => {
+      this.result = this.buildCancelledResult();
+      this.resolveModalPromise(this.result);
+      this.close();
+    };
+
+    this.approveBtn = buttonContainer.createEl("button", { text: this.getApproveText() });
+    this.styleApproveButton(this.approveBtn);
+
+    // Initial validation
+    this.validateApproveButton();
+
+    this.approveBtn.onclick = () => {
+      this.result = this.buildApprovedResult();
+      this.resolveModalPromise(this.result);
+      this.close();
+    };
+  }
+
   protected buildApprovedResult(): ToolApprovalDecision {
     return {
       approvalId: this.toolName,
@@ -139,6 +170,27 @@ export class ToolApprovalModal extends BaseApprovalModal<ToolApprovalDecision> {
       approvalId: this.toolName,
       approved: false,
     };
+  }
+
+  /**
+   * Validate query and enable/disable approve button
+   */
+  private validateApproveButton(): void {
+    if (!this.approveBtn) return;
+
+    // For search tools, require non-empty query
+    if ((this.toolName === "vault_search" || this.toolName === "web_search") && this.queryTextarea) {
+      const query = this.queryTextarea.value.trim();
+      const isValid = query.length > 0;
+      this.approveBtn.disabled = !isValid;
+      this.approveBtn.style.opacity = isValid ? "1" : "0.5";
+      this.approveBtn.style.cursor = isValid ? "pointer" : "not-allowed";
+    } else {
+      // Other tools - always enabled
+      this.approveBtn.disabled = false;
+      this.approveBtn.style.opacity = "1";
+      this.approveBtn.style.cursor = "pointer";
+    }
   }
 
   /**
@@ -157,6 +209,14 @@ export class ToolApprovalModal extends BaseApprovalModal<ToolApprovalDecision> {
       return {
         ...baseArgs,
         filePaths: selectedFiles,
+      };
+    }
+
+    // For vault_search and web_search, include edited query if changed
+    if ((this.toolName === "vault_search" || this.toolName === "web_search") && this.editedQuery) {
+      return {
+        ...baseArgs,
+        query: this.editedQuery,
       };
     }
 
@@ -198,10 +258,33 @@ export class ToolApprovalModal extends BaseApprovalModal<ToolApprovalDecision> {
 
     // List for search queries
     if ((this.toolName === "vault_search" || this.toolName === "web_search") && query) {
-      const list = container.createEl("ul");
-      list.style.margin = "0 0 16px 20px";
-      list.style.lineHeight = "1.5";
-      list.createEl("li", { text: `"${query}"` });
+      // Label for textarea
+      const label = container.createEl("label", { text: "Search query:" });
+      label.style.display = "block";
+      label.style.marginBottom = "8px";
+      label.style.fontWeight = "500";
+      label.style.opacity = "0.7";
+
+      // Editable textarea for query
+      this.queryTextarea = container.createEl("textarea");
+      this.queryTextarea.value = query;
+      this.queryTextarea.style.width = "100%";
+      this.queryTextarea.style.minHeight = "80px";
+      this.queryTextarea.style.padding = "8px";
+      this.queryTextarea.style.borderRadius = "4px";
+      this.queryTextarea.style.border = "1px solid var(--background-modifier-border)";
+      this.queryTextarea.style.backgroundColor = "var(--background-secondary)";
+      this.queryTextarea.style.color = "var(--text-normal)";
+      this.queryTextarea.style.fontSize = "0.95em";
+      this.queryTextarea.style.fontFamily = "var(--font-interface)";
+      this.queryTextarea.style.resize = "vertical";
+      this.queryTextarea.style.marginBottom = "16px";
+
+      // Track query changes
+      this.queryTextarea.addEventListener("input", () => {
+        this.editedQuery = this.queryTextarea!.value.trim();
+        this.validateApproveButton();
+      });
     } else if (this.toolName === "file_read") {
       // For file_read, still just one line since files are shown in selection below
       const noteEl = container.createEl("p", {
