@@ -442,20 +442,10 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         id: "toolEnabledModels",
         name: "Tool-Enabled Models",
         description:
-          "Whitelist of models that can use tools (vault search, file read, web search).\n\n" +
-          "📝 Pattern Syntax:\n" +
-          "  • Exact match: 'gpt-4o' matches only 'gpt-4o'\n" +
-          "  • Date auto-match: 'gpt-4o' matches 'gpt-4o-2025-04-16'\n" +
-          "  • Wildcard: 'gpt-4*' matches 'gpt-4o', 'gpt-4-turbo', etc.\n\n" +
-          "🔧 Current Coverage:\n" +
-          "  • OpenAI: 36 patterns (GPT-3.5/4/5, o-series)\n" +
-          "  • Anthropic: 9 patterns (Claude 3/3.5/4/4.5)\n" +
-          "  • Gemini: 7 patterns (Flash 2.5/3.0)\n" +
-          "  • OpenRouter: 109 patterns (DeepSeek, Qwen, Mistral, etc.)\n\n" +
-          "💡 Tips:\n" +
-          "  • Use 'Reset to Recommended' to restore tested whitelist\n" +
-          "  • Lines starting with # are comments\n" +
-          "  • One pattern per line or comma-separated",
+          "Models allowed to use tools (vault search, file read, web search).\n\n" +
+          "Format: One model pattern per line. Supports wildcards (*).\n" +
+          "Examples: 'gpt-4o', 'claude-*', 'gemini-1.5*'\n\n" +
+          "Only tested models are included by default.",
         type: "textarea",
         placeholder: "gpt-5.2\ngpt-5.2-chat-latest\no3\nclaude-opus-4-5",
         group: "Tool Calling",
@@ -645,26 +635,12 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         }
 
         if (schema.id === "toolEnabledModels") {
-          text.inputEl.style.height = "280px";
-          text.inputEl.style.minHeight = "280px";
+          text.inputEl.style.height = "200px";
+          text.inputEl.style.minHeight = "200px";
         }
 
         return text;
       });
-
-      if (schema.id === "toolEnabledModels") {
-        setting.addButton((button) => {
-          button
-            .setButtonText("Reset to Recommended")
-            .setTooltip("Restore the recommended default whitelist")
-            .onClick(async () => {
-              const defaultWhitelist = getDefaultToolWhitelist();
-              this.settingsProvider.settings.toolEnabledModels = defaultWhitelist;
-              await this.settingsProvider.saveSettings();
-              this.display();
-            });
-        });
-      }
     } else if (schema.type === "toggle") {
       setting.addToggle((toggle) =>
         toggle.setValue(Boolean(this.settingsProvider.settings[schema.id])).onChange(async (value) => {
