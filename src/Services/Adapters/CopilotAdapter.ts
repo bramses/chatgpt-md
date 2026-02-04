@@ -165,13 +165,12 @@ export class CopilotAdapter extends BaseProviderAdapter {
    */
   getCliNotFoundError(): string {
     return (
-      "GitHub Copilot CLI not found. Please install and authenticate:\n" +
-      "1. Install Copilot CLI: https://docs.github.com/en/copilot/github-copilot-in-the-cli\n" +
-      "2. Authenticate: copilot auth login\n\n" +
-      "Or via GitHub CLI:\n" +
+      "GitHub Copilot CLI not found. Please install and authenticate:\n\n" +
       "1. Install GitHub CLI: https://cli.github.com/\n" +
-      "2. Install Copilot extension: gh extension install github/gh-copilot\n" +
-      "3. Authenticate: gh auth login"
+      "2. Authenticate: gh auth login\n" +
+      "3. Verify: gh copilot --version\n\n" +
+      "Note: Copilot is now built into GitHub CLI (gh) - no extension needed.\n" +
+      "Requires an active GitHub Copilot subscription."
     );
   }
 }

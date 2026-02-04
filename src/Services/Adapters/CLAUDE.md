@@ -115,14 +115,11 @@ Default implementations:
 
 **Prerequisites**:
 
-1. Install Copilot CLI: https://docs.github.com/en/copilot/github-copilot-in-the-cli
-2. Authenticate: `copilot auth login`
-
-Or via GitHub CLI:
-
 1. Install GitHub CLI: https://cli.github.com/
-2. Install Copilot extension: `gh extension install github/gh-copilot`
-3. Authenticate: `gh auth login`
+2. Authenticate: `gh auth login`
+3. Verify: `gh copilot --version`
+
+Note: Copilot is now built into GitHub CLI - no extension installation needed.
 
 **SDK API (2026 best practices)**:
 
