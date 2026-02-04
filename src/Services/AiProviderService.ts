@@ -345,7 +345,7 @@ export class AiProviderService implements IAiApiService {
     }
 
     const customFetch = this.apiService.createFetchAdapter();
-    const providerFactory = this.getProviderFactory(this.currentAdapter.type);
+    const providerFactory = this.getProviderFactory(this.currentAdapter.type, config.url);
 
     this.provider = providerFactory({
       apiKey: apiKey || "",
@@ -356,8 +356,10 @@ export class AiProviderService implements IAiApiService {
 
   /**
    * Get the AI SDK provider factory for a given provider type
+   * @param type - Provider type
+   * @param url - Optional URL to determine API mode (used for Z.AI)
    */
-  private getProviderFactory(type: ProviderType): any {
+  private getProviderFactory(type: ProviderType, url?: string): any {
     switch (type) {
       case "openai":
         return createOpenAI;
@@ -367,7 +369,14 @@ export class AiProviderService implements IAiApiService {
         return createGoogleGenerativeAI;
       case "ollama":
       case "lmstudio":
+        return createOpenAICompatible;
       case "zai":
+        // Z.AI supports two API modes based on URL
+        // - Standard API (OpenAI-compatible): /api/paas/v4
+        // - Coding Plan (Anthropic-compatible): /api/anthropic
+        if (url && url.includes("/api/anthropic")) {
+          return createAnthropic;
+        }
         return createOpenAICompatible;
       case "openrouter":
         return createOpenRouter;

@@ -51,7 +51,7 @@ export interface ApiKeySettings {
   anthropicApiKey: string;
   /** API Key for Gemini - used for Google Gemini models */
   geminiApiKey: string;
-  /** API Key for Z.AI - used for GLM models via Z.AI API */
+  /** API Key for Z.AI - used for GLM models (both Standard API and Coding Plan) */
   zaiApiKey: string;
 }
 
@@ -206,7 +206,7 @@ export interface ServiceUrlSettings {
   anthropicUrl: string;
   /** URL for Gemini API */
   geminiUrl: string;
-  /** URL for Z.AI API */
+  /** URL for Z.AI API (Standard: /api/paas/v4, Coding Plan: /api/anthropic) */
   zaiUrl: string;
 }
 

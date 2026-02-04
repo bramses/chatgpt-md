@@ -11,6 +11,7 @@ import {
   DEFAULT_OPENROUTER_CONFIG,
   DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
+import { ZAI_ANTHROPIC_ENDPOINT, ZAI_OPENAI_ENDPOINT } from "src/Services/Adapters/ZaiAdapter";
 import { getDefaultToolWhitelist } from "src/Services/ToolSupportDetector";
 
 interface SettingDefinition {
@@ -78,7 +79,7 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
       {
         id: "zaiApiKey",
         name: "Z.AI API Key",
-        description: "API Key for Z.AI (GLM models). Get your key at https://z.ai",
+        description: "API Key for Z.AI (GLM models). Works with both Standard API and Coding Plan. Get your key at https://z.ai",
         type: "text",
         placeholder: "your Z.AI API Key",
         group: "API Keys",
@@ -278,47 +279,11 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "OpenRouter Defaults",
       },
 
-      // Ollama Defaults
-      {
-        id: "ollamaUrl",
-        name: "Ollama API URL",
-        description: `URL for Ollama API\nDefault URL: ${DEFAULT_OLLAMA_CONFIG.url}`,
-        type: "text",
-        placeholder: DEFAULT_OLLAMA_CONFIG.url,
-        group: "Ollama Defaults",
-      },
-      {
-        id: "ollamaDefaultTemperature",
-        name: "Default Ollama Temperature",
-        description: "Default temperature for Ollama chats (0.0 to 2.0)",
-        type: "text",
-        placeholder: "0.7",
-        group: "Ollama Defaults",
-      },
-
-      // LM Studio Defaults
-      {
-        id: "lmstudioUrl",
-        name: "LM Studio API URL",
-        description: `URL for LM Studio API\nDefault URL: ${DEFAULT_LMSTUDIO_CONFIG.url}`,
-        type: "text",
-        placeholder: DEFAULT_LMSTUDIO_CONFIG.url,
-        group: "LM Studio Defaults",
-      },
-      {
-        id: "lmstudioDefaultTemperature",
-        name: "Default LM Studio Temperature",
-        description: "Default temperature for LM Studio chats (0.0 to 2.0)",
-        type: "text",
-        placeholder: "0.7",
-        group: "LM Studio Defaults",
-      },
-
       // Z.AI Defaults
       {
         id: "zaiUrl",
         name: "Z.AI API URL",
-        description: `URL for Z.AI API\nDefault URL: ${DEFAULT_ZAI_CONFIG.url}`,
+        description: `URL for Z.AI API. Two modes available:\n• Standard API (pay-per-token): ${ZAI_OPENAI_ENDPOINT}\n• Coding Plan (subscription): ${ZAI_ANTHROPIC_ENDPOINT}`,
         type: "text",
         placeholder: DEFAULT_ZAI_CONFIG.url,
         group: "Z.AI Defaults",
@@ -380,6 +345,42 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
               group: "GitHub Copilot",
             },
           ]),
+
+      // Ollama Defaults (Local)
+      {
+        id: "ollamaUrl",
+        name: "Ollama API URL",
+        description: `URL for Ollama API\nDefault URL: ${DEFAULT_OLLAMA_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_OLLAMA_CONFIG.url,
+        group: "Ollama Defaults (Local)",
+      },
+      {
+        id: "ollamaDefaultTemperature",
+        name: "Default Ollama Temperature",
+        description: "Default temperature for Ollama chats (0.0 to 2.0)",
+        type: "text",
+        placeholder: "0.7",
+        group: "Ollama Defaults (Local)",
+      },
+
+      // LM Studio Defaults (Local)
+      {
+        id: "lmstudioUrl",
+        name: "LM Studio API URL",
+        description: `URL for LM Studio API\nDefault URL: ${DEFAULT_LMSTUDIO_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_LMSTUDIO_CONFIG.url,
+        group: "LM Studio Defaults (Local)",
+      },
+      {
+        id: "lmstudioDefaultTemperature",
+        name: "Default LM Studio Temperature",
+        description: "Default temperature for LM Studio chats (0.0 to 2.0)",
+        type: "text",
+        placeholder: "0.7",
+        group: "LM Studio Defaults (Local)",
+      },
 
       // Folders
       {
