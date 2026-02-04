@@ -29,6 +29,7 @@ import { OpenRouterAdapter } from "./Adapters/OpenRouterAdapter";
 import { GeminiAdapter } from "./Adapters/GeminiAdapter";
 import { LmStudioAdapter } from "./Adapters/LmStudioAdapter";
 import { CopilotAdapter } from "./Adapters/CopilotAdapter";
+import { ZaiAdapter } from "./Adapters/ZaiAdapter";
 
 // Constants
 import { NEWLINE, ROLE_USER, TITLE_INFERENCE_ERROR_HEADER, TRUNCATION_ERROR_INDICATOR } from "src/Constants";
@@ -69,6 +70,7 @@ export class AiProviderService implements IAiApiService {
       ["gemini", new GeminiAdapter()],
       ["lmstudio", new LmStudioAdapter()],
       ["copilot", new CopilotAdapter()],
+      ["zai", new ZaiAdapter()],
     ]);
 
     // Default to OpenAI
@@ -365,6 +367,7 @@ export class AiProviderService implements IAiApiService {
         return createGoogleGenerativeAI;
       case "ollama":
       case "lmstudio":
+      case "zai":
         return createOpenAICompatible;
       case "openrouter":
         return createOpenRouter;

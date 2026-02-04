@@ -12,6 +12,7 @@ import {
   DEFAULT_OLLAMA_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
+  DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
 import { getDefaultToolWhitelist } from "src/Services/ToolSupportDetector";
 
@@ -50,6 +51,8 @@ export interface ApiKeySettings {
   anthropicApiKey: string;
   /** API Key for Gemini - used for Google Gemini models */
   geminiApiKey: string;
+  /** API Key for Z.AI - used for GLM models via Z.AI API */
+  zaiApiKey: string;
 }
 
 /**
@@ -168,6 +171,18 @@ export interface CopilotSettings {
 }
 
 /**
+ * Provider-specific frontmatter settings for Z.AI
+ */
+export interface ZaiFrontmatterSettings {
+  /** Default model for Z.AI chats */
+  zaiDefaultModel: string;
+  /** Default temperature for Z.AI chats */
+  zaiDefaultTemperature: number;
+  /** Default max tokens for Z.AI chats */
+  zaiDefaultMaxTokens: number;
+}
+
+/**
  * Chat template settings
  */
 export interface TemplateSettings {
@@ -191,6 +206,8 @@ export interface ServiceUrlSettings {
   anthropicUrl: string;
   /** URL for Gemini API */
   geminiUrl: string;
+  /** URL for Z.AI API */
+  zaiUrl: string;
 }
 
 /**
@@ -225,7 +242,8 @@ export interface ChatGPT_MDSettings
     OpenRouterFrontmatterSettings,
     OllamaFrontmatterSettings,
     LmStudioFrontmatterSettings,
-    CopilotSettings {}
+    CopilotSettings,
+    ZaiFrontmatterSettings {}
 
 /**
  * Default settings
@@ -236,6 +254,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   openrouterApiKey: "",
   anthropicApiKey: "",
   geminiApiKey: "",
+  zaiApiKey: "",
 
   // Service URLs
   openaiUrl: DEFAULT_OPENAI_CONFIG.url,
@@ -244,6 +263,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   lmstudioUrl: DEFAULT_LMSTUDIO_CONFIG.url,
   anthropicUrl: DEFAULT_ANTHROPIC_CONFIG.url,
   geminiUrl: DEFAULT_GEMINI_CONFIG.url,
+  zaiUrl: DEFAULT_ZAI_CONFIG.url,
 
   // Folders
   chatFolder: "ChatGPT_MD/chats",
@@ -313,4 +333,9 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   copilotEnabled: false,
   copilotCliPath: "",
   copilotDefaultModel: DEFAULT_COPILOT_CONFIG.model,
+
+  // Z.AI Defaults
+  zaiDefaultModel: DEFAULT_ZAI_CONFIG.model,
+  zaiDefaultTemperature: DEFAULT_ZAI_CONFIG.temperature,
+  zaiDefaultMaxTokens: DEFAULT_ZAI_CONFIG.max_tokens,
 };

@@ -6,6 +6,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_ZAI,
 } from "src/Constants";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { NotificationService } from "./NotificationService";
@@ -47,6 +48,8 @@ export class ApiAuthService {
         return settings.anthropicApiKey;
       case AI_SERVICE_GEMINI:
         return settings.geminiApiKey;
+      case AI_SERVICE_ZAI:
+        return settings.zaiApiKey;
       case AI_SERVICE_OLLAMA:
         return ""; // Ollama doesn't use an API key
       case AI_SERVICE_LMSTUDIO:
@@ -109,6 +112,9 @@ export class ApiAuthService {
         break;
       case AI_SERVICE_GEMINI:
         headers["x-goog-api-key"] = apiKey;
+        break;
+      case AI_SERVICE_ZAI:
+        headers["Authorization"] = `Bearer ${apiKey}`;
         break;
       case AI_SERVICE_OLLAMA:
         // Ollama doesn't require authentication headers

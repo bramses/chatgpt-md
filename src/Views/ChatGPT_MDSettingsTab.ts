@@ -9,6 +9,7 @@ import {
   DEFAULT_OLLAMA_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
+  DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
 import { getDefaultToolWhitelist } from "src/Services/ToolSupportDetector";
 
@@ -72,6 +73,14 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         description: "API Key for Google Gemini (Google AI Studio)",
         type: "text",
         placeholder: "your Gemini API Key",
+        group: "API Keys",
+      },
+      {
+        id: "zaiApiKey",
+        name: "Z.AI API Key",
+        description: "API Key for Z.AI (GLM models). Get your key at https://z.ai",
+        type: "text",
+        placeholder: "your Z.AI API Key",
         group: "API Keys",
       },
 
@@ -303,6 +312,40 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         type: "text",
         placeholder: "0.7",
         group: "LM Studio Defaults",
+      },
+
+      // Z.AI Defaults
+      {
+        id: "zaiUrl",
+        name: "Z.AI API URL",
+        description: `URL for Z.AI API\nDefault URL: ${DEFAULT_ZAI_CONFIG.url}`,
+        type: "text",
+        placeholder: DEFAULT_ZAI_CONFIG.url,
+        group: "Z.AI Defaults",
+      },
+      {
+        id: "zaiDefaultModel",
+        name: "Default Z.AI Model",
+        description: "Default model for Z.AI chats (e.g., zai@glm-4.7)",
+        type: "text",
+        placeholder: DEFAULT_ZAI_CONFIG.model,
+        group: "Z.AI Defaults",
+      },
+      {
+        id: "zaiDefaultTemperature",
+        name: "Default Z.AI Temperature",
+        description: "Default temperature for Z.AI chats (0.0 to 1.0)",
+        type: "text",
+        placeholder: "0.7",
+        group: "Z.AI Defaults",
+      },
+      {
+        id: "zaiDefaultMaxTokens",
+        name: "Default Z.AI Max Tokens",
+        description: "Default max tokens for Z.AI chats",
+        type: "text",
+        placeholder: "400",
+        group: "Z.AI Defaults",
       },
 
       // GitHub Copilot Settings (desktop only)
