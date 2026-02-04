@@ -29,6 +29,18 @@ interface SettingsProvider {
   saveSettings: () => Promise<void>;
 }
 
+// Groups that should be collapsible (provider-specific settings)
+const COLLAPSIBLE_GROUPS = [
+  "OpenAI",
+  "Anthropic",
+  "Gemini",
+  "OpenRouter",
+  "Z.AI",
+  "GitHub Copilot",
+  "Ollama (Local)",
+  "LM Studio (Local)",
+];
+
 export class ChatGPT_MDSettingsTab extends PluginSettingTab {
   settingsProvider: SettingsProvider;
 
@@ -146,171 +158,171 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
       // OpenAI Defaults
       {
         id: "openaiUrl",
-        name: "OpenAI API URL",
+        name: "API URL",
         description: `URL for OpenAI API\nDefault URL: ${DEFAULT_OPENAI_CONFIG.url}`,
         type: "text",
         placeholder: DEFAULT_OPENAI_CONFIG.url,
-        group: "OpenAI Defaults",
+        group: "OpenAI",
       },
       {
         id: "openaiDefaultModel",
-        name: "Default OpenAI Model",
+        name: "Default Model",
         description: "Default model for OpenAI chats",
         type: "text",
         placeholder: "openai@gpt-4",
-        group: "OpenAI Defaults",
+        group: "OpenAI",
       },
       {
         id: "openaiDefaultTemperature",
-        name: "Default OpenAI Temperature",
+        name: "Default Temperature",
         description: "Default temperature for OpenAI chats (0.0 to 2.0)",
         type: "text",
         placeholder: "0.7",
-        group: "OpenAI Defaults",
+        group: "OpenAI",
       },
       {
         id: "openaiDefaultMaxTokens",
-        name: "Default OpenAI Max Tokens",
+        name: "Default Max Tokens",
         description: "Default max tokens for OpenAI chats",
         type: "text",
         placeholder: "400",
-        group: "OpenAI Defaults",
+        group: "OpenAI",
       },
 
       // Anthropic Defaults
       {
         id: "anthropicUrl",
-        name: "Anthropic API URL",
+        name: "API URL",
         description: `URL for Anthropic API\nDefault URL: ${DEFAULT_ANTHROPIC_CONFIG.url}`,
         type: "text",
         placeholder: DEFAULT_ANTHROPIC_CONFIG.url,
-        group: "Anthropic Defaults",
+        group: "Anthropic",
       },
       {
         id: "anthropicDefaultModel",
-        name: "Default Anthropic Model",
+        name: "Default Model",
         description: "Default model for Anthropic chats",
         type: "text",
         placeholder: "anthropic@claude-3-5-sonnet-20241022",
-        group: "Anthropic Defaults",
+        group: "Anthropic",
       },
       {
         id: "anthropicDefaultTemperature",
-        name: "Default Anthropic Temperature",
+        name: "Default Temperature",
         description: "Default temperature for Anthropic chats (0.0 to 1.0)",
         type: "text",
         placeholder: "0.7",
-        group: "Anthropic Defaults",
+        group: "Anthropic",
       },
       {
         id: "anthropicDefaultMaxTokens",
-        name: "Default Anthropic Max Tokens",
+        name: "Default Max Tokens",
         description: "Default max tokens for Anthropic chats",
         type: "text",
         placeholder: "400",
-        group: "Anthropic Defaults",
+        group: "Anthropic",
       },
 
       // Gemini Defaults
       {
         id: "geminiUrl",
-        name: "Gemini API URL",
+        name: "API URL",
         description: `URL for Gemini API\nDefault URL: ${DEFAULT_GEMINI_CONFIG.url}`,
         type: "text",
         placeholder: DEFAULT_GEMINI_CONFIG.url,
-        group: "Gemini Defaults",
+        group: "Gemini",
       },
       {
         id: "geminiDefaultModel",
-        name: "Default Gemini Model",
+        name: "Default Model",
         description: "Default model for Gemini chats",
         type: "text",
         placeholder: "gemini@gemini-1.5-pro",
-        group: "Gemini Defaults",
+        group: "Gemini",
       },
       {
         id: "geminiDefaultTemperature",
-        name: "Default Gemini Temperature",
+        name: "Default Temperature",
         description: "Default temperature for Gemini chats (0.0 to 2.0)",
         type: "text",
         placeholder: "0.7",
-        group: "Gemini Defaults",
+        group: "Gemini",
       },
       {
         id: "geminiDefaultMaxTokens",
-        name: "Default Gemini Max Tokens",
+        name: "Default Max Tokens",
         description: "Default max tokens for Gemini chats",
         type: "text",
         placeholder: "400",
-        group: "Gemini Defaults",
+        group: "Gemini",
       },
 
       // OpenRouter Defaults
       {
         id: "openrouterUrl",
-        name: "OpenRouter.ai API URL",
+        name: "API URL",
         description: `URL for OpenRouter.ai API\nDefault URL: ${DEFAULT_OPENROUTER_CONFIG.url}`,
         type: "text",
         placeholder: DEFAULT_OPENROUTER_CONFIG.url,
-        group: "OpenRouter Defaults",
+        group: "OpenRouter",
       },
       {
         id: "openrouterDefaultModel",
-        name: "Default OpenRouter Model",
+        name: "Default Model",
         description: "Default model for OpenRouter chats",
         type: "text",
         placeholder: "openrouter@anthropic/claude-3.5-sonnet",
-        group: "OpenRouter Defaults",
+        group: "OpenRouter",
       },
       {
         id: "openrouterDefaultTemperature",
-        name: "Default OpenRouter Temperature",
+        name: "Default Temperature",
         description: "Default temperature for OpenRouter chats (0.0 to 2.0)",
         type: "text",
         placeholder: "0.7",
-        group: "OpenRouter Defaults",
+        group: "OpenRouter",
       },
       {
         id: "openrouterDefaultMaxTokens",
-        name: "Default OpenRouter Max Tokens",
+        name: "Default Max Tokens",
         description: "Default max tokens for OpenRouter chats",
         type: "text",
         placeholder: "400",
-        group: "OpenRouter Defaults",
+        group: "OpenRouter",
       },
 
       // Z.AI Defaults
       {
         id: "zaiUrl",
-        name: "Z.AI API URL",
+        name: "API URL",
         description: `URL for Z.AI API. Two modes available:\n• Standard API (pay-per-token): ${ZAI_OPENAI_ENDPOINT}\n• Coding Plan (subscription): ${ZAI_ANTHROPIC_ENDPOINT}`,
         type: "text",
         placeholder: DEFAULT_ZAI_CONFIG.url,
-        group: "Z.AI Defaults",
+        group: "Z.AI",
       },
       {
         id: "zaiDefaultModel",
-        name: "Default Z.AI Model",
+        name: "Default Model",
         description: "Default model for Z.AI chats (e.g., zai@glm-4.7)",
         type: "text",
         placeholder: DEFAULT_ZAI_CONFIG.model,
-        group: "Z.AI Defaults",
+        group: "Z.AI",
       },
       {
         id: "zaiDefaultTemperature",
-        name: "Default Z.AI Temperature",
+        name: "Default Temperature",
         description: "Default temperature for Z.AI chats (0.0 to 1.0)",
         type: "text",
         placeholder: "0.7",
-        group: "Z.AI Defaults",
+        group: "Z.AI",
       },
       {
         id: "zaiDefaultMaxTokens",
-        name: "Default Z.AI Max Tokens",
+        name: "Default Max Tokens",
         description: "Default max tokens for Z.AI chats",
         type: "text",
         placeholder: "400",
-        group: "Z.AI Defaults",
+        group: "Z.AI",
       },
 
       // GitHub Copilot Settings (desktop only)
@@ -338,7 +350,7 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
             },
             {
               id: "copilotDefaultModel" as keyof ChatGPT_MDSettings,
-              name: "Default Copilot Model",
+              name: "Default Model",
               description: `Default model for Copilot chats. Available models depend on your subscription.\nDefault: ${DEFAULT_COPILOT_CONFIG.model}`,
               type: "text" as const,
               placeholder: DEFAULT_COPILOT_CONFIG.model,
@@ -349,37 +361,37 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
       // Ollama Defaults (Local)
       {
         id: "ollamaUrl",
-        name: "Ollama API URL",
+        name: "API URL",
         description: `URL for Ollama API\nDefault URL: ${DEFAULT_OLLAMA_CONFIG.url}`,
         type: "text",
         placeholder: DEFAULT_OLLAMA_CONFIG.url,
-        group: "Ollama Defaults (Local)",
+        group: "Ollama (Local)",
       },
       {
         id: "ollamaDefaultTemperature",
-        name: "Default Ollama Temperature",
+        name: "Default Temperature",
         description: "Default temperature for Ollama chats (0.0 to 2.0)",
         type: "text",
         placeholder: "0.7",
-        group: "Ollama Defaults (Local)",
+        group: "Ollama (Local)",
       },
 
       // LM Studio Defaults (Local)
       {
         id: "lmstudioUrl",
-        name: "LM Studio API URL",
+        name: "API URL",
         description: `URL for LM Studio API\nDefault URL: ${DEFAULT_LMSTUDIO_CONFIG.url}`,
         type: "text",
         placeholder: DEFAULT_LMSTUDIO_CONFIG.url,
-        group: "LM Studio Defaults (Local)",
+        group: "LM Studio (Local)",
       },
       {
         id: "lmstudioDefaultTemperature",
-        name: "Default LM Studio Temperature",
+        name: "Default Temperature",
         description: "Default temperature for LM Studio chats (0.0 to 2.0)",
         type: "text",
         placeholder: "0.7",
-        group: "LM Studio Defaults (Local)",
+        group: "LM Studio (Local)",
       },
 
       // Folders
@@ -503,15 +515,96 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
       groupedSettings[setting.group].push(setting);
     });
 
-    // Create settings UI
-    Object.entries(groupedSettings).forEach(([group, settings]) => {
-      containerEl.createEl("h3", { text: group });
+    // Separate collapsible and non-collapsible groups
+    const collapsibleGroups: Record<string, SettingDefinition[]> = {};
+    const regularGroups: Record<string, SettingDefinition[]> = {};
 
-      settings.forEach((setting) => {
+    Object.entries(groupedSettings).forEach(([group, settings]) => {
+      if (COLLAPSIBLE_GROUPS.includes(group)) {
+        collapsibleGroups[group] = settings;
+      } else {
+        regularGroups[group] = settings;
+      }
+    });
+
+    // Render API Keys first (always visible)
+    if (regularGroups["API Keys"]) {
+      this.renderGroupHeader(containerEl, "API Keys");
+      regularGroups["API Keys"].forEach((setting) => {
         this.createSettingElement(containerEl, setting);
+      });
+      containerEl.createEl("hr");
+      delete regularGroups["API Keys"];
+    }
+
+    // Render Chat Behavior (always visible)
+    if (regularGroups["Chat Behavior"]) {
+      this.renderGroupHeader(containerEl, "Chat Behavior");
+      regularGroups["Chat Behavior"].forEach((setting) => {
+        this.createSettingElement(containerEl, setting);
+      });
+      containerEl.createEl("hr");
+      delete regularGroups["Chat Behavior"];
+    }
+
+    // Render collapsible provider settings section
+    if (Object.keys(collapsibleGroups).length > 0) {
+      this.renderGroupHeader(containerEl, "Provider Settings");
+      const providerNote = containerEl.createEl("p", {
+        text: "Configure default settings for each AI provider. Click to expand.",
+        cls: "setting-item-description",
+      });
+      providerNote.style.marginTop = "-10px";
+      providerNote.style.marginBottom = "15px";
+
+      // Create collapsible sections for each provider
+      Object.entries(collapsibleGroups).forEach(([group, settings]) => {
+        this.renderCollapsibleGroup(containerEl, group, settings);
       });
 
       containerEl.createEl("hr");
+    }
+
+    // Render remaining regular groups
+    Object.entries(regularGroups).forEach(([group, settings]) => {
+      this.renderGroupHeader(containerEl, group);
+      settings.forEach((setting) => {
+        this.createSettingElement(containerEl, setting);
+      });
+      containerEl.createEl("hr");
+    });
+  }
+
+  /**
+   * Render a group header (h3)
+   */
+  private renderGroupHeader(container: HTMLElement, title: string): void {
+    container.createEl("h3", { text: title });
+  }
+
+  /**
+   * Render a collapsible group using details/summary elements
+   */
+  private renderCollapsibleGroup(container: HTMLElement, group: string, settings: SettingDefinition[]): void {
+    const details = container.createEl("details", { cls: "chatgpt-md-collapsible-group" });
+    details.style.marginBottom = "10px";
+    details.style.border = "1px solid var(--background-modifier-border)";
+    details.style.borderRadius = "5px";
+    details.style.padding = "0";
+
+    const summary = details.createEl("summary", { text: group });
+    summary.style.padding = "10px 15px";
+    summary.style.cursor = "pointer";
+    summary.style.fontWeight = "600";
+    summary.style.backgroundColor = "var(--background-secondary)";
+    summary.style.borderRadius = "5px";
+    summary.style.userSelect = "none";
+
+    const content = details.createEl("div", { cls: "chatgpt-md-collapsible-content" });
+    content.style.padding = "10px 15px";
+
+    settings.forEach((setting) => {
+      this.createSettingElement(content, setting);
     });
   }
 
