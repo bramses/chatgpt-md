@@ -1,5 +1,5 @@
 import { Editor, MarkdownView, Plugin, TFile } from "obsidian";
-import { ChatGPT_MDSettings, DEFAULT_SETTINGS } from "src/Models/Config";
+import { ChatGPT_MDSettings, DEFAULT_SETTINGS, MergedFrontmatterConfig } from "src/Models/Config";
 import { ChatGPT_MDSettingsTab } from "../Views/ChatGPT_MDSettingsTab";
 import { NotificationService } from "./NotificationService";
 import { ErrorService } from "./ErrorService";
@@ -107,8 +107,8 @@ export class SettingsService {
   /**
    * Get frontmatter from a markdown view using FrontmatterManager
    */
-  async getFrontmatter(view: MarkdownView): Promise<any> {
-    let frontmatter: Record<string, any> = {};
+  async getFrontmatter(view: MarkdownView): Promise<MergedFrontmatterConfig> {
+    let frontmatter: Record<string, unknown> = {};
 
     // Use FrontmatterManager to get frontmatter
     if (view.file) {
@@ -125,13 +125,17 @@ export class SettingsService {
 
     // Merge configurations with proper priority order
     // Priority: defaultFrontmatter < settings < frontmatter
-    const mergedConfig = { ...defaultFrontmatter, ...this.settings, ...frontmatter } as Record<string, any>;
+    const merged: Record<string, unknown> & Partial<MergedFrontmatterConfig> = {
+      ...defaultFrontmatter,
+      ...this.settings,
+      ...frontmatter,
+    };
 
     // Determine AI service
     const aiService =
-      mergedConfig.aiService ||
-      aiProviderFromUrl(mergedConfig.url, mergedConfig.model) ||
-      aiProviderFromKeys(mergedConfig) ||
+      (merged.aiService as string | undefined) ||
+      aiProviderFromUrl(merged.url as string | undefined, merged.model as string | undefined) ||
+      aiProviderFromKeys(merged as Record<string, unknown>) ||
       AI_SERVICE_OPENAI;
 
     // Get default config for the determined service
@@ -140,13 +144,16 @@ export class SettingsService {
     // Return final configuration with everything merged
     // Priority order: defaultConfig < defaultFrontmatter < settings < frontmatter
     // This ensures global settings override template defaults, but note frontmatter overrides everything
-    return {
+    const finalConfig = {
       ...defaultConfig,
       ...defaultFrontmatter,
       ...this.settings,
       ...frontmatter,
       aiService,
     };
+
+    // Cast to MergedFrontmatterConfig - at this point we have all necessary fields from defaults and merging
+    return finalConfig as unknown as MergedFrontmatterConfig;
   }
 
   /**
@@ -155,7 +162,7 @@ export class SettingsService {
    * @param key The key to update
    * @param value The new value
    */
-  async updateFrontmatterField(editor: Editor, key: string, value: any): Promise<void> {
+  async updateFrontmatterField(editor: Editor, key: string, value: unknown): Promise<void> {
     // Get the active file
     const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
     if (!activeView || !activeView.file) {
@@ -179,7 +186,7 @@ export class SettingsService {
    * @param obj Object to convert to YAML
    * @returns YAML frontmatter string including delimiter markers
    */
-  private objectToYamlFrontmatter(obj: Record<string, any>): string {
+  private objectToYamlFrontmatter(obj: Record<string, unknown>): string {
     // Convert to YAML
     const frontmatterLines = Object.entries(obj).map(([key, value]) => {
       if (value === null || value === undefined) {
@@ -197,7 +204,7 @@ export class SettingsService {
   /**
    * Generate frontmatter for a new chat
    */
-  generateFrontmatter(additionalSettings: Record<string, any> = {}): string {
+  generateFrontmatter(additionalSettings: Record<string, unknown> = {}): string {
     // If default frontmatter exists in settings, use it as a base
     if (this.settings.defaultChatFrontmatter) {
       // If there are additional settings, merge them with the default frontmatter
@@ -217,7 +224,7 @@ export class SettingsService {
     const aiService = additionalSettings.aiService || AI_SERVICE_OPENAI;
 
     // Start with basic settings
-    let frontmatterObj: Record<string, any> = {
+    let frontmatterObj: Record<string, unknown> = {
       stream: this.settings.stream,
       ...additionalSettings,
     };

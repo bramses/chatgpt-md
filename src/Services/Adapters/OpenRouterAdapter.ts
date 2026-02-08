@@ -37,7 +37,15 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
   /**
    * OpenRouter requires /api/v1 prefix for all endpoints
+   *
+   * This is combined with the base URL to form the complete baseURL passed to the AI SDK:
+   * - Base URL: https://openrouter.ai (from DEFAULT_OPENROUTER_CONFIG.url)
+   * - Path suffix: /api/v1 (this method)
+   * - Result: https://openrouter.ai/api/v1 (passed as baseURL to createOpenRouter)
+   * - Final endpoint: https://openrouter.ai/api/v1/chat/completions (AI SDK appends /chat/completions)
+   *
    * @param url - Optional URL parameter (ignored by OpenRouter)
+   * @returns The API path prefix required by OpenRouter
    */
   override getApiPathSuffix(_url?: string): string {
     return "/api/v1";

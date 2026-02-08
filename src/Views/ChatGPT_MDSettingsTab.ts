@@ -45,6 +45,13 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
     this.settingsProvider = settingsProvider;
   }
 
+  /**
+   * Type-safe helper method to update settings
+   */
+  private updateSetting<K extends keyof ChatGPT_MDSettings>(key: K, value: ChatGPT_MDSettings[K]): void {
+    this.settingsProvider.settings[key] = value;
+  }
+
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
@@ -572,7 +579,8 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
           .setPlaceholder(schema.placeholder || "")
           .setValue(String(this.settingsProvider.settings[schema.id]))
           .onChange(async (value) => {
-            (this.settingsProvider.settings[schema.id] as string) = value;
+            // Type-safe update for string settings
+            this.updateSetting(schema.id, value as ChatGPT_MDSettings[typeof schema.id]);
             await this.settingsProvider.saveSettings();
           });
 
@@ -587,7 +595,8 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
           .setPlaceholder(schema.placeholder || "")
           .setValue(String(this.settingsProvider.settings[schema.id] || schema.placeholder))
           .onChange(async (value) => {
-            (this.settingsProvider.settings[schema.id] as string) = value;
+            // Type-safe update for string settings
+            this.updateSetting(schema.id, value as ChatGPT_MDSettings[typeof schema.id]);
             await this.settingsProvider.saveSettings();
           });
 
@@ -608,7 +617,8 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
     } else if (schema.type === "toggle") {
       setting.addToggle((toggle) =>
         toggle.setValue(Boolean(this.settingsProvider.settings[schema.id])).onChange(async (value) => {
-          (this.settingsProvider.settings[schema.id] as boolean) = value;
+          // Type-safe update for boolean settings
+          this.updateSetting(schema.id, value as ChatGPT_MDSettings[typeof schema.id]);
           await this.settingsProvider.saveSettings();
         })
       );
@@ -617,7 +627,8 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         dropdown.addOptions(schema.options || {});
         dropdown.setValue(String(this.settingsProvider.settings[schema.id]));
         dropdown.onChange(async (value) => {
-          (this.settingsProvider.settings[schema.id] as string) = value;
+          // Type-safe update for string settings
+          this.updateSetting(schema.id, value as ChatGPT_MDSettings[typeof schema.id]);
           await this.settingsProvider.saveSettings();
         });
 

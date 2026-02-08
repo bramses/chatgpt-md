@@ -9,18 +9,14 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { SearchResultsApprovalModal } from "src/Views/SearchResultsApprovalModal";
 import { WebSearchApprovalModal } from "src/Views/WebSearchApprovalModal";
 import { ToolApprovalModal } from "src/Views/ToolApprovalModal";
-import { ToolApprovalDecision, ToolApprovalRequest, VaultSearchResult, WebSearchResult } from "src/Models/Tool";
-
-/**
- * Handler for processing tool results
- */
-type ToolResultHandler = (
-  result: any,
-  toolCall: any,
-  filteredResults: any[],
-  contextMessages: Array<{ role: "user"; content: string }>,
-  modelName?: string
-) => Promise<void>;
+import {
+  RegisteredTool,
+  ToolApprovalDecision,
+  ToolApprovalRequest,
+  ToolResultHandler,
+  VaultSearchResult,
+  WebSearchResult,
+} from "src/Models/Tool";
 
 /**
  * Unified Tool Service
@@ -31,9 +27,9 @@ type ToolResultHandler = (
  * - Tool orchestration and approval
  */
 export class ToolService {
-  private approvalHandler?: (toolName: string, args: any) => Promise<any>;
+  private approvalHandler?: (toolName: string, args: Record<string, unknown>) => Promise<unknown>;
   private readonly toolResultHandlers: Record<string, ToolResultHandler>;
-  private readonly tools: Map<string, any> = new Map();
+  private readonly tools: Map<string, RegisteredTool> = new Map();
   private readonly vaultSearchService: VaultSearchService;
   private readonly webSearchService: WebSearchService;
 

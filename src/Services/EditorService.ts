@@ -1,5 +1,5 @@
 import { App, Editor, MarkdownView } from "obsidian";
-import { ChatGPT_MDSettings } from "src/Models/Config";
+import { ChatGPT_MDSettings, MergedFrontmatterConfig } from "src/Models/Config";
 import { FileService } from "./FileService";
 import { MessageService } from "./MessageService";
 import { TemplateService } from "./TemplateService";
@@ -135,13 +135,13 @@ export class EditorService {
 
   // FrontmatterService delegations
 
-  async getFrontmatter(view: MarkdownView, settings: ChatGPT_MDSettings, app: App): Promise<any> {
+  async getFrontmatter(view: MarkdownView, settings: ChatGPT_MDSettings, app: App): Promise<MergedFrontmatterConfig> {
     return await this.settingsService.getFrontmatter(view);
   }
 
   // ResponseProcessingService delegations
 
-  processResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings): void {
+  processResponse(editor: Editor, response: { fullString: string; mode: string }, settings: ChatGPT_MDSettings): void {
     this.messageService.processResponse(editor, response, settings);
   }
 

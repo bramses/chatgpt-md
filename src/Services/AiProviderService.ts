@@ -10,7 +10,7 @@ import { ToolService } from "./ToolService";
 import { StreamingHandler } from "./StreamingHandler";
 import { isModelWhitelisted } from "./ToolSupportDetector";
 import { insertAssistantHeader } from "src/Utilities/ResponseHelpers";
-import { AiProvider, IAiApiService, StreamingResponse } from "src/Types/AiTypes";
+import { AiProviderInstance, IAiApiService, ProviderFactory, StreamingResponse } from "src/Types/AiTypes";
 
 // AI SDK providers
 import { createOpenAI } from "@ai-sdk/openai";
@@ -49,7 +49,7 @@ export class AiProviderService implements IAiApiService {
   private currentAdapter: ProviderAdapter;
 
   // AI SDK provider instance (created per request)
-  private provider?: AiProvider;
+  private provider?: AiProviderInstance;
 
   // Static callback for saving settings
   private static saveSettingsCallback: (() => Promise<void>) | null = null;
@@ -174,7 +174,7 @@ export class AiProviderService implements IAiApiService {
    */
   async callAiAPI(
     messages: Message[],
-    options: Record<string, any> = {},
+    options: Partial<AiProviderConfig> = {},
     headingPrefix: string,
     url: string,
     editor?: Editor,
@@ -182,7 +182,7 @@ export class AiProviderService implements IAiApiService {
     apiKey?: string,
     settings?: ChatGPT_MDSettings,
     toolService?: ToolService
-  ): Promise<any> {
+  ): Promise<{ fullString: string; mode: string; wasAborted?: boolean }> {
     const config = { ...this.getDefaultConfig(), ...options };
 
     // Set provider from model
@@ -283,7 +283,11 @@ export class AiProviderService implements IAiApiService {
   /**
    * Infer a title from messages
    */
-  private inferTitleFromMessages = async (apiKey: string, messages: string[], settings: any): Promise<string> => {
+  private inferTitleFromMessages = async (
+    apiKey: string,
+    messages: string[],
+    settings: ChatGPT_MDSettings
+  ): Promise<string> => {
     try {
       if (messages.length < 2) {
         this.notificationService.showWarning("Not enough messages to infer title. Minimum 2 messages.");
@@ -315,7 +319,7 @@ export class AiProviderService implements IAiApiService {
           config,
           settings
         );
-        return response.fullString || response;
+        return response.fullString;
       } catch (apiError) {
         console.error(`[ChatGPT MD] Error calling API for title inference:`, apiError);
         return "";
@@ -336,6 +340,11 @@ export class AiProviderService implements IAiApiService {
 
   /**
    * Ensure the AI SDK provider is initialized
+   *
+   * URL Construction:
+   * - Most providers: baseURL = https://api.openai.com + /v1 = https://api.openai.com/v1
+   * - OpenRouter: baseURL = https://openrouter.ai + /api/v1 = https://openrouter.ai/api/v1
+   * - The AI SDK appends the final endpoint (e.g., /chat/completions) to the baseURL
    */
   private ensureProvider(apiKey: string | undefined, config: AiProviderConfig): void {
     if (this.provider) {
@@ -346,12 +355,14 @@ export class AiProviderService implements IAiApiService {
     const providerFactory = this.getProviderFactory(this.currentAdapter.type, config.url);
 
     // Use adapter-specific path suffix instead of hardcoded "/v1"
+    // This allows OpenRouter to use /api/v1 while others use /v1
     const apiPathSuffix = this.currentAdapter.getApiPathSuffix(config.url);
 
     this.provider = providerFactory({
       apiKey: apiKey || "",
       baseURL: `${config.url}${apiPathSuffix}`,
       fetch: customFetch,
+      name: this.currentAdapter.type, // Required for OpenAICompatible providers
     });
   }
 
@@ -360,7 +371,7 @@ export class AiProviderService implements IAiApiService {
    * @param type - Provider type
    * @param url - Optional URL to determine API mode (used for Z.AI)
    */
-  private getProviderFactory(type: ProviderType, url?: string): any {
+  private getProviderFactory(type: ProviderType, url?: string): ProviderFactory {
     switch (type) {
       case "openai":
         return createOpenAI;
@@ -401,7 +412,7 @@ export class AiProviderService implements IAiApiService {
   ): Promise<StreamingResponse> {
     this.ensureProvider(apiKey, config);
     const modelName = this.extractModelName(config.model);
-    const model = (this.provider as any)(modelName);
+    const model = this.provider!(modelName);
 
     // Get tools only if toolService is available and settings are provided
     const tools = toolService && settings ? toolService.getToolsForRequest(settings) : undefined;
@@ -428,10 +439,10 @@ export class AiProviderService implements IAiApiService {
     config: AiProviderConfig,
     settings?: ChatGPT_MDSettings,
     toolService?: ToolService
-  ): Promise<any> {
+  ): Promise<{ fullString: string; mode: string }> {
     this.ensureProvider(apiKey, config);
     const modelName = this.extractModelName(config.model);
-    const model = (this.provider as any)(modelName);
+    const model = this.provider!(modelName);
 
     // Get tools only if toolService is available and settings are provided
     const tools = toolService && settings ? toolService.getToolsForRequest(settings) : undefined;
@@ -445,25 +456,25 @@ export class AiProviderService implements IAiApiService {
     model: LanguageModel,
     modelName: string,
     messages: Message[],
-    tools?: Record<string, any>,
+    tools?: unknown,
     toolService?: ToolService,
     settings?: ChatGPT_MDSettings
-  ): Promise<{ fullString: string; model: string }> {
+  ): Promise<{ fullString: string; mode: string }> {
     const aiSdkMessages = messages.map((msg) => ({
       role: msg.role as "user" | "assistant" | "system",
       content: msg.content,
     }));
 
-    const request: any = {
+    const request: Parameters<typeof generateText>[0] = {
       model,
       messages: aiSdkMessages,
     };
 
-    const toolsAvailable = tools && Object.keys(tools).length > 0;
+    const toolsAvailable = tools && typeof tools === "object" && Object.keys(tools as object).length > 0;
     const shouldUseTool = toolsAvailable && settings && this.modelSupportsTools(modelName, settings);
 
     if (shouldUseTool) {
-      request.tools = tools;
+      request.tools = tools as typeof request.tools;
     }
 
     let response;
@@ -491,10 +502,10 @@ export class AiProviderService implements IAiApiService {
         messages: updatedMessages,
       });
 
-      return { fullString: continuationResponse.text, model: modelName };
+      return { fullString: continuationResponse.text, mode: "non-streaming" };
     }
 
-    return { fullString: response.text, model: modelName };
+    return { fullString: response.text, mode: "non-streaming" };
   }
 
   /**
@@ -508,7 +519,7 @@ export class AiProviderService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     setAtCursor?: boolean,
-    tools?: Record<string, any>,
+    tools?: unknown,
     toolService?: ToolService,
     settings?: ChatGPT_MDSettings
   ): Promise<StreamingResponse> {
@@ -529,22 +540,22 @@ export class AiProviderService implements IAiApiService {
       handler = new StreamingHandler(editor, initialCursor, setAtCursor);
       handler.startBuffering();
 
-      const request: any = {
+      const request: Parameters<typeof streamText>[0] = {
         model,
         messages: aiSdkMessages,
         abortSignal: abortController.signal,
       };
 
-      const toolsAvailable = tools && Object.keys(tools).length > 0;
+      const toolsAvailable = tools && typeof tools === "object" && Object.keys(tools as object).length > 0;
       const shouldUseTool = toolsAvailable && settings && this.modelSupportsTools(modelName, settings);
 
       if (shouldUseTool) {
-        request.tools = tools;
+        request.tools = tools as typeof request.tools;
       }
 
       let fullText = "";
-      let result: any;
-      let finalResult: any;
+      let result: Awaited<ReturnType<typeof streamText>>;
+      let finalResult: typeof result;
 
       const consumeStream = async (streamResult: any): Promise<string> => {
         let text = "";

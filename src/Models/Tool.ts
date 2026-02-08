@@ -1,4 +1,6 @@
 import { App, TFile } from "obsidian";
+import { z } from "zod";
+import { Message } from "./Message";
 
 /**
  * Tool execution context with Obsidian-specific information
@@ -6,7 +8,7 @@ import { App, TFile } from "obsidian";
 export interface ToolExecutionContext {
   app: App;
   toolCallId: string;
-  messages: any[];
+  messages: Message[];
   abortSignal?: AbortSignal;
 }
 
@@ -16,9 +18,46 @@ export interface ToolExecutionContext {
 export interface ToolApprovalRequest {
   toolCallId: string;
   toolName: string;
-  args: Record<string, any>;
+  args: Record<string, unknown>;
   modelName?: string;
 }
+
+/**
+ * Tool call from AI SDK
+ */
+export interface AiToolCall {
+  toolCallId: string;
+  toolName: string;
+  args: Record<string, unknown>;
+}
+
+/**
+ * Tool execution result
+ */
+export interface ToolExecutionResult {
+  toolCallId: string;
+  result: unknown;
+}
+
+/**
+ * Tool definition for registration
+ */
+export interface RegisteredTool {
+  description: string;
+  inputSchema: z.ZodSchema;
+  execute: (args: Record<string, unknown>, context: ToolExecutionContext) => Promise<unknown>;
+}
+
+/**
+ * Result handlers
+ */
+export type ToolResultHandler = (
+  result: ToolExecutionResult,
+  toolCall: AiToolCall,
+  filteredResults: ToolExecutionResult[],
+  contextMessages: Array<{ role: "user"; content: string }>,
+  modelName?: string
+) => Promise<void>;
 
 /**
  * User's approval decision for a tool call
@@ -26,7 +65,7 @@ export interface ToolApprovalRequest {
 export interface ToolApprovalDecision {
   approvalId: string;
   approved: boolean;
-  modifiedArgs?: Record<string, any>; // Allow user to modify args before execution
+  modifiedArgs?: Record<string, unknown>; // Allow user to modify args before execution
 }
 
 /**

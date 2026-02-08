@@ -2,6 +2,7 @@ import { Editor, MarkdownView, Notice, Platform } from "obsidian";
 import { ServiceContainer } from "src/core/ServiceContainer";
 import { getHeadingPrefix } from "src/Utilities/TextHelpers";
 import { isTitleTimestampFormat } from "src/Utilities/FrontmatterHelpers";
+import { ChatGPT_MDSettings, MergedFrontmatterConfig } from "src/Models/Config";
 import {
   AI_SERVICE_ANTHROPIC,
   AI_SERVICE_GEMINI,
@@ -48,10 +49,10 @@ export class ChatHandler {
   /**
    * Execute the chat command
    */
-  async execute(editor: Editor, view: MarkdownView | any): Promise<void> {
+  async execute(editor: Editor, view: MarkdownView): Promise<void> {
     const { editorService, settingsService, apiAuthService, toolService } = this.services;
     const settings = settingsService.getSettings();
-    const frontmatter = await editorService.getFrontmatter(view, settings, this.services.app);
+    const frontmatter: MergedFrontmatterConfig = await editorService.getFrontmatter(view, settings, this.services.app);
 
     const aiService = this.services.aiProviderService();
     this.stopStreamingHandler.setCurrentAiService(aiService);
@@ -100,7 +101,8 @@ export class ChatHandler {
         messagesWithRoleAndMessage.length > MIN_AUTO_INFER_MESSAGES
       ) {
         // Create a settings object with the correct API key and model
-        const settingsWithApiKey = {
+        const settingsWithApiKey: ChatGPT_MDSettings & { url?: string; model?: string } = {
+          ...settings,
           ...frontmatter,
           // Use the utility function to get the correct API key
           openrouterApiKey: apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER),
@@ -127,7 +129,7 @@ export class ChatHandler {
           }
         }
 
-        await aiService.inferTitle(view, settingsWithApiKey, messages, editorService);
+        await aiService.inferTitle(view, settingsWithApiKey as ChatGPT_MDSettings, messages, editorService);
       }
     } catch (err) {
       if (Platform.isMobile) {
