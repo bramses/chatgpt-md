@@ -4,28 +4,33 @@
 
 ```bash
 # Development (watch mode)
-npm run dev
+yarn dev
 
 # Production build (includes TypeScript type checking)
-npm run build
+yarn build
 
 # Lint TypeScript files
-npm run lint
+yarn lint
 
 # Fix linting issues automatically
-npm run lint:fix
+yarn lint:fix
 
 # Build with bundle analysis
-npm run build:analyze
+yarn build:analyze
 
 # Analyze existing bundle
-npm run analyze
+yarn analyze
 
 # Build and show size
-npm run build:size
+yarn build:size
 
 # Full analysis (build + analyze)
-npm run build:full-analysis
+yarn build:full-analysis
+
+# Testing
+yarn test              # Run tests
+yarn test:watch        # Run tests in watch mode
+yarn test:coverage     # Run tests with coverage
 ```
 
 ## Build Process
@@ -155,7 +160,7 @@ src/
 1. **Build the plugin**
 
    ```bash
-   npm run build
+   yarn build
    ```
 
 2. **Copy to Obsidian plugins folder**
@@ -177,7 +182,7 @@ src/
 **Development mode**:
 
 ```bash
-npm run dev
+yarn dev
 ```
 
 - Auto-rebuilds on file changes
@@ -213,7 +218,7 @@ Rules enforced:
 ### Fix linting issues
 
 ```bash
-npm run lint:fix
+yarn lint:fix
 ```
 
 ## Platform Considerations
@@ -275,7 +280,7 @@ Optimizations applied:
 ### Bundle Analysis
 
 ```bash
-npm run build:analyze
+yarn build:analyze
 ```
 
 Shows:
@@ -300,6 +305,8 @@ Not currently implemented but could be added for:
 - `esbuild` - Fast bundler
 - `typescript` - Type checking
 - `eslint` - Code linting
+- `jest`, `ts-jest` - Testing framework
+- `husky`, `lint-staged` - Git hooks and pre-commit checks
 - `obsidian` - Obsidian API types
 - `@codemirror/*` - Editor API types
 - `@types/node` - Node.js types
@@ -307,9 +314,10 @@ Not currently implemented but could be added for:
 ## Release Process
 
 1. Update version in `manifest.json` and `package.json`
-2. Run `npm run build` to create production bundle
-3. Test in Obsidian
-4. Commit changes
-5. Create git tag
-6. Push to GitHub
-7. Create release with `main.js`, `manifest.json`, `styles.css`
+2. Run `yarn test` to ensure all tests pass
+3. Run `yarn build` to create production bundle
+4. Test in Obsidian
+5. Commit changes
+6. Create git tag
+7. Push to GitHub
+8. Create release with `main.js`, `manifest.json`, `styles.css`

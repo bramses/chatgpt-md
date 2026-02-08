@@ -305,7 +305,91 @@ The single 'url' parameter is now deprecated. In v2.2.0 and higher, we've introd
 🤖 Enjoy exploring the power of ChatGPT MD in your Obsidian vault!🚀
 
 ## Contributions Welcome 🤝
-Pull requests, bug reports, and all other forms of contribution are welcomed and highly encouraged!* :octocat:
+
+Pull requests, bug reports, and all other forms of contribution are welcomed and highly encouraged! :octocat:
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/bramses/chatgpt-md.git
+cd chatgpt-md
+
+# Install dependencies
+yarn install
+
+# Development mode (watch for changes)
+yarn dev
+
+# Run tests
+yarn test
+
+# Run tests with coverage
+yarn test:coverage
+
+# Lint code
+yarn lint
+yarn lint:fix
+
+# Production build
+yarn build
+```
+
+### Testing
+
+The project uses Jest for testing with 104 tests covering utility functions. Before submitting a PR:
+
+1. Run `yarn test` to ensure all tests pass
+2. Run `yarn lint` to check code quality
+3. Run `yarn build` to verify the build succeeds
+
+### Code Quality Standards
+
+- **Complexity**: Functions should be under 50 lines with cyclomatic complexity ≤15
+- **Type Safety**: Minimize `any` usage; prefer explicit types
+- **Async Safety**: All promises must be handled properly (awaited, caught, or explicitly ignored)
+- **Testing**: Add tests for new utility functions in `src/Utilities/*.test.ts`
+
+### Pre-commit Hooks
+
+Pre-commit hooks automatically run on `git commit`:
+- ESLint auto-fixes linting issues
+- Prettier formats code
+- Only staged files are checked
+
+### CI/CD
+
+GitHub Actions automatically runs on pull requests:
+- Lint check
+- TypeScript type checking
+- Test suite with coverage
+- Production build
+
+### Project Structure
+
+```
+src/
+├── Commands/           # Obsidian command handlers
+├── Services/           # Business logic & AI adapters
+├── Views/              # UI components & modals
+├── Utilities/          # Pure helper functions (well-tested)
+├── Models/             # TypeScript interfaces
+├── Types/              # Type definitions
+└── core/               # Dependency injection container
+```
+
+For detailed development documentation, see [CLAUDE.md](CLAUDE.md) and [docs/development.md](docs/development.md).
+
+### Submitting Changes
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes (tests, linting, and docs)
+4. Commit your changes (`git commit -m 'Add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
+
+Your PR will be automatically checked by CI. Please ensure all checks pass before requesting review!
 
 ## About the Developers ✍️
 Bram created ChatGPT MD in March 2023 lives in NYC and is building [Your Commonbase](https://bramses.notion.site/Your-Commonbase-ALPHA-10b034182ddd8038b9ffe11cc2833713) (A Self Organizing Scrapbook with Zero Stress Storing, Searching, and Sharing). His personal website and newsletter is located at [bramadams.dev](https://www.bramadams.dev/)
