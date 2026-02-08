@@ -1,6 +1,6 @@
 # Utilities
 
-Pure helper functions extracted from services for reusability and testability.
+Pure helper functions extracted from services for reusability and testability. Functions here have no side effects and are covered by Jest tests.
 
 ## Text Processing
 
@@ -8,7 +8,7 @@ Pure helper functions extracted from services for reusability and testability.
 
 **Text formatting utilities**
 
-- `getHeadingPrefix(level)` - Returns `"### "` for heading level 3
+- `getHeadingPrefix(level)` - Returns `"### "` for heading level 3, etc.
 - `sanitizeTitle(title)` - Remove invalid filename characters
 - Other text manipulation helpers
 
@@ -16,7 +16,7 @@ Pure helper functions extracted from services for reusability and testability.
 
 **Message formatting utilities**
 
-- Message role extraction
+- Message role extraction (parses `role::assistant` format)
 - Content formatting
 - Message array manipulation
 
@@ -41,7 +41,7 @@ Pure helper functions extracted from services for reusability and testability.
 
 **Streaming utilities**
 
-- Buffer management
+- Buffer management (reduces editor updates for smoother UX)
 - Chunk processing
 
 ## Configuration Utilities
@@ -57,7 +57,7 @@ Pure helper functions extracted from services for reusability and testability.
 
 **AI provider utilities**
 
-- Provider detection from model string
+- Provider detection from model string (e.g., `ollama@model` → "ollama")
 - URL construction
 
 ## Validation
@@ -102,3 +102,14 @@ Pure helper functions extracted from services for reusability and testability.
 - Common modal patterns
 - Button creation
 - Form helpers
+
+## Testing
+
+Tests are located alongside utilities in `*.test.ts` files:
+
+- `TextHelpers.test.ts`
+- `MessageHelpers.test.ts`
+- `FrontmatterHelpers.test.ts`
+- Others
+
+Run tests with: `yarn test` or `yarn test path/to/test.test.ts`

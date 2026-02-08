@@ -1,14 +1,18 @@
 # UI Components
 
-All user interface components and modals.
+All user interface components and modals. Uses Obsidian's Modal and SuggestModal APIs.
 
-## Tool Calling Modals
+## Tool Calling Modals (v3.0)
 
 ### BaseApprovalModal.ts
 
 **Abstract base class for approval modals**
 
-Common functionality for all tool approval flows.
+Common functionality for all tool approval flows:
+
+- Two-button layout (Approve/Reject)
+- Editable parameters
+- Result display and selection
 
 ### ToolApprovalModal.ts
 
@@ -17,26 +21,34 @@ Common functionality for all tool approval flows.
 Shown when AI requests to use a tool. User can:
 
 - Approve execution
-- Modify parameters (e.g., search query)
+- Modify parameters (e.g., search query) before approval
 - Reject the request
 
 ### SearchResultsApprovalModal.ts
 
 **Review and filter vault search results**
 
-After vault search executes, user selects which files to share with AI.
+After vault search executes, user selects which files to share with AI:
+
+- Multi-select checkboxes
+- File preview
+- Choose what to share back to AI
 
 ### WebSearchApprovalModal.ts
 
 **Review and filter web search results**
 
-After web search executes, user selects which results to share with AI.
+After web search executes, user selects which results to share with AI:
+
+- Multi-select checkboxes
+- Result preview (title, snippet, URL)
+- Choose what to share back to AI
 
 ## Model Selection
 
-### AiModelSuggestModel.ts
+### AiModelSuggestModal.ts
 
-**Model selection modal**
+**Model selection modal** (note: file name is `AiModelSuggestModel.ts`)
 
 Extends Obsidian's `SuggestModal<string>`
 

@@ -486,18 +486,13 @@ export class ToolService {
    * Handle tool calls by requesting user approval and executing if approved
    */
   async handleToolCalls(toolCalls: any[], modelName?: string): Promise<any[]> {
-    return Promise.all(
-      toolCalls.map((tc) => this.executeToolCall(tc, modelName))
-    );
+    return Promise.all(toolCalls.map((tc) => this.executeToolCall(tc, modelName)));
   }
 
   /**
    * Execute a single tool call with approval
    */
-  private async executeToolCall(
-    toolCall: any,
-    modelName?: string
-  ): Promise<any> {
+  private async executeToolCall(toolCall: any, modelName?: string): Promise<any> {
     const { toolName, args, toolCallId } = this.normalizeToolCall(toolCall);
 
     const approval = await this.requestApproval({
@@ -535,11 +530,7 @@ export class ToolService {
   /**
    * Execute tool and return result
    */
-  private async executeTool(
-    toolName: string,
-    args: Record<string, unknown>,
-    toolCallId: string
-  ): Promise<any> {
+  private async executeTool(toolName: string, args: Record<string, unknown>, toolCallId: string): Promise<any> {
     try {
       const tool = this.getTool(toolName);
       if (!tool || !tool.execute) {

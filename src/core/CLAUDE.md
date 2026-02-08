@@ -1,6 +1,6 @@
 # Core Infrastructure
 
-This directory contains the core architectural component of the plugin.
+This directory contains the core architectural components: the dependency injection container and plugin initialization.
 
 ## ServiceContainer.ts
 
@@ -10,9 +10,9 @@ This directory contains the core architectural component of the plugin.
 
 ### Factory Method
 
-`ServiceContainer.create(app, plugin)` - The ONLY place where service dependencies are defined.
+`ServiceContainer.create(app, plugin)` - The ONLY place where service dependencies are defined. When adding a new service, you MUST wire it here.
 
-**Service instantiation order** (leaf nodes first):
+**Service instantiation order** (leaf nodes first, no circular dependencies):
 
 1. **Leaf services** (no dependencies):
    - NotificationService
@@ -35,7 +35,7 @@ This directory contains the core architectural component of the plugin.
 5. **AI service factory**:
    - `aiProviderService: () => AiProviderService` - Factory function creating new instances per request
 
-6. **Tool services**:
+6. **Tool services** (v3.0):
    - VaultSearchService → App, FileService
    - WebSearchService → NotificationService
    - ToolService → App, FileService, NotificationService, Settings, VaultSearchService, WebSearchService
@@ -46,12 +46,27 @@ All services exposed as readonly properties:
 
 ```typescript
 container.editorService; // Direct access
-container.aiProviderService(); // Factory - creates new instance
+container.aiProviderService(); // Factory - creates new instance per request
 container.toolService; // Direct access
 ```
 
-### Key Differences from Old Architecture
+### Adding a New Service
+
+1. Create the service class with constructor dependencies
+2. Add to `ServiceContainer.create()` in correct dependency order
+3. Expose as readonly property
+4. Update commands/handlers to use via container
+
+### Key Architectural Changes
 
 - **ServiceLocator.ts** → **ServiceContainer.ts**: No longer uses string-based lookups
 - **CommandRegistry.ts** → Moved to `src/Commands/` directory
 - **Individual AI services** → Consolidated into `AiProviderService` with adapter pattern
+
+## main.ts
+
+**Plugin entry point**
+
+- `onload()` - Registers commands, initializes ServiceContainer
+- `onunload()` - Cleanup, abort streaming
+- `loadSettings()` - Load settings with migration

@@ -1,4 +1,4 @@
-import { findLinksInMessage, splitMessages, removeCommentBlocks } from "./MessageHelpers";
+import { findLinksInMessage, removeCommentBlocks, splitMessages } from "./MessageHelpers";
 
 describe("findLinksInMessage", () => {
   it("finds wiki links", () => {

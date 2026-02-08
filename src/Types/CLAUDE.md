@@ -8,7 +8,7 @@ TypeScript type definitions for AI services.
 
 ### IAiApiService
 
-Contract for AI service implementations:
+Contract for AI service implementations (currently implemented by `AiProviderService`):
 
 ```typescript
 interface IAiApiService {
@@ -37,6 +37,8 @@ interface IAiApiService {
     settings?: ChatGPT_MDSettings,
     providerType?: string
   ): Promise<string[]>;
+
+  stopStreaming(): void;
 }
 ```
 

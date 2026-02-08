@@ -20,6 +20,7 @@ Extends multiple interfaces:
 - LmStudioFrontmatterSettings
 - AnthropicFrontmatterSettings
 - GeminiFrontmatterSettings
+- ZaiFrontmatterSettings
 - ToolCallingSettings
 
 ### Key Setting Groups
@@ -103,7 +104,7 @@ Key constants used across the codebase:
 **Provider Types**:
 
 ```typescript
-type ProviderType = "openai" | "ollama" | "openrouter" | "lmstudio" | "anthropic" | "gemini";
+type ProviderType = "openai" | "ollama" | "openrouter" | "lmstudio" | "anthropic" | "gemini" | "zai";
 ```
 
 **Message Format**:
@@ -119,26 +120,7 @@ type ProviderType = "openai" | "ollama" | "openrouter" | "lmstudio" | "anthropic
 
 ## Types/ Directory
 
-### AiTypes.ts
-
-**AI service interfaces**:
-
-```typescript
-interface IAiApiService {
-  callAiAPI(...): Promise<any>
-  inferTitle(...): Promise<string>
-  stopStreaming(): void
-  fetchAvailableModels(...): Promise<string[]>
-}
-
-type AiProvider = ReturnType<typeof createOpenAI> | ...
-
-interface StreamingResponse {
-  fullString: string
-  mode: "streaming"
-  wasAborted?: boolean
-}
-```
+See `src/Types/CLAUDE.md` for AI service interfaces.
 
 ## Settings Migration
 

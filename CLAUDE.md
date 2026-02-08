@@ -25,39 +25,42 @@ Major feature: **Privacy-first AI tool calling** with human-in-the-loop approval
 ```bash
 yarn dev           # Development with watch mode
 yarn build         # Production build with TypeScript checks
+yarn build:analyze # Build with bundle analysis
+yarn analyze       # Analyze bundle size without rebuilding
 yarn lint          # Check code quality
 yarn lint:fix      # Auto-fix linting issues
-yarn analyze       # Bundle size analysis
 yarn test          # Run tests
 yarn test:watch    # Run tests in watch mode
 yarn test:coverage # Run tests with coverage
 ```
 
-**Test suite**: This project uses Jest with 104 passing tests covering utility functions.
+**Run single test file**: `yarn test path/to/test.test.ts`
+
+**Test suite**: Uses Jest with tests in `src/**/*.test.ts`. Tests cover utility functions and pure functions. Tests are NOT used for services or command handlers (those are tested manually).
 
 ## Architecture Overview
 
-The plugin uses **constructor injection** via `ServiceContainer`:
+The plugin uses **constructor injection** via a centralized `ServiceContainer`:
 
 - `src/core/ServiceContainer.ts` - DI container with readonly service instances
-- `src/Commands/` - Command handlers (extracted from old CommandRegistry)
-- `src/Services/AiProviderService.ts` - Unified AI service with adapter pattern
+- **Only place** where dependencies are defined via `ServiceContainer.create()`
+- All services receive dependencies through constructors (no service locator pattern)
 
 **AI SDK**: Uses Vercel AI SDK (`ai` package) with provider-specific adapters (`@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`, `@openrouter/ai-sdk-provider`).
 
-**Message flow**: User command → EditorService extracts messages → MessageService parses → AiProviderService calls API → Response streamed to editor
+**Message flow**: User invokes chat command → EditorService extracts messages → MessageService parses (splits by `<hr class="__chatgpt_plugin">`, extracts `role::assistant` format, resolves wiki links) → FrontmatterManager merges per-note settings → AiProviderService selects adapter → API call → StreamingHandler streams response → EditorService inserts into editor
 
 ## Code Organization
 
 Each directory has its own CLAUDE.md with detailed context:
 
-- `src/core/` - ServiceContainer (DI)
-- `src/Commands/` - Obsidian command handlers
+- `src/core/` - ServiceContainer (DI), plugin initialization
+- `src/Commands/` - Obsidian command handlers (ChatHandler, ModelSelectHandler, etc.)
 - `src/Services/` - Service implementations + `Adapters/` subdirectory
 - `src/Views/` - UI components and modals
 - `src/Models/` - TypeScript interfaces
 - `src/Types/` - AI service type definitions
-- `src/Utilities/` - Pure helper functions
+- `src/Utilities/` - Pure helper functions (well-tested)
 
 ## Cross-cutting Documentation
 
@@ -66,8 +69,27 @@ Each directory has its own CLAUDE.md with detailed context:
 
 ## Key Design Patterns
 
-1. **Constructor Injection** - Dependencies passed via ServiceContainer
-2. **Adapter Pattern** - Provider-specific adapters implement common interface
-3. **Frontmatter-driven config** - Per-note settings override globals
-4. **Streaming responses** - Real-time AI output via Vercel AI SDK
-5. **Link context injection** - Auto-include `[[Wiki Links]]` in prompts
+1. **Constructor Injection** - Dependencies passed via ServiceContainer; never instantiate services directly outside `ServiceContainer.create()`
+2. **Adapter Pattern** - `AiProviderService` uses provider-specific adapters (OpenAI, Anthropic, Gemini, Ollama, OpenRouter, LM Studio) implementing `ProviderAdapter` interface
+3. **Frontmatter-driven config** - Per-note settings override globals; merged at runtime by FrontmatterManager
+4. **Streaming responses** - Real-time AI output via Vercel AI SDK with platform-specific handling (desktop Node.js vs mobile Web API)
+5. **Link context injection** - Wiki links `[[Note Name]]` are resolved and content injected into prompts
+6. **Command Handler Interface** - Commands implement `CommandHandler` with metadata; registered via `CommandRegistrar`
+
+## Adding a New AI Provider
+
+1. Create adapter in `src/Services/Adapters/` implementing `ProviderAdapter`
+2. Add provider-specific configuration to settings
+3. Register adapter in `AiProviderService` (provider selection by model prefix: `ollama@`, `openrouter@`, etc.)
+4. Add URL configuration parameter (e.g., `providerUrl`)
+
+## Model Selection
+
+Models are specified with provider prefix:
+
+- OpenAI: `gpt-4o` (no prefix, default)
+- Ollama: `ollama@llama3.2`
+- OpenRouter: `openrouter@anthropic/claude-3-5-sonnet`
+- LM Studio: `lmstudio@model-name`
+
+The prefix determines which adapter handles the request in `AiProviderService`.

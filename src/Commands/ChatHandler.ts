@@ -1,7 +1,7 @@
 import { Editor, MarkdownView, Notice, Platform } from "obsidian";
 import { ServiceContainer } from "src/core/ServiceContainer";
 import { getHeadingPrefix } from "src/Utilities/TextHelpers";
-import { isTitleTimestampFormat, getDefaultModelForService } from "src/Utilities/FrontmatterHelpers";
+import { getDefaultModelForService, isTitleTimestampFormat } from "src/Utilities/FrontmatterHelpers";
 import { ChatGPT_MDSettings, MergedFrontmatterConfig } from "src/Models/Config";
 import {
   AI_SERVICE_OPENROUTER,

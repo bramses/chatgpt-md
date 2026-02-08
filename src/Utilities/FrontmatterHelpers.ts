@@ -17,6 +17,7 @@ import {
   DEFAULT_OPENROUTER_CONFIG,
   DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
+
 // ModelFilteringHelper exports are available for use elsewhere
 
 /**
@@ -69,10 +70,7 @@ export function getApiUrlsFromFrontmatter(frontmatter: any): Record<string, stri
   ];
 
   return Object.fromEntries(
-    providers.map((provider) => [
-      provider,
-      frontmatter[`${provider}Url`] || configs[provider].url,
-    ])
+    providers.map((provider) => [provider, frontmatter[`${provider}Url`] || configs[provider].url])
   );
 }
 

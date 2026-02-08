@@ -5,7 +5,7 @@ import { NotificationService } from "./NotificationService";
 import { ErrorService } from "./ErrorService";
 import { SettingsMigrationService } from "./SettingsMigration";
 import { FrontmatterManager } from "./FrontmatterManager";
-import { parseSettingsFrontmatter, objectToYamlFrontmatter } from "src/Utilities/YamlHelpers";
+import { objectToYamlFrontmatter, parseSettingsFrontmatter } from "src/Utilities/YamlHelpers";
 import { getDefaultConfigForService } from "src/Utilities/FrontmatterHelpers";
 import { aiProviderFromKeys, aiProviderFromUrl } from "src/Utilities/ProviderHelpers";
 import {
@@ -21,10 +21,7 @@ import {
 /**
  * Provider-specific frontmatter field mapping
  */
-const PROVIDER_FRONTMATTER_FIELDS: Record<
-  string,
-  (settings: ChatGPT_MDSettings) => Record<string, unknown>
-> = {
+const PROVIDER_FRONTMATTER_FIELDS: Record<string, (settings: ChatGPT_MDSettings) => Record<string, unknown>> = {
   [AI_SERVICE_OPENAI]: (s) => ({
     model: s.openaiDefaultModel,
     temperature: s.openaiDefaultTemperature,
