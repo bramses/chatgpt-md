@@ -5,7 +5,7 @@ import { NotificationService } from "./NotificationService";
 import { ErrorService } from "./ErrorService";
 import { SettingsMigrationService } from "./SettingsMigration";
 import { FrontmatterManager } from "./FrontmatterManager";
-import { parseSettingsFrontmatter } from "src/Utilities/TextHelpers";
+import { parseSettingsFrontmatter, objectToYamlFrontmatter } from "src/Utilities/YamlHelpers";
 import { getDefaultConfigForService } from "src/Utilities/FrontmatterHelpers";
 import { aiProviderFromKeys, aiProviderFromUrl } from "src/Utilities/ProviderHelpers";
 import {
@@ -181,25 +181,7 @@ export class SettingsService {
     }
   }
 
-  /**
-   * Convert a JavaScript object to YAML frontmatter string
-   * @param obj Object to convert to YAML
-   * @returns YAML frontmatter string including delimiter markers
-   */
-  private objectToYamlFrontmatter(obj: Record<string, unknown>): string {
-    // Convert to YAML
-    const frontmatterLines = Object.entries(obj).map(([key, value]) => {
-      if (value === null || value === undefined) {
-        return `${key}:`;
-      }
-      if (typeof value === "string") {
-        return `${key}: "${value}"`;
-      }
-      return `${key}: ${value}`;
-    });
-
-    return `---\n${frontmatterLines.join("\n")}\n---\n\n`;
-  }
+  // objectToYamlFrontmatter moved to YamlHelpers.ts - using imported function
 
   /**
    * Generate frontmatter for a new chat
@@ -212,7 +194,7 @@ export class SettingsService {
         const defaultFrontmatter = parseSettingsFrontmatter(this.settings.defaultChatFrontmatter);
         const mergedFrontmatter = { ...defaultFrontmatter, ...additionalSettings };
 
-        return this.objectToYamlFrontmatter(mergedFrontmatter);
+        return objectToYamlFrontmatter(mergedFrontmatter);
       }
 
       // If no additional settings, return the default frontmatter as is
@@ -294,6 +276,6 @@ export class SettingsService {
         break;
     }
 
-    return this.objectToYamlFrontmatter(frontmatterObj);
+    return objectToYamlFrontmatter(frontmatterObj);
   }
 }
