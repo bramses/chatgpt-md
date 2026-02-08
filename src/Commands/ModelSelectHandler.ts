@@ -47,7 +47,7 @@ export class ModelSelectHandler {
     initialModal.open();
 
     // --- Step 2: Fetch fresh models asynchronously ---
-    (async () => {
+    void (async () => {
       try {
         const frontmatter = await editorService.getFrontmatter(view, settings, this.services.app);
         const openAiKey = apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);

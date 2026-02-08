@@ -54,7 +54,7 @@ export default class ChatGPT_MD extends Plugin {
       ...ChatHandler.getCommand(),
       editorCallback: (editor, view) => {
         if (view instanceof MarkdownView) {
-          this.chatHandler.execute(editor, view);
+          void this.chatHandler.execute(editor, view);
         }
       },
     });
@@ -64,7 +64,7 @@ export default class ChatGPT_MD extends Plugin {
       ...ModelSelectHandler.getCommand(),
       editorCallback: (editor, view) => {
         if (view instanceof MarkdownView) {
-          this.modelSelectHandler.execute(editor, view);
+          void this.modelSelectHandler.execute(editor, view);
         }
       },
     });
