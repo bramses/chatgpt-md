@@ -62,6 +62,8 @@ export interface FolderSettings {
   chatFolder: string;
   /** Path to folder for chat file templates */
   chatTemplateFolder: string;
+  /** Path to folder for agent files */
+  agentFolder: string;
 }
 
 /**
@@ -279,6 +281,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   // Folders
   chatFolder: "ChatGPT_MD/chats",
   chatTemplateFolder: "ChatGPT_MD/templates",
+  agentFolder: "ChatGPT_MD/agents",
 
   // Chat Behavior
   stream: true,

@@ -13,6 +13,7 @@ import { SettingsService } from "src/Services/SettingsService";
 import { ToolService } from "src/Services/ToolService";
 import { VaultSearchService } from "src/Services/VaultSearchService";
 import { WebSearchService } from "src/Services/WebSearchService";
+import { AgentService } from "src/Services/AgentService";
 
 /**
  * Simple service container with readonly service instances.
@@ -48,6 +49,9 @@ export class ServiceContainer {
   // Settings (now includes frontmatter operations)
   readonly settingsService: SettingsService;
 
+  // Agent service
+  readonly agentService: AgentService;
+
   // Tool services (consolidated into single ToolService)
   readonly vaultSearchService: VaultSearchService;
   readonly webSearchService: WebSearchService;
@@ -67,6 +71,7 @@ export class ServiceContainer {
     editorService: EditorService,
     aiProviderService: () => AiProviderService,
     settingsService: SettingsService,
+    agentService: AgentService,
     vaultSearchService: VaultSearchService,
     webSearchService: WebSearchService,
     toolService: ToolService
@@ -84,6 +89,7 @@ export class ServiceContainer {
     this.editorService = editorService;
     this.aiProviderService = aiProviderService;
     this.settingsService = settingsService;
+    this.agentService = agentService;
     this.vaultSearchService = vaultSearchService;
     this.webSearchService = webSearchService;
     this.toolService = toolService;
@@ -124,6 +130,12 @@ export class ServiceContainer {
     // Now create templateService with the merged editorService
     const templateService = new TemplateService(app, fileService, editorService);
 
+    // === Agent service ===
+    const agentService = new AgentService(app, fileService, frontmatterManager);
+
+    // Late-bind agent service to settings service (same pattern as templateService)
+    settingsService.setAgentService(agentService);
+
     // === AI service factory ===
     // Using a factory function to create new instances when needed
     const aiProviderService = () => new AiProviderService();
@@ -158,6 +170,7 @@ export class ServiceContainer {
       editorService,
       aiProviderService,
       settingsService,
+      agentService,
       vaultSearchService,
       webSearchService,
       toolService

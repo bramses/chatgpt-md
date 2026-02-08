@@ -107,6 +107,13 @@ export class ModelSelectHandler {
   }
 
   /**
+   * Get the cached available models list
+   */
+  getAvailableModels(): string[] {
+    return this.availableModels;
+  }
+
+  /**
    * Initialize available models on plugin startup
    */
   async initializeAvailableModels(): Promise<void> {

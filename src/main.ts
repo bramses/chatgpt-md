@@ -6,6 +6,7 @@ import { AddCommentBlockHandler, AddDividerHandler } from "./Commands/SimpleHand
 import { StopStreamingHandler } from "./Commands/StopStreamingHandler";
 import { InferTitleHandler } from "./Commands/InferTitleHandler";
 import { ChooseChatTemplateHandler, ClearChatHandler, MoveToNewChatHandler } from "./Commands/RemainingHandlers";
+import { ChooseAgentHandler, CreateAgentHandler } from "./Commands/AgentHandlers";
 import { CommandRegistrar } from "./Commands/CommandRegistrar";
 
 export default class ChatGPT_MD extends Plugin {
@@ -89,5 +90,9 @@ export default class ChatGPT_MD extends Plugin {
 
     // Clear chat command
     registrar.registerEditorCommand(new ClearChatHandler(this.services));
+
+    // Agent commands
+    registrar.registerCallbackCommand(new ChooseAgentHandler(this.services));
+    registrar.registerCallbackCommand(new CreateAgentHandler(this.services, this.modelSelectHandler));
   }
 }

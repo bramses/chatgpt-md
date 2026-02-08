@@ -381,6 +381,14 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         placeholder: "chat-templates",
         group: "Folders",
       },
+      {
+        id: "agentFolder",
+        name: "Agent Folder",
+        description: "Path to folder for agent files",
+        type: "text",
+        placeholder: "ChatGPT_MD/agents",
+        group: "Folders",
+      },
 
       // Formatting
       {

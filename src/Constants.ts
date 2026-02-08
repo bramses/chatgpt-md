@@ -55,6 +55,10 @@ export const CHAT_ERROR_RESPONSE =
 
 export const CHAT_FOLDER_TYPE = "chatFolder";
 export const CHAT_TEMPLATE_FOLDER_TYPE = "chatTemplateFolder";
+export const AGENT_FOLDER_TYPE = "agentFolder";
+
+export const CHOOSE_AGENT_COMMAND_ID = "choose-agent";
+export const CREATE_AGENT_COMMAND_ID = "create-agent";
 
 export const NEWLINE = "\n\n";
 export const WIKI_LINKS_REGEX = /\[\[([^\][]+)\]\]/g;
