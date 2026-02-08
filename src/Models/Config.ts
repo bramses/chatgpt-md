@@ -11,6 +11,7 @@ import {
   DEFAULT_OLLAMA_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
+  DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
 import { getDefaultToolWhitelist } from "src/Services/ToolSupportDetector";
 
@@ -49,6 +50,8 @@ export interface ApiKeySettings {
   anthropicApiKey: string;
   /** API Key for Gemini - used for Google Gemini models */
   geminiApiKey: string;
+  /** API Key for Z.AI - used for GLM models (both Standard API and Coding Plan) */
+  zaiApiKey: string;
 }
 
 /**
@@ -155,6 +158,18 @@ export interface LmStudioFrontmatterSettings {
 }
 
 /**
+ * Provider-specific frontmatter settings for Z.AI
+ */
+export interface ZaiFrontmatterSettings {
+  /** Default model for Z.AI chats */
+  zaiDefaultModel: string;
+  /** Default temperature for Z.AI chats */
+  zaiDefaultTemperature: number;
+  /** Default max tokens for Z.AI chats */
+  zaiDefaultMaxTokens: number;
+}
+
+/**
  * Chat template settings
  */
 export interface TemplateSettings {
@@ -178,6 +193,8 @@ export interface ServiceUrlSettings {
   anthropicUrl: string;
   /** URL for Gemini API */
   geminiUrl: string;
+  /** URL for Z.AI API (Standard: /api/paas/v4, Coding Plan: /api/anthropic) */
+  zaiUrl: string;
 }
 
 /**
@@ -211,7 +228,8 @@ export interface ChatGPT_MDSettings
     GeminiFrontmatterSettings,
     OpenRouterFrontmatterSettings,
     OllamaFrontmatterSettings,
-    LmStudioFrontmatterSettings {}
+    LmStudioFrontmatterSettings,
+    ZaiFrontmatterSettings {}
 
 /**
  * Default settings
@@ -222,6 +240,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   openrouterApiKey: "",
   anthropicApiKey: "",
   geminiApiKey: "",
+  zaiApiKey: "",
 
   // Service URLs
   openaiUrl: DEFAULT_OPENAI_CONFIG.url,
@@ -230,6 +249,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   lmstudioUrl: DEFAULT_LMSTUDIO_CONFIG.url,
   anthropicUrl: DEFAULT_ANTHROPIC_CONFIG.url,
   geminiUrl: DEFAULT_GEMINI_CONFIG.url,
+  zaiUrl: DEFAULT_ZAI_CONFIG.url,
 
   // Folders
   chatFolder: "ChatGPT_MD/chats",
@@ -294,4 +314,9 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   lmstudioDefaultTopP: DEFAULT_LMSTUDIO_CONFIG.top_p,
   lmstudioDefaultPresencePenalty: DEFAULT_LMSTUDIO_CONFIG.presence_penalty,
   lmstudioDefaultFrequencyPenalty: DEFAULT_LMSTUDIO_CONFIG.frequency_penalty,
+
+  // Z.AI Defaults
+  zaiDefaultModel: DEFAULT_ZAI_CONFIG.model,
+  zaiDefaultTemperature: DEFAULT_ZAI_CONFIG.temperature,
+  zaiDefaultMaxTokens: DEFAULT_ZAI_CONFIG.max_tokens,
 };

@@ -59,19 +59,7 @@ export function isModelWhitelisted(modelId: string, whitelist: string): boolean 
  * For updates, see: scripts/tool-whitelist/README-WHITELIST-MAINTENANCE.md
  */
 export function getDefaultToolWhitelist(): string {
-  return `# Tool-Enabled Models Whitelist
-# Generated: 2026-02-01 from live API testing
-# Models tested: 503 | Tool support confirmed: 194 (38.6%)
-#
-# Pattern Matching:
-#   - Exact match: "o3" matches "o3"
-#   - Date suffix: "o3" matches "o3-2025-04-16" or "o3-20251101"
-#   - Wildcard: "gpt-4*" matches anything starting with "gpt-4"
-#   - Comments: Lines starting with # are ignored
-#
-# Last updated: See scripts/tool-whitelist/README-WHITELIST-MAINTENANCE.md
-
-# OpenAI (36 patterns)
+  return `# OpenAI (36 patterns)
 codex-mini-latest
 gpt-3.5-turbo
 gpt-3.5-turbo-0125
@@ -249,5 +237,10 @@ z-ai/glm-4.6
 z-ai/glm-4.6:exacto
 z-ai/glm-4.6v
 z-ai/glm-4.7
-z-ai/glm-4.7-flash`;
+z-ai/glm-4.7-flash
+
+# Z.AI (GLM Models)
+glm-4
+glm-4.7
+glm-4.7-flash`;
 }

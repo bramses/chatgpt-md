@@ -9,6 +9,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_ZAI,
   FETCH_MODELS_TIMEOUT_MS,
 } from "src/Constants";
 import { getApiUrlsFromFrontmatter } from "src/Utilities/FrontmatterHelpers";
@@ -19,6 +20,7 @@ import {
   DEFAULT_OLLAMA_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
+  DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
 
 /**
@@ -40,6 +42,7 @@ export function getDefaultApiUrls(settings: ChatGPT_MDSettings): { [key: string]
     [AI_SERVICE_LMSTUDIO]: settings.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
     [AI_SERVICE_ANTHROPIC]: settings.anthropicUrl || DEFAULT_ANTHROPIC_CONFIG.url,
     [AI_SERVICE_GEMINI]: settings.geminiUrl || DEFAULT_GEMINI_CONFIG.url,
+    [AI_SERVICE_ZAI]: settings.zaiUrl || DEFAULT_ZAI_CONFIG.url,
   };
 }
 
@@ -134,6 +137,18 @@ export async function fetchAvailableModels(
             settingsService.getSettings(),
             "gemini"
           ),
+          FETCH_MODELS_TIMEOUT_MS,
+          []
+        )
+      );
+    }
+
+    // Conditionally add Z.AI promise
+    const zaiApiKey = apiAuthService.getApiKey(settingsService.getSettings(), AI_SERVICE_ZAI);
+    if (isValidApiKey(zaiApiKey)) {
+      promises.push(
+        withTimeout(
+          aiService.fetchAvailableModels(urls[AI_SERVICE_ZAI], zaiApiKey, settingsService.getSettings(), "zai"),
           FETCH_MODELS_TIMEOUT_MS,
           []
         )

@@ -43,7 +43,8 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     }
 
     try {
-      const modelsUrl = `${url.replace(/\/$/, "")}/v1/models`;
+      const apiPath = this.getApiPathSuffix(url);
+      const modelsUrl = `${url.replace(/\/$/, "")}${apiPath}/models`;
       const headers = this.getAuthHeaders(apiKey!); // Non-null assertion: validated above
 
       // Anthropic uses requestUrl directly (not through apiService)

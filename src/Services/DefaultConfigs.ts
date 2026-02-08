@@ -5,6 +5,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_ZAI,
 } from "src/Constants";
 
 /**
@@ -104,4 +105,20 @@ export const DEFAULT_GEMINI_CONFIG = {
   title: "Untitled",
   top_p: 1,
   url: "https://generativelanguage.googleapis.com",
+};
+
+/**
+ * Default configuration for Z.AI
+ */
+export const DEFAULT_ZAI_CONFIG = {
+  aiService: AI_SERVICE_ZAI,
+  max_tokens: 400,
+  model: "zai@glm-4.7",
+  stream: true,
+  system_commands: null,
+  tags: [],
+  temperature: 0.7,
+  title: "Untitled",
+  top_p: 1,
+  url: "https://api.z.ai",
 };

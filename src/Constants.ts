@@ -9,6 +9,7 @@ export const AI_SERVICE_OPENROUTER = "openrouter";
 export const AI_SERVICE_LMSTUDIO = "lmstudio";
 export const AI_SERVICE_ANTHROPIC = "anthropic";
 export const AI_SERVICE_GEMINI = "gemini";
+export const AI_SERVICE_ZAI = "zai";
 
 // API endpoints for each service
 export const API_ENDPOINTS = {

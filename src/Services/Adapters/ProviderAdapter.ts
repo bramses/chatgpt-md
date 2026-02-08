@@ -3,7 +3,7 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 /**
  * Union type for all supported AI providers
  */
-export type ProviderType = "openai" | "anthropic" | "ollama" | "openrouter" | "gemini" | "lmstudio";
+export type ProviderType = "openai" | "anthropic" | "ollama" | "openrouter" | "gemini" | "lmstudio" | "zai";
 
 /**
  * Unified configuration interface for all AI providers
@@ -107,4 +107,13 @@ export interface ProviderAdapter {
    * @param modelId - Model ID with or without provider prefix
    */
   extractModelName(modelId: string): string;
+
+  /**
+   * Get the API path suffix for chat completions endpoint
+   * Most OpenAI-compatible providers use "/v1"
+   * OpenRouter uses "/api/v1" to handle its unique structure
+   * Z.AI returns "/api/paas/v4" or "/api/anthropic/v1" depending on the URL
+   * @param url - Optional URL to determine the correct suffix (used by Z.AI for mode detection)
+   */
+  getApiPathSuffix(url?: string): string;
 }

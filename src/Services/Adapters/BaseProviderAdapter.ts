@@ -101,4 +101,13 @@ export abstract class BaseProviderAdapter implements ProviderAdapter {
     }
     return true;
   }
+
+  /**
+   * Default API path suffix for chat completions
+   * Most OpenAI-compatible providers use "/v1"
+   * @param url - Optional URL parameter (ignored by most providers)
+   */
+  getApiPathSuffix(_url?: string): string {
+    return "/v1";
+  }
 }
