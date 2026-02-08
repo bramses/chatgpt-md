@@ -21,6 +21,7 @@ Uses Vercel AI SDK (`ai` package) with provider factories:
 - `createAnthropic` - Anthropic
 - `createGoogleGenerativeAI` - Gemini
 - `createOpenRouter` - OpenRouter
+- `createZhipu` - Z.AI
 - `createOpenAICompatible` - Ollama, LM Studio
 
 ### Adapters/ Subdirectory

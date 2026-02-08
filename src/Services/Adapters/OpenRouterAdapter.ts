@@ -35,6 +35,14 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     };
   }
 
+  /**
+   * OpenRouter requires /api/v1 prefix for all endpoints
+   * @param url - Optional URL parameter (ignored by OpenRouter)
+   */
+  override getApiPathSuffix(_url?: string): string {
+    return "/api/v1";
+  }
+
   async fetchModels(
     url: string,
     apiKey: string | undefined,
@@ -47,7 +55,8 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
 
     try {
       const headers = this.getAuthHeaders(apiKey!); // Non-null assertion: validated above
-      const models = await makeGetRequest(`${url}/api/v1/models`, headers, this.type);
+      const apiPath = this.getApiPathSuffix(url);
+      const models = await makeGetRequest(`${url}${apiPath}/models`, headers, this.type);
 
       return models.data
         .sort((a: OpenRouterModel, b: OpenRouterModel) => {

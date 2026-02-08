@@ -6,6 +6,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_ZAI,
 } from "src/Constants";
 import {
   DEFAULT_ANTHROPIC_CONFIG,
@@ -14,6 +15,7 @@ import {
   DEFAULT_OLLAMA_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
+  DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
 import { extractProvider, getModelName } from "./ModelFilteringHelper";
 
@@ -28,6 +30,7 @@ export function getDefaultConfigForService(serviceType: string): Record<string, 
     [AI_SERVICE_LMSTUDIO]: DEFAULT_LMSTUDIO_CONFIG,
     [AI_SERVICE_ANTHROPIC]: DEFAULT_ANTHROPIC_CONFIG,
     [AI_SERVICE_GEMINI]: DEFAULT_GEMINI_CONFIG,
+    [AI_SERVICE_ZAI]: DEFAULT_ZAI_CONFIG,
   };
   return defaults[serviceType] || DEFAULT_OPENAI_CONFIG;
 }
@@ -44,6 +47,7 @@ export function getApiUrlsFromFrontmatter(frontmatter: any): Record<string, stri
     lmstudio: frontmatter.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
     anthropic: frontmatter.anthropicUrl || DEFAULT_ANTHROPIC_CONFIG.url,
     gemini: frontmatter.geminiUrl || DEFAULT_GEMINI_CONFIG.url,
+    zai: frontmatter.zaiUrl || DEFAULT_ZAI_CONFIG.url,
   };
 }
 

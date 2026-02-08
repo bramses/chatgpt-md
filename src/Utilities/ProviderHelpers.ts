@@ -6,6 +6,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_ZAI,
 } from "src/Constants";
 
 /**
@@ -25,6 +26,7 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
     ["ollama@", AI_SERVICE_OLLAMA],
     ["lmstudio@", AI_SERVICE_LMSTUDIO],
     ["openrouter@", AI_SERVICE_OPENROUTER],
+    ["zai@", AI_SERVICE_ZAI],
     ["local@", AI_SERVICE_OLLAMA], // backward compatibility
   ];
 
@@ -64,6 +66,11 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
     if (baseUrl.includes("generativelanguage.googleapis.com")) {
       return AI_SERVICE_GEMINI;
     }
+
+    // Z.AI API detection
+    if (baseUrl.includes("api.z.ai")) {
+      return AI_SERVICE_ZAI;
+    }
   }
 
   return undefined;
@@ -71,15 +78,16 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
 
 /**
  * Determine the AI provider from available API keys
- * Uses a priority order: OpenAI > Anthropic > Gemini > OpenRouter
+ * Uses a priority order: OpenAI > Anthropic > Gemini > OpenRouter > Z.AI
  */
 export const aiProviderFromKeys = (config: Record<string, any>): string | null => {
   const hasOpenRouterKey = isValidApiKey(config.openrouterApiKey);
   const hasOpenAIKey = isValidApiKey(config.apiKey);
   const hasAnthropicKey = isValidApiKey(config.anthropicApiKey);
   const hasGeminiKey = isValidApiKey(config.geminiApiKey);
+  const hasZaiKey = isValidApiKey(config.zaiApiKey);
 
-  // Priority order: OpenAI > Anthropic > Gemini > OpenRouter
+  // Priority order: OpenAI > Anthropic > Gemini > OpenRouter > Z.AI
   if (hasOpenAIKey) {
     return AI_SERVICE_OPENAI;
   } else if (hasAnthropicKey) {
@@ -88,6 +96,8 @@ export const aiProviderFromKeys = (config: Record<string, any>): string | null =
     return AI_SERVICE_GEMINI;
   } else if (hasOpenRouterKey) {
     return AI_SERVICE_OPENROUTER;
+  } else if (hasZaiKey) {
+    return AI_SERVICE_ZAI;
   }
 
   return null;

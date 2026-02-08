@@ -8,7 +8,9 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_ZAI,
 } from "src/Constants";
+import { DEFAULT_ZAI_CONFIG } from "src/Services/DefaultConfigs";
 import { fetchAvailableModels, getAiApiUrls } from "./CommandUtilities";
 
 /**
@@ -61,6 +63,8 @@ export class ModelSelectHandler {
           [AI_SERVICE_ANTHROPIC]:
             frontmatter.anthropicUrl || settings.anthropicUrl || getAiApiUrls(frontmatter).anthropic,
           [AI_SERVICE_GEMINI]: frontmatter.geminiUrl || settings.geminiUrl || getAiApiUrls(frontmatter).gemini,
+          [AI_SERVICE_ZAI]:
+            frontmatter.zaiUrl || settings.zaiUrl || getAiApiUrls(frontmatter).zai || DEFAULT_ZAI_CONFIG.url,
         };
 
         const aiService = this.services.aiProviderService();
@@ -115,6 +119,7 @@ export class ModelSelectHandler {
         [AI_SERVICE_LMSTUDIO]: settings.lmstudioUrl || getAiApiUrls({}).lmstudio,
         [AI_SERVICE_ANTHROPIC]: settings.anthropicUrl || getAiApiUrls({}).anthropic,
         [AI_SERVICE_GEMINI]: settings.geminiUrl || getAiApiUrls({}).gemini,
+        [AI_SERVICE_ZAI]: settings.zaiUrl || getAiApiUrls({}).zai || DEFAULT_ZAI_CONFIG.url,
       };
 
       const aiService = this.services.aiProviderService();

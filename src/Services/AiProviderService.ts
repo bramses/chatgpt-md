@@ -28,6 +28,7 @@ import { OllamaAdapter } from "./Adapters/OllamaAdapter";
 import { OpenRouterAdapter } from "./Adapters/OpenRouterAdapter";
 import { GeminiAdapter } from "./Adapters/GeminiAdapter";
 import { LmStudioAdapter } from "./Adapters/LmStudioAdapter";
+import { ZaiAdapter } from "./Adapters/ZaiAdapter";
 
 // Constants
 import { NEWLINE, ROLE_USER, TITLE_INFERENCE_ERROR_HEADER, TRUNCATION_ERROR_INDICATOR } from "src/Constants";
@@ -67,6 +68,7 @@ export class AiProviderService implements IAiApiService {
       ["openrouter", new OpenRouterAdapter()],
       ["gemini", new GeminiAdapter()],
       ["lmstudio", new LmStudioAdapter()],
+      ["zai", new ZaiAdapter()],
     ]);
 
     // Default to OpenAI
@@ -341,19 +343,24 @@ export class AiProviderService implements IAiApiService {
     }
 
     const customFetch = this.apiService.createFetchAdapter();
-    const providerFactory = this.getProviderFactory(this.currentAdapter.type);
+    const providerFactory = this.getProviderFactory(this.currentAdapter.type, config.url);
+
+    // Use adapter-specific path suffix instead of hardcoded "/v1"
+    const apiPathSuffix = this.currentAdapter.getApiPathSuffix(config.url);
 
     this.provider = providerFactory({
       apiKey: apiKey || "",
-      baseURL: `${config.url}/v1`,
+      baseURL: `${config.url}${apiPathSuffix}`,
       fetch: customFetch,
     });
   }
 
   /**
    * Get the AI SDK provider factory for a given provider type
+   * @param type - Provider type
+   * @param url - Optional URL to determine API mode (used for Z.AI)
    */
-  private getProviderFactory(type: ProviderType): any {
+  private getProviderFactory(type: ProviderType, url?: string): any {
     switch (type) {
       case "openai":
         return createOpenAI;
@@ -363,6 +370,7 @@ export class AiProviderService implements IAiApiService {
         return createGoogleGenerativeAI;
       case "ollama":
       case "lmstudio":
+      case "zai":
         return createOpenAICompatible;
       case "openrouter":
         return createOpenRouter;
@@ -557,15 +565,18 @@ export class AiProviderService implements IAiApiService {
         result = streamText(request);
         fullText = await consumeStream(result);
         handler.stopBuffering();
+
+        // Await the full result to catch any async errors
         finalResult = await result;
 
-        let actualFinishReason = finalResult?.finishReason;
-        if (actualFinishReason && typeof actualFinishReason.then === "function") {
-          try {
-            actualFinishReason = await actualFinishReason;
-          } catch (finishErr: any) {
-            throw finishErr;
+        // Check for error finish reason
+        let actualFinishReason = await finalResult?.finishReason;
+        if (actualFinishReason === "error") {
+          const error = (finalResult as any).error;
+          if (error) {
+            throw error;
           }
+          throw new Error("Stream finished with error");
         }
       } catch (err: any) {
         handler?.stopBuffering();
@@ -606,6 +617,19 @@ export class AiProviderService implements IAiApiService {
               fullText += textPart;
               handler.appendText(textPart);
             }
+
+            // Await the continuation result to catch any async errors
+            const continuationFinalResult = await continuationResult;
+
+            // Check for error finish reason
+            let continuationFinishReason = await continuationFinalResult?.finishReason;
+            if (continuationFinishReason === "error") {
+              const error = (continuationFinalResult as any).error;
+              if (error) {
+                throw error;
+              }
+              throw new Error("Continuation stream finished with error");
+            }
           } finally {
             handler.stopBuffering();
           }
@@ -622,8 +646,37 @@ export class AiProviderService implements IAiApiService {
         mode: "streaming",
         wasAborted: this.apiService.wasAborted(),
       };
-    } catch (err) {
-      const errorMessage = `Error: ${err}`;
+    } catch (err: any) {
+      // Extract the actual error message from various error types
+      let errorMessage = "Error: ";
+      let rootCause = err;
+
+      // Unwrap retry errors to get to the root cause
+      while (rootCause?.cause && (rootCause?.name === "AI_RetryError" || rootCause?.message?.includes("Retry"))) {
+        rootCause = rootCause.cause;
+      }
+
+      // Use the root cause message if available
+      if (rootCause?.message) {
+        errorMessage += rootCause.message;
+      } else if (err?.message) {
+        errorMessage += err.message;
+      } else if (typeof err === "string") {
+        errorMessage += err;
+      } else {
+        errorMessage += "Unknown error occurred";
+      }
+
+      // Add error name if it's a specific error type
+      if (rootCause?.name && rootCause.name !== "Error") {
+        errorMessage = `Error (${rootCause.name}): ${errorMessage.replace("Error: ", "")}`;
+      }
+
+      // Add additional context if available
+      if (err?.cause?.message && err?.cause !== rootCause) {
+        errorMessage += `\n\nDetails: ${err.cause.message}`;
+      }
+
       const errorCursor = handler?.getCursor() || initialCursor;
       editor.replaceRange(errorMessage, errorCursor);
       return { fullString: errorMessage, mode: "streaming" };
