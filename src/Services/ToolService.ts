@@ -486,61 +486,81 @@ export class ToolService {
    * Handle tool calls by requesting user approval and executing if approved
    */
   async handleToolCalls(toolCalls: any[], modelName?: string): Promise<any[]> {
-    const results = [];
+    return Promise.all(
+      toolCalls.map((tc) => this.executeToolCall(tc, modelName))
+    );
+  }
 
-    for (const toolCall of toolCalls) {
-      // Extract tool info - handle different possible structures
-      const toolName = toolCall.toolName || toolCall.name || toolCall.tool;
-      const toolArgs = toolCall.args || toolCall.input || toolCall.arguments || {};
-      const toolCallId = toolCall.toolCallId || toolCall.id || "unknown";
+  /**
+   * Execute a single tool call with approval
+   */
+  private async executeToolCall(
+    toolCall: any,
+    modelName?: string
+  ): Promise<any> {
+    const { toolName, args, toolCallId } = this.normalizeToolCall(toolCall);
 
-      // Request user approval for this tool call
-      const approved = await this.requestApproval({
-        toolCallId: toolCallId,
-        toolName: toolName,
-        args: toolArgs,
-        modelName: modelName,
-      });
+    const approval = await this.requestApproval({
+      toolCallId,
+      toolName,
+      args,
+      modelName,
+    });
 
-      if (!approved.approved) {
-        results.push({
-          toolCallId: toolCallId,
-          result: { error: "User declined tool execution" },
-        });
-        continue;
-      }
-
-      // Execute the tool with approved arguments
-      try {
-        const tool = this.getTool(toolName);
-        if (!tool || !tool.execute) {
-          results.push({
-            toolCallId: toolCallId,
-            result: { error: "Tool not found or has no execute function" },
-          });
-          continue;
-        }
-
-        // Use modified args if provided (e.g., filtered file list from approval modal)
-        const argsToUse = approved.modifiedArgs || toolArgs;
-
-        const result = await tool.execute(argsToUse, {
-          app: this.app,
-          toolCallId: toolCallId,
-          messages: [],
-        });
-        results.push({
-          toolCallId: toolCallId,
-          result: result,
-        });
-      } catch (error) {
-        results.push({
-          toolCallId: toolCallId,
-          result: { error: `Tool execution failed: ${error}` },
-        });
-      }
+    if (!approval.approved) {
+      return {
+        toolCallId,
+        result: { error: "User declined tool execution" },
+      };
     }
 
-    return results;
+    return this.executeTool(toolName, approval.modifiedArgs || args, toolCallId);
+  }
+
+  /**
+   * Normalize different tool call structures
+   */
+  private normalizeToolCall(toolCall: any): {
+    toolName: string;
+    args: Record<string, unknown>;
+    toolCallId: string;
+  } {
+    return {
+      toolName: toolCall.toolName || toolCall.name || toolCall.tool,
+      args: toolCall.args || toolCall.input || toolCall.arguments || {},
+      toolCallId: toolCall.toolCallId || toolCall.id || "unknown",
+    };
+  }
+
+  /**
+   * Execute tool and return result
+   */
+  private async executeTool(
+    toolName: string,
+    args: Record<string, unknown>,
+    toolCallId: string
+  ): Promise<any> {
+    try {
+      const tool = this.getTool(toolName);
+      if (!tool || !tool.execute) {
+        return {
+          toolCallId,
+          result: { error: "Tool not found or has no execute function" },
+        };
+      }
+
+      const result = await tool.execute(args, {
+        app: this.app,
+        toolCallId,
+        messages: [],
+      });
+
+      return { toolCallId, result };
+    } catch (error) {
+      return {
+        toolCallId,
+        result: { error: `Tool execution failed: ${error}` },
+      };
+    }
   }
 }

@@ -523,133 +523,43 @@ export class AiProviderService implements IAiApiService {
     toolService?: ToolService,
     settings?: ChatGPT_MDSettings
   ): Promise<StreamingResponse> {
-    const aiSdkMessages = messages.map((msg) => ({
-      role: msg.role as "user" | "assistant" | "system",
-      content: msg.content,
-    }));
-
-    const cursorPositions = insertAssistantHeader(editor, headingPrefix, modelName);
-
-    const abortController = new AbortController();
-    this.apiService.setAbortController(abortController);
-
-    const initialCursor = setAtCursor ? cursorPositions.initialCursor : cursorPositions.newCursor;
-    let handler: StreamingHandler | undefined;
+    const { aiSdkMessages, handler, abortController } = this.setupStreamingContext(
+      messages,
+      editor,
+      headingPrefix,
+      modelName,
+      setAtCursor
+    );
 
     try {
-      handler = new StreamingHandler(editor, initialCursor, setAtCursor);
+      const request = this.buildStreamRequest(model, aiSdkMessages, abortController.signal, tools, modelName, settings);
+
       handler.startBuffering();
+      const result = streamText(request);
+      let fullText = await this.consumeStream(result, handler);
+      const finalResult = await result;
 
-      const request: Parameters<typeof streamText>[0] = {
-        model,
-        messages: aiSdkMessages,
-        abortSignal: abortController.signal,
-      };
+      this.checkForStreamError(finalResult);
 
-      const toolsAvailable = tools && typeof tools === "object" && Object.keys(tools as object).length > 0;
-      const shouldUseTool = toolsAvailable && settings && this.modelSupportsTools(modelName, settings);
-
-      if (shouldUseTool) {
-        request.tools = tools as typeof request.tools;
-      }
-
-      let fullText = "";
-      let result: Awaited<ReturnType<typeof streamText>>;
-      let finalResult: typeof result;
-
-      const consumeStream = async (streamResult: any): Promise<string> => {
-        let text = "";
-        const { textStream } = streamResult;
-
-        for await (const textPart of textStream) {
-          if (this.apiService.wasAborted()) {
-            break;
-          }
-          text += textPart;
-          handler?.appendText(textPart);
-        }
-
-        return text;
-      };
-
-      try {
-        result = streamText(request);
-        fullText = await consumeStream(result);
-        handler.stopBuffering();
-
-        // Await the full result to catch any async errors
-        finalResult = await result;
-
-        // Check for error finish reason
-        let actualFinishReason = await finalResult?.finishReason;
-        if (actualFinishReason === "error") {
-          const error = (finalResult as any).error;
-          if (error) {
-            throw error;
-          }
-          throw new Error("Stream finished with error");
-        }
-      } catch (err: any) {
-        handler?.stopBuffering();
-        throw err;
-      }
-
-      if (toolService && finalResult && finalResult.toolCalls) {
+      // Handle tool calls if present
+      if (toolService && finalResult?.toolCalls) {
         const toolCalls = await finalResult.toolCalls;
-        if (toolCalls && toolCalls.length > 0) {
-          const toolNotice = "_[Tool approval required...]_\n";
-          const indicatorCursor = handler.getCursor();
-          editor.replaceRange(toolNotice, indicatorCursor);
-          handler.updateCursorAfterInsert(toolNotice, indicatorCursor);
-
-          const toolResults = await toolService.handleToolCalls(toolCalls, modelName);
-          const { contextMessages } = await toolService.processToolResults(toolCalls, toolResults, modelName);
-
-          const toolCursor = handler.getCursor();
-          editor.replaceRange("", { line: toolCursor.line - 1, ch: 0 }, toolCursor);
-          handler.setCursor({ line: toolCursor.line - 1, ch: 0 });
-
-          const updatedMessages = [...aiSdkMessages];
-          updatedMessages.push({ role: "assistant", content: fullText });
-          updatedMessages.push(...contextMessages);
-
-          const continuationResult = streamText({
+        if (toolCalls?.length > 0) {
+          fullText = await this.handleStreamToolCalls(
+            toolCalls,
+            fullText,
+            handler,
+            editor,
             model,
-            messages: updatedMessages,
-          });
-
-          const continuationCursor = handler.getCursor();
-          handler.reset(continuationCursor);
-          handler.startBuffering();
-
-          try {
-            for await (const textPart of continuationResult.textStream) {
-              if (this.apiService.wasAborted()) break;
-              fullText += textPart;
-              handler.appendText(textPart);
-            }
-
-            // Await the continuation result to catch any async errors
-            const continuationFinalResult = await continuationResult;
-
-            // Check for error finish reason
-            let continuationFinishReason = await continuationFinalResult?.finishReason;
-            if (continuationFinishReason === "error") {
-              const error = (continuationFinalResult as any).error;
-              if (error) {
-                throw error;
-              }
-              throw new Error("Continuation stream finished with error");
-            }
-          } finally {
-            handler.stopBuffering();
-          }
+            aiSdkMessages,
+            toolService,
+            modelName
+          );
         }
       }
 
-      const finalCursor = handler.getCursor();
       if (!setAtCursor) {
-        editor.setCursor(finalCursor);
+        editor.setCursor(handler.getCursor());
       }
 
       return {
@@ -658,39 +568,220 @@ export class AiProviderService implements IAiApiService {
         wasAborted: this.apiService.wasAborted(),
       };
     } catch (err: any) {
-      // Extract the actual error message from various error types
-      let errorMessage = "Error: ";
-      let rootCause = err;
-
-      // Unwrap retry errors to get to the root cause
-      while (rootCause?.cause && (rootCause?.name === "AI_RetryError" || rootCause?.message?.includes("Retry"))) {
-        rootCause = rootCause.cause;
-      }
-
-      // Use the root cause message if available
-      if (rootCause?.message) {
-        errorMessage += rootCause.message;
-      } else if (err?.message) {
-        errorMessage += err.message;
-      } else if (typeof err === "string") {
-        errorMessage += err;
-      } else {
-        errorMessage += "Unknown error occurred";
-      }
-
-      // Add error name if it's a specific error type
-      if (rootCause?.name && rootCause.name !== "Error") {
-        errorMessage = `Error (${rootCause.name}): ${errorMessage.replace("Error: ", "")}`;
-      }
-
-      // Add additional context if available
-      if (err?.cause?.message && err?.cause !== rootCause) {
-        errorMessage += `\n\nDetails: ${err.cause.message}`;
-      }
-
-      const errorCursor = handler?.getCursor() || initialCursor;
-      editor.replaceRange(errorMessage, errorCursor);
-      return { fullString: errorMessage, mode: "streaming" };
+      return this.handleStreamError(err, handler, editor);
     }
+  }
+
+  /**
+   * Setup streaming context with abort controller and handler
+   */
+  private setupStreamingContext(
+    messages: Message[],
+    editor: Editor,
+    headingPrefix: string,
+    modelName: string,
+    setAtCursor?: boolean
+  ) {
+    const aiSdkMessages = this.prepareAiSdkMessages(messages);
+    const cursorPositions = insertAssistantHeader(editor, headingPrefix, modelName);
+
+    const abortController = new AbortController();
+    this.apiService.setAbortController(abortController);
+
+    const initialCursor = setAtCursor ? cursorPositions.initialCursor : cursorPositions.newCursor;
+    const handler = new StreamingHandler(editor, initialCursor, setAtCursor);
+
+    return { aiSdkMessages, handler, abortController };
+  }
+
+  /**
+   * Handle streaming error
+   */
+  private handleStreamError(err: any, handler: StreamingHandler, editor: Editor): StreamingResponse {
+    handler.stopBuffering();
+    const errorMessage = this.formatStreamError(err);
+    const errorCursor = handler.getCursor();
+    editor.replaceRange(errorMessage, errorCursor);
+    return { fullString: errorMessage, mode: "streaming" };
+  }
+
+  /**
+   * Prepare messages for AI SDK format
+   */
+  private prepareAiSdkMessages(messages: Message[]): Array<{
+    role: "user" | "assistant" | "system";
+    content: string;
+  }> {
+    return messages.map((msg) => ({
+      role: msg.role as "user" | "assistant" | "system",
+      content: msg.content,
+    }));
+  }
+
+  /**
+   * Build stream request with optional tools
+   */
+  private buildStreamRequest(
+    model: LanguageModel,
+    messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+    abortSignal: AbortSignal,
+    tools: unknown,
+    modelName: string,
+    settings?: ChatGPT_MDSettings
+  ): Parameters<typeof streamText>[0] {
+    const request: Parameters<typeof streamText>[0] = {
+      model,
+      messages,
+      abortSignal,
+    };
+
+    const toolsAvailable = tools && typeof tools === "object" && Object.keys(tools as object).length > 0;
+    const shouldUseTool = toolsAvailable && settings && this.modelSupportsTools(modelName, settings);
+
+    if (shouldUseTool) {
+      request.tools = tools as typeof request.tools;
+    }
+
+    return request;
+  }
+
+  /**
+   * Consume stream and buffer to handler
+   */
+  private async consumeStream(streamResult: any, handler: StreamingHandler): Promise<string> {
+    let text = "";
+    const { textStream } = streamResult;
+
+    for await (const textPart of textStream) {
+      if (this.apiService.wasAborted()) {
+        break;
+      }
+      text += textPart;
+      handler.appendText(textPart);
+    }
+
+    handler.stopBuffering();
+    return text;
+  }
+
+  /**
+   * Check if stream finished with error
+   */
+  private async checkForStreamError(finalResult: any): Promise<void> {
+    const finishReason = await finalResult?.finishReason;
+    if (finishReason === "error") {
+      const error = (finalResult as any).error;
+      if (error) {
+        throw error;
+      }
+      throw new Error("Stream finished with error");
+    }
+  }
+
+  /**
+   * Handle tool calls during streaming
+   */
+  private async handleStreamToolCalls(
+    toolCalls: any[],
+    fullText: string,
+    handler: StreamingHandler,
+    editor: Editor,
+    model: LanguageModel,
+    aiSdkMessages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+    toolService: ToolService,
+    modelName: string
+  ): Promise<string> {
+    // Insert tool notice
+    const toolNotice = "_[Tool approval required...]_\n";
+    const indicatorCursor = handler.getCursor();
+    editor.replaceRange(toolNotice, indicatorCursor);
+    handler.updateCursorAfterInsert(toolNotice, indicatorCursor);
+
+    // Execute tools
+    const toolResults = await toolService.handleToolCalls(toolCalls, modelName);
+    const { contextMessages } = await toolService.processToolResults(toolCalls, toolResults, modelName);
+
+    // Clean up notice
+    const toolCursor = handler.getCursor();
+    editor.replaceRange("", { line: toolCursor.line - 1, ch: 0 }, toolCursor);
+    handler.setCursor({ line: toolCursor.line - 1, ch: 0 });
+
+    // Continue with tool results
+    const updatedMessages = [...aiSdkMessages, { role: "assistant" as const, content: fullText }, ...contextMessages];
+
+    return this.streamContinuation(model, updatedMessages, handler, fullText);
+  }
+
+  /**
+   * Stream continuation after tool calls
+   */
+  private async streamContinuation(
+    model: LanguageModel,
+    messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+    handler: StreamingHandler,
+    initialText: string
+  ): Promise<string> {
+    const continuationResult = streamText({ model, messages });
+
+    const continuationCursor = handler.getCursor();
+    handler.reset(continuationCursor);
+    handler.startBuffering();
+
+    let fullText = initialText;
+
+    try {
+      for await (const textPart of continuationResult.textStream) {
+        if (this.apiService.wasAborted()) break;
+        fullText += textPart;
+        handler.appendText(textPart);
+      }
+
+      const continuationFinalResult = await continuationResult;
+      this.checkForStreamError(continuationFinalResult);
+
+      return fullText;
+    } finally {
+      handler.stopBuffering();
+    }
+  }
+
+  /**
+   * Format streaming error for display
+   */
+  private formatStreamError(err: any): string {
+    let rootCause = err;
+
+    // Unwrap retry errors
+    while (rootCause?.cause && this.isRetryError(rootCause)) {
+      rootCause = rootCause.cause;
+    }
+
+    let errorMessage = "Error: ";
+    if (rootCause?.message) {
+      errorMessage += rootCause.message;
+    } else if (err?.message) {
+      errorMessage += err.message;
+    } else if (typeof err === "string") {
+      errorMessage += err;
+    } else {
+      errorMessage += "Unknown error occurred";
+    }
+
+    if (rootCause?.name && rootCause.name !== "Error") {
+      errorMessage = `Error (${rootCause.name}): ${errorMessage.replace("Error: ", "")}`;
+    }
+
+    if (err?.cause?.message && err?.cause !== rootCause) {
+      errorMessage += `\n\nDetails: ${err.cause.message}`;
+    }
+
+    return errorMessage;
+  }
+
+  /**
+   * Check if error is a retry error
+   */
+  private isRetryError(err: any): boolean {
+    return err?.name === "AI_RetryError" || err?.message?.includes("Retry");
   }
 }

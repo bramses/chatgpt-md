@@ -15,7 +15,64 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_ZAI,
 } from "src/Constants";
+
+/**
+ * Provider-specific frontmatter field mapping
+ */
+const PROVIDER_FRONTMATTER_FIELDS: Record<
+  string,
+  (settings: ChatGPT_MDSettings) => Record<string, unknown>
+> = {
+  [AI_SERVICE_OPENAI]: (s) => ({
+    model: s.openaiDefaultModel,
+    temperature: s.openaiDefaultTemperature,
+    top_p: s.openaiDefaultTopP,
+    max_tokens: s.openaiDefaultMaxTokens,
+    presence_penalty: s.openaiDefaultPresencePenalty,
+    frequency_penalty: s.openaiDefaultFrequencyPenalty,
+  }),
+  [AI_SERVICE_OLLAMA]: (s) => ({
+    url: s.ollamaUrl,
+    temperature: s.ollamaDefaultTemperature,
+    top_p: s.ollamaDefaultTopP,
+  }),
+  [AI_SERVICE_OPENROUTER]: (s) => ({
+    model: s.openrouterDefaultModel,
+    temperature: s.openrouterDefaultTemperature,
+    top_p: s.openrouterDefaultTopP,
+    max_tokens: s.openrouterDefaultMaxTokens,
+    presence_penalty: s.openrouterDefaultPresencePenalty,
+    frequency_penalty: s.openrouterDefaultFrequencyPenalty,
+  }),
+  [AI_SERVICE_LMSTUDIO]: (s) => ({
+    url: s.lmstudioUrl,
+    temperature: s.lmstudioDefaultTemperature,
+    top_p: s.lmstudioDefaultTopP,
+    presence_penalty: s.lmstudioDefaultPresencePenalty,
+    frequency_penalty: s.lmstudioDefaultFrequencyPenalty,
+  }),
+  [AI_SERVICE_ANTHROPIC]: (s) => ({
+    model: s.anthropicDefaultModel,
+    url: s.anthropicUrl,
+    temperature: s.anthropicDefaultTemperature,
+    max_tokens: s.anthropicDefaultMaxTokens,
+  }),
+  [AI_SERVICE_GEMINI]: (s) => ({
+    model: s.geminiDefaultModel,
+    url: s.geminiUrl,
+    temperature: s.geminiDefaultTemperature,
+    top_p: s.geminiDefaultTopP,
+    max_tokens: s.geminiDefaultMaxTokens,
+  }),
+  [AI_SERVICE_ZAI]: (s) => ({
+    model: s.zaiDefaultModel,
+    url: s.zaiUrl,
+    temperature: s.zaiDefaultTemperature,
+    max_tokens: s.zaiDefaultMaxTokens,
+  }),
+};
 
 /**
  * Manages plugin settings with persistence
@@ -189,93 +246,28 @@ export class SettingsService {
   generateFrontmatter(additionalSettings: Record<string, unknown> = {}): string {
     // If default frontmatter exists in settings, use it as a base
     if (this.settings.defaultChatFrontmatter) {
-      // If there are additional settings, merge them with the default frontmatter
-      if (Object.keys(additionalSettings).length > 0) {
-        const defaultFrontmatter = parseSettingsFrontmatter(this.settings.defaultChatFrontmatter);
-        const mergedFrontmatter = { ...defaultFrontmatter, ...additionalSettings };
-
-        return objectToYamlFrontmatter(mergedFrontmatter);
-      }
-
-      // If no additional settings, return the default frontmatter as is
-      return this.settings.defaultChatFrontmatter + "\n\n";
+      return this.handleExistingTemplate(additionalSettings);
     }
 
-    // If no default frontmatter in settings, generate one from scratch using new settings structure
-    // Determine the AI service type
-    const aiService = additionalSettings.aiService || AI_SERVICE_OPENAI;
+    // Generate frontmatter from scratch using data-driven approach
+    const aiService = (additionalSettings.aiService as string) || AI_SERVICE_OPENAI;
+    const getProviderFields = PROVIDER_FRONTMATTER_FIELDS[aiService];
 
-    // Start with basic settings
-    let frontmatterObj: Record<string, unknown> = {
+    const frontmatterObj: Record<string, unknown> = {
       stream: this.settings.stream,
       ...additionalSettings,
+      ...(getProviderFields ? getProviderFields(this.settings) : {}),
     };
 
-    // Add service-specific properties based on settings defaults
-    switch (aiService) {
-      case AI_SERVICE_OPENAI:
-        frontmatterObj = {
-          ...frontmatterObj,
-          model: this.settings.openaiDefaultModel,
-          temperature: this.settings.openaiDefaultTemperature,
-          top_p: this.settings.openaiDefaultTopP,
-          max_tokens: this.settings.openaiDefaultMaxTokens,
-          presence_penalty: this.settings.openaiDefaultPresencePenalty,
-          frequency_penalty: this.settings.openaiDefaultFrequencyPenalty,
-        };
-        break;
-      case AI_SERVICE_OLLAMA:
-        frontmatterObj = {
-          ...frontmatterObj,
-          // model: User must configure model manually
-          url: this.settings.ollamaUrl,
-          temperature: this.settings.ollamaDefaultTemperature,
-          top_p: this.settings.ollamaDefaultTopP,
-        };
-        break;
-      case AI_SERVICE_OPENROUTER:
-        frontmatterObj = {
-          ...frontmatterObj,
-          model: this.settings.openrouterDefaultModel,
-          temperature: this.settings.openrouterDefaultTemperature,
-          top_p: this.settings.openrouterDefaultTopP,
-          max_tokens: this.settings.openrouterDefaultMaxTokens,
-          presence_penalty: this.settings.openrouterDefaultPresencePenalty,
-          frequency_penalty: this.settings.openrouterDefaultFrequencyPenalty,
-        };
-        break;
-      case AI_SERVICE_LMSTUDIO:
-        frontmatterObj = {
-          ...frontmatterObj,
-          // model: User must configure model manually
-          url: this.settings.lmstudioUrl,
-          temperature: this.settings.lmstudioDefaultTemperature,
-          top_p: this.settings.lmstudioDefaultTopP,
-          presence_penalty: this.settings.lmstudioDefaultPresencePenalty,
-          frequency_penalty: this.settings.lmstudioDefaultFrequencyPenalty,
-        };
-        break;
-      case AI_SERVICE_ANTHROPIC:
-        frontmatterObj = {
-          ...frontmatterObj,
-          model: this.settings.anthropicDefaultModel,
-          url: this.settings.anthropicUrl,
-          temperature: this.settings.anthropicDefaultTemperature,
-          max_tokens: this.settings.anthropicDefaultMaxTokens,
-        };
-        break;
-      case AI_SERVICE_GEMINI:
-        frontmatterObj = {
-          ...frontmatterObj,
-          model: this.settings.geminiDefaultModel,
-          url: this.settings.geminiUrl,
-          temperature: this.settings.geminiDefaultTemperature,
-          top_p: this.settings.geminiDefaultTopP,
-          max_tokens: this.settings.geminiDefaultMaxTokens,
-        };
-        break;
-    }
-
     return objectToYamlFrontmatter(frontmatterObj);
+  }
+
+  private handleExistingTemplate(additionalSettings: Record<string, unknown>): string {
+    if (Object.keys(additionalSettings).length > 0) {
+      const defaultFrontmatter = parseSettingsFrontmatter(this.settings.defaultChatFrontmatter);
+      const merged = { ...defaultFrontmatter, ...additionalSettings };
+      return objectToYamlFrontmatter(merged);
+    }
+    return this.settings.defaultChatFrontmatter + "\n\n";
   }
 }

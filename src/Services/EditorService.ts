@@ -63,40 +63,48 @@ export class EditorService {
   }
 
   async clearChat(editor: Editor): Promise<void> {
-    let frontmatterContent = "";
+    const frontmatterContent = await this.preserveFrontmatter();
+    editor.setValue(frontmatterContent);
+    this.positionCursorAfterClear(editor, frontmatterContent);
+  }
 
-    // Try to use FrontmatterManager to preserve frontmatter
-    if (this.app && this.frontmatterManager) {
-      const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-      if (activeView?.file) {
-        try {
-          const frontmatter = await this.frontmatterManager.readFrontmatter(activeView.file);
-          if (frontmatter && Object.keys(frontmatter).length > 0) {
-            // Reconstruct frontmatter from the data
-            const frontmatterEntries = Object.entries(frontmatter)
-              .filter(([key]) => key !== "position") // Exclude Obsidian's internal position data
-              .map(([key, value]) => {
-                if (typeof value === "string") {
-                  return `${key}: "${value}"`;
-                }
-                return `${key}: ${value}`;
-              });
-
-            if (frontmatterEntries.length > 0) {
-              frontmatterContent = `---\n${frontmatterEntries.join("\n")}\n---\n\n`;
-            }
-          }
-        } catch (error) {
-          console.error("[EditorService] Error reading frontmatter:", error);
-        }
-      }
+  private async preserveFrontmatter(): Promise<string> {
+    if (!this.app || !this.frontmatterManager) {
+      return "";
     }
 
-    // Clear editor and restore frontmatter
-    editor.setValue(frontmatterContent);
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!activeView?.file) {
+      return "";
+    }
 
-    // Position cursor at the end of the document
-    if (frontmatterContent) {
+    try {
+      const frontmatter = await this.frontmatterManager.readFrontmatter(activeView.file);
+      if (!frontmatter || Object.keys(frontmatter).length === 0) {
+        return "";
+      }
+
+      return this.formatFrontmatter(frontmatter);
+    } catch (error) {
+      console.error("[EditorService] Error reading frontmatter:", error);
+      return "";
+    }
+  }
+
+  private formatFrontmatter(frontmatter: Record<string, unknown>): string {
+    const entries = Object.entries(frontmatter)
+      .filter(([key]) => key !== "position")
+      .map(([key, value]) =>
+        typeof value === "string" ? `${key}: "${value}"` : `${key}: ${value}`
+      );
+
+    return entries.length > 0
+      ? `---\n${entries.join("\n")}\n---\n\n`
+      : "";
+  }
+
+  private positionCursorAfterClear(editor: Editor, content: string): void {
+    if (content) {
       editor.setCursor({ line: editor.lastLine() + 1, ch: 0 });
     } else {
       editor.setCursor({ line: 0, ch: 0 });
