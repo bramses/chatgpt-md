@@ -70,32 +70,6 @@ export function splitMessages(text: string | undefined): string[] {
 
 /**
  * Remove YAML frontmatter from text
+ * Re-exported from YamlHelpers for backward compatibility
  */
-export function removeYAMLFrontMatter(note: string | undefined): string | undefined {
-  if (!note) return note;
-
-  // Check if the note starts with frontmatter
-  if (!note.trim().startsWith("---")) {
-    return note;
-  }
-
-  // Find the end of frontmatter
-  const lines = note.split("\n");
-  let endIndex = -1;
-
-  // Skip first line (opening ---)
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i].trim() === "---") {
-      endIndex = i;
-      break;
-    }
-  }
-
-  if (endIndex === -1) {
-    // No closing ---, return original note
-    return note;
-  }
-
-  // Return content after frontmatter
-  return lines.slice(endIndex + 1).join("\n");
-}
+export { removeYAMLFrontMatter } from "./YamlHelpers";

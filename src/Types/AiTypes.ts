@@ -3,6 +3,7 @@ import { Editor, MarkdownView } from "obsidian";
 import { ToolService } from "src/Services/ToolService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
+import { LanguageModel } from "ai";
 
 // AI SDK providers
 import { OpenAIProvider } from "@ai-sdk/openai";
@@ -10,6 +11,29 @@ import { OpenAICompatibleProvider } from "@ai-sdk/openai-compatible";
 import { AnthropicProvider } from "@ai-sdk/anthropic";
 import { GoogleGenerativeAIProvider } from "@ai-sdk/google";
 import { OpenRouterProvider } from "@openrouter/ai-sdk-provider";
+
+/**
+ * AI Provider instance that can create language models
+ */
+export interface AiProviderInstance {
+  (modelId: string): LanguageModel;
+}
+
+/**
+ * Provider factory configuration
+ */
+export interface ProviderFactoryConfig {
+  apiKey: string;
+  baseURL: string;
+  fetch?: typeof fetch;
+  name: string; // Required for OpenAICompatible providers
+}
+
+/**
+ * Provider factory function type
+ * Note: This is a loose type to accommodate different provider factory signatures
+ */
+export type ProviderFactory = (config: ProviderFactoryConfig | unknown) => AiProviderInstance;
 
 /**
  * Interface defining the contract for AI service implementations
@@ -20,7 +44,7 @@ export interface IAiApiService {
    */
   callAiAPI(
     messages: Message[],
-    options: Record<string, any>,
+    options: Record<string, unknown>,
     headingPrefix: string,
     url: string,
     editor?: Editor,

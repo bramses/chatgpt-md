@@ -1,9 +1,11 @@
 import { ChatGPT_MDSettings } from "src/Models/Config";
+import { AiServiceType } from "src/Constants";
 
 /**
  * Union type for all supported AI providers
+ * Derived from AI_SERVICES constants
  */
-export type ProviderType = "openai" | "anthropic" | "ollama" | "openrouter" | "gemini" | "lmstudio" | "zai";
+export type ProviderType = AiServiceType;
 
 /**
  * Unified configuration interface for all AI providers

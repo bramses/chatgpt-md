@@ -23,14 +23,17 @@ Major feature: **Privacy-first AI tool calling** with human-in-the-loop approval
 **Commands**:
 
 ```bash
-npm run dev        # Development with watch mode
-npm run build      # Production build with TypeScript checks
-npm run lint       # Check code quality
-npm run lint:fix   # Auto-fix linting issues
-npm run analyze    # Bundle size analysis
+yarn dev           # Development with watch mode
+yarn build         # Production build with TypeScript checks
+yarn lint          # Check code quality
+yarn lint:fix      # Auto-fix linting issues
+yarn analyze       # Bundle size analysis
+yarn test          # Run tests
+yarn test:watch    # Run tests in watch mode
+yarn test:coverage # Run tests with coverage
 ```
 
-**No test suite**: This project does not currently have automated tests.
+**Test suite**: This project uses Jest with 104 passing tests covering utility functions.
 
 ## Architecture Overview
 

@@ -47,24 +47,29 @@ export class ModelSelectHandler {
     initialModal.open();
 
     // --- Step 2: Fetch fresh models asynchronously ---
-    (async () => {
+    void (async () => {
       try {
         const frontmatter = await editorService.getFrontmatter(view, settings, this.services.app);
         const openAiKey = apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
         const openRouterKey = apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
 
         // Use the same URL structure as initializeAvailableModels
-        const currentUrls = {
-          [AI_SERVICE_OPENAI]: frontmatter.openaiUrl || settings.openaiUrl || getAiApiUrls(frontmatter).openai,
-          [AI_SERVICE_OPENROUTER]:
-            frontmatter.openrouterUrl || settings.openrouterUrl || getAiApiUrls(frontmatter).openrouter,
-          [AI_SERVICE_OLLAMA]: frontmatter.ollamaUrl || settings.ollamaUrl || getAiApiUrls(frontmatter).ollama,
-          [AI_SERVICE_LMSTUDIO]: frontmatter.lmstudioUrl || settings.lmstudioUrl || getAiApiUrls(frontmatter).lmstudio,
-          [AI_SERVICE_ANTHROPIC]:
-            frontmatter.anthropicUrl || settings.anthropicUrl || getAiApiUrls(frontmatter).anthropic,
-          [AI_SERVICE_GEMINI]: frontmatter.geminiUrl || settings.geminiUrl || getAiApiUrls(frontmatter).gemini,
-          [AI_SERVICE_ZAI]:
-            frontmatter.zaiUrl || settings.zaiUrl || getAiApiUrls(frontmatter).zai || DEFAULT_ZAI_CONFIG.url,
+        const currentUrls: { [key: string]: string } = {
+          [AI_SERVICE_OPENAI]: String(frontmatter.openaiUrl || settings.openaiUrl || getAiApiUrls(frontmatter).openai),
+          [AI_SERVICE_OPENROUTER]: String(
+            frontmatter.openrouterUrl || settings.openrouterUrl || getAiApiUrls(frontmatter).openrouter
+          ),
+          [AI_SERVICE_OLLAMA]: String(frontmatter.ollamaUrl || settings.ollamaUrl || getAiApiUrls(frontmatter).ollama),
+          [AI_SERVICE_LMSTUDIO]: String(
+            frontmatter.lmstudioUrl || settings.lmstudioUrl || getAiApiUrls(frontmatter).lmstudio
+          ),
+          [AI_SERVICE_ANTHROPIC]: String(
+            frontmatter.anthropicUrl || settings.anthropicUrl || getAiApiUrls(frontmatter).anthropic
+          ),
+          [AI_SERVICE_GEMINI]: String(frontmatter.geminiUrl || settings.geminiUrl || getAiApiUrls(frontmatter).gemini),
+          [AI_SERVICE_ZAI]: String(
+            frontmatter.zaiUrl || settings.zaiUrl || getAiApiUrls(frontmatter).zai || DEFAULT_ZAI_CONFIG.url
+          ),
         };
 
         const aiService = this.services.aiProviderService();

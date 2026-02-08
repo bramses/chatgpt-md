@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { MarkdownView, Plugin } from "obsidian";
 import { ServiceContainer } from "./core/ServiceContainer";
 import { ChatHandler } from "./Commands/ChatHandler";
 import { ModelSelectHandler } from "./Commands/ModelSelectHandler";
@@ -52,13 +52,21 @@ export default class ChatGPT_MD extends Plugin {
     // Chat command
     this.addCommand({
       ...ChatHandler.getCommand(),
-      editorCallback: (editor, view) => this.chatHandler.execute(editor, view),
+      editorCallback: (editor, view) => {
+        if (view instanceof MarkdownView) {
+          void this.chatHandler.execute(editor, view);
+        }
+      },
     });
 
     // Select model command
     this.addCommand({
       ...ModelSelectHandler.getCommand(),
-      editorCallback: (editor, view) => this.modelSelectHandler.execute(editor, view),
+      editorCallback: (editor, view) => {
+        if (view instanceof MarkdownView) {
+          void this.modelSelectHandler.execute(editor, view);
+        }
+      },
     });
 
     // Add divider command

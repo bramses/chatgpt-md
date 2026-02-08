@@ -17,7 +17,7 @@ import {
   DEFAULT_OPENROUTER_CONFIG,
   DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
-import { extractProvider, getModelName } from "./ModelFilteringHelper";
+// ModelFilteringHelper exports are available for use elsewhere
 
 /**
  * Get the default configuration for a given AI service
@@ -36,19 +36,44 @@ export function getDefaultConfigForService(serviceType: string): Record<string, 
 }
 
 /**
+ * Get default model for a given AI service
+ */
+export function getDefaultModelForService(aiService: string): string {
+  const config = getDefaultConfigForService(aiService);
+  return config.model || "";
+}
+
+/**
  * Get all API URLs for all services from frontmatter or settings
  * Returns a map of service type to URL
  */
 export function getApiUrlsFromFrontmatter(frontmatter: any): Record<string, string> {
-  return {
-    openai: frontmatter.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
-    openrouter: frontmatter.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
-    ollama: frontmatter.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
-    lmstudio: frontmatter.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
-    anthropic: frontmatter.anthropicUrl || DEFAULT_ANTHROPIC_CONFIG.url,
-    gemini: frontmatter.geminiUrl || DEFAULT_GEMINI_CONFIG.url,
-    zai: frontmatter.zaiUrl || DEFAULT_ZAI_CONFIG.url,
+  const configs: Record<string, { url: string }> = {
+    [AI_SERVICE_OPENAI]: DEFAULT_OPENAI_CONFIG,
+    [AI_SERVICE_OPENROUTER]: DEFAULT_OPENROUTER_CONFIG,
+    [AI_SERVICE_OLLAMA]: DEFAULT_OLLAMA_CONFIG,
+    [AI_SERVICE_LMSTUDIO]: DEFAULT_LMSTUDIO_CONFIG,
+    [AI_SERVICE_ANTHROPIC]: DEFAULT_ANTHROPIC_CONFIG,
+    [AI_SERVICE_GEMINI]: DEFAULT_GEMINI_CONFIG,
+    [AI_SERVICE_ZAI]: DEFAULT_ZAI_CONFIG,
   };
+
+  const providers = [
+    AI_SERVICE_OPENAI,
+    AI_SERVICE_OPENROUTER,
+    AI_SERVICE_OLLAMA,
+    AI_SERVICE_LMSTUDIO,
+    AI_SERVICE_ANTHROPIC,
+    AI_SERVICE_GEMINI,
+    AI_SERVICE_ZAI,
+  ];
+
+  return Object.fromEntries(
+    providers.map((provider) => [
+      provider,
+      frontmatter[`${provider}Url`] || configs[provider].url,
+    ])
+  );
 }
 
 /**
@@ -70,21 +95,7 @@ export function buildModelId(model: string, provider: string): string {
   return `${provider}@${model}`;
 }
 
-/**
- * Extract provider from model ID
- * @deprecated Use extractProvider from ModelFilteringHelper instead
- */
-export function extractProviderFromModel(modelId: string): string {
-  return extractProvider(modelId);
-}
-
-/**
- * Extract model name from full model ID
- * @deprecated Use getModelName from ModelFilteringHelper instead
- */
-export function extractModelName(modelId: string): string {
-  return getModelName(modelId);
-}
+// Deprecated functions removed - use extractProvider and getModelName from ModelFilteringHelper directly
 
 /**
  * Check if a model is a timestamp format (used for auto-title inference)

@@ -1,11 +1,11 @@
 import { Editor, MarkdownView, Plugin, TFile } from "obsidian";
-import { ChatGPT_MDSettings, DEFAULT_SETTINGS } from "src/Models/Config";
+import { ChatGPT_MDSettings, DEFAULT_SETTINGS, MergedFrontmatterConfig } from "src/Models/Config";
 import { ChatGPT_MDSettingsTab } from "../Views/ChatGPT_MDSettingsTab";
 import { NotificationService } from "./NotificationService";
 import { ErrorService } from "./ErrorService";
 import { SettingsMigrationService } from "./SettingsMigration";
 import { FrontmatterManager } from "./FrontmatterManager";
-import { parseSettingsFrontmatter } from "src/Utilities/TextHelpers";
+import { parseSettingsFrontmatter, objectToYamlFrontmatter } from "src/Utilities/YamlHelpers";
 import { getDefaultConfigForService } from "src/Utilities/FrontmatterHelpers";
 import { aiProviderFromKeys, aiProviderFromUrl } from "src/Utilities/ProviderHelpers";
 import {
@@ -15,7 +15,64 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_ZAI,
 } from "src/Constants";
+
+/**
+ * Provider-specific frontmatter field mapping
+ */
+const PROVIDER_FRONTMATTER_FIELDS: Record<
+  string,
+  (settings: ChatGPT_MDSettings) => Record<string, unknown>
+> = {
+  [AI_SERVICE_OPENAI]: (s) => ({
+    model: s.openaiDefaultModel,
+    temperature: s.openaiDefaultTemperature,
+    top_p: s.openaiDefaultTopP,
+    max_tokens: s.openaiDefaultMaxTokens,
+    presence_penalty: s.openaiDefaultPresencePenalty,
+    frequency_penalty: s.openaiDefaultFrequencyPenalty,
+  }),
+  [AI_SERVICE_OLLAMA]: (s) => ({
+    url: s.ollamaUrl,
+    temperature: s.ollamaDefaultTemperature,
+    top_p: s.ollamaDefaultTopP,
+  }),
+  [AI_SERVICE_OPENROUTER]: (s) => ({
+    model: s.openrouterDefaultModel,
+    temperature: s.openrouterDefaultTemperature,
+    top_p: s.openrouterDefaultTopP,
+    max_tokens: s.openrouterDefaultMaxTokens,
+    presence_penalty: s.openrouterDefaultPresencePenalty,
+    frequency_penalty: s.openrouterDefaultFrequencyPenalty,
+  }),
+  [AI_SERVICE_LMSTUDIO]: (s) => ({
+    url: s.lmstudioUrl,
+    temperature: s.lmstudioDefaultTemperature,
+    top_p: s.lmstudioDefaultTopP,
+    presence_penalty: s.lmstudioDefaultPresencePenalty,
+    frequency_penalty: s.lmstudioDefaultFrequencyPenalty,
+  }),
+  [AI_SERVICE_ANTHROPIC]: (s) => ({
+    model: s.anthropicDefaultModel,
+    url: s.anthropicUrl,
+    temperature: s.anthropicDefaultTemperature,
+    max_tokens: s.anthropicDefaultMaxTokens,
+  }),
+  [AI_SERVICE_GEMINI]: (s) => ({
+    model: s.geminiDefaultModel,
+    url: s.geminiUrl,
+    temperature: s.geminiDefaultTemperature,
+    top_p: s.geminiDefaultTopP,
+    max_tokens: s.geminiDefaultMaxTokens,
+  }),
+  [AI_SERVICE_ZAI]: (s) => ({
+    model: s.zaiDefaultModel,
+    url: s.zaiUrl,
+    temperature: s.zaiDefaultTemperature,
+    max_tokens: s.zaiDefaultMaxTokens,
+  }),
+};
 
 /**
  * Manages plugin settings with persistence
@@ -107,8 +164,8 @@ export class SettingsService {
   /**
    * Get frontmatter from a markdown view using FrontmatterManager
    */
-  async getFrontmatter(view: MarkdownView): Promise<any> {
-    let frontmatter: Record<string, any> = {};
+  async getFrontmatter(view: MarkdownView): Promise<MergedFrontmatterConfig> {
+    let frontmatter: Record<string, unknown> = {};
 
     // Use FrontmatterManager to get frontmatter
     if (view.file) {
@@ -125,13 +182,17 @@ export class SettingsService {
 
     // Merge configurations with proper priority order
     // Priority: defaultFrontmatter < settings < frontmatter
-    const mergedConfig = { ...defaultFrontmatter, ...this.settings, ...frontmatter } as Record<string, any>;
+    const merged: Record<string, unknown> & Partial<MergedFrontmatterConfig> = {
+      ...defaultFrontmatter,
+      ...this.settings,
+      ...frontmatter,
+    };
 
     // Determine AI service
     const aiService =
-      mergedConfig.aiService ||
-      aiProviderFromUrl(mergedConfig.url, mergedConfig.model) ||
-      aiProviderFromKeys(mergedConfig) ||
+      (merged.aiService as string | undefined) ||
+      aiProviderFromUrl(merged.url as string | undefined, merged.model as string | undefined) ||
+      aiProviderFromKeys(merged as Record<string, unknown>) ||
       AI_SERVICE_OPENAI;
 
     // Get default config for the determined service
@@ -140,13 +201,16 @@ export class SettingsService {
     // Return final configuration with everything merged
     // Priority order: defaultConfig < defaultFrontmatter < settings < frontmatter
     // This ensures global settings override template defaults, but note frontmatter overrides everything
-    return {
+    const finalConfig = {
       ...defaultConfig,
       ...defaultFrontmatter,
       ...this.settings,
       ...frontmatter,
       aiService,
     };
+
+    // Cast to MergedFrontmatterConfig - at this point we have all necessary fields from defaults and merging
+    return finalConfig as unknown as MergedFrontmatterConfig;
   }
 
   /**
@@ -155,7 +219,7 @@ export class SettingsService {
    * @param key The key to update
    * @param value The new value
    */
-  async updateFrontmatterField(editor: Editor, key: string, value: any): Promise<void> {
+  async updateFrontmatterField(editor: Editor, key: string, value: unknown): Promise<void> {
     // Get the active file
     const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
     if (!activeView || !activeView.file) {
@@ -174,119 +238,36 @@ export class SettingsService {
     }
   }
 
-  /**
-   * Convert a JavaScript object to YAML frontmatter string
-   * @param obj Object to convert to YAML
-   * @returns YAML frontmatter string including delimiter markers
-   */
-  private objectToYamlFrontmatter(obj: Record<string, any>): string {
-    // Convert to YAML
-    const frontmatterLines = Object.entries(obj).map(([key, value]) => {
-      if (value === null || value === undefined) {
-        return `${key}:`;
-      }
-      if (typeof value === "string") {
-        return `${key}: "${value}"`;
-      }
-      return `${key}: ${value}`;
-    });
-
-    return `---\n${frontmatterLines.join("\n")}\n---\n\n`;
-  }
+  // objectToYamlFrontmatter moved to YamlHelpers.ts - using imported function
 
   /**
    * Generate frontmatter for a new chat
    */
-  generateFrontmatter(additionalSettings: Record<string, any> = {}): string {
+  generateFrontmatter(additionalSettings: Record<string, unknown> = {}): string {
     // If default frontmatter exists in settings, use it as a base
     if (this.settings.defaultChatFrontmatter) {
-      // If there are additional settings, merge them with the default frontmatter
-      if (Object.keys(additionalSettings).length > 0) {
-        const defaultFrontmatter = parseSettingsFrontmatter(this.settings.defaultChatFrontmatter);
-        const mergedFrontmatter = { ...defaultFrontmatter, ...additionalSettings };
-
-        return this.objectToYamlFrontmatter(mergedFrontmatter);
-      }
-
-      // If no additional settings, return the default frontmatter as is
-      return this.settings.defaultChatFrontmatter + "\n\n";
+      return this.handleExistingTemplate(additionalSettings);
     }
 
-    // If no default frontmatter in settings, generate one from scratch using new settings structure
-    // Determine the AI service type
-    const aiService = additionalSettings.aiService || AI_SERVICE_OPENAI;
+    // Generate frontmatter from scratch using data-driven approach
+    const aiService = (additionalSettings.aiService as string) || AI_SERVICE_OPENAI;
+    const getProviderFields = PROVIDER_FRONTMATTER_FIELDS[aiService];
 
-    // Start with basic settings
-    let frontmatterObj: Record<string, any> = {
+    const frontmatterObj: Record<string, unknown> = {
       stream: this.settings.stream,
       ...additionalSettings,
+      ...(getProviderFields ? getProviderFields(this.settings) : {}),
     };
 
-    // Add service-specific properties based on settings defaults
-    switch (aiService) {
-      case AI_SERVICE_OPENAI:
-        frontmatterObj = {
-          ...frontmatterObj,
-          model: this.settings.openaiDefaultModel,
-          temperature: this.settings.openaiDefaultTemperature,
-          top_p: this.settings.openaiDefaultTopP,
-          max_tokens: this.settings.openaiDefaultMaxTokens,
-          presence_penalty: this.settings.openaiDefaultPresencePenalty,
-          frequency_penalty: this.settings.openaiDefaultFrequencyPenalty,
-        };
-        break;
-      case AI_SERVICE_OLLAMA:
-        frontmatterObj = {
-          ...frontmatterObj,
-          // model: User must configure model manually
-          url: this.settings.ollamaUrl,
-          temperature: this.settings.ollamaDefaultTemperature,
-          top_p: this.settings.ollamaDefaultTopP,
-        };
-        break;
-      case AI_SERVICE_OPENROUTER:
-        frontmatterObj = {
-          ...frontmatterObj,
-          model: this.settings.openrouterDefaultModel,
-          temperature: this.settings.openrouterDefaultTemperature,
-          top_p: this.settings.openrouterDefaultTopP,
-          max_tokens: this.settings.openrouterDefaultMaxTokens,
-          presence_penalty: this.settings.openrouterDefaultPresencePenalty,
-          frequency_penalty: this.settings.openrouterDefaultFrequencyPenalty,
-        };
-        break;
-      case AI_SERVICE_LMSTUDIO:
-        frontmatterObj = {
-          ...frontmatterObj,
-          // model: User must configure model manually
-          url: this.settings.lmstudioUrl,
-          temperature: this.settings.lmstudioDefaultTemperature,
-          top_p: this.settings.lmstudioDefaultTopP,
-          presence_penalty: this.settings.lmstudioDefaultPresencePenalty,
-          frequency_penalty: this.settings.lmstudioDefaultFrequencyPenalty,
-        };
-        break;
-      case AI_SERVICE_ANTHROPIC:
-        frontmatterObj = {
-          ...frontmatterObj,
-          model: this.settings.anthropicDefaultModel,
-          url: this.settings.anthropicUrl,
-          temperature: this.settings.anthropicDefaultTemperature,
-          max_tokens: this.settings.anthropicDefaultMaxTokens,
-        };
-        break;
-      case AI_SERVICE_GEMINI:
-        frontmatterObj = {
-          ...frontmatterObj,
-          model: this.settings.geminiDefaultModel,
-          url: this.settings.geminiUrl,
-          temperature: this.settings.geminiDefaultTemperature,
-          top_p: this.settings.geminiDefaultTopP,
-          max_tokens: this.settings.geminiDefaultMaxTokens,
-        };
-        break;
-    }
+    return objectToYamlFrontmatter(frontmatterObj);
+  }
 
-    return this.objectToYamlFrontmatter(frontmatterObj);
+  private handleExistingTemplate(additionalSettings: Record<string, unknown>): string {
+    if (Object.keys(additionalSettings).length > 0) {
+      const defaultFrontmatter = parseSettingsFrontmatter(this.settings.defaultChatFrontmatter);
+      const merged = { ...defaultFrontmatter, ...additionalSettings };
+      return objectToYamlFrontmatter(merged);
+    }
+    return this.settings.defaultChatFrontmatter + "\n\n";
   }
 }

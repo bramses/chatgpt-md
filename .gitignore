@@ -13,18 +13,32 @@ agents.config.json
 # npm
 node_modules
 npm-debug.log
+yarn-error.log
+yarn-debug.log
+package-lock.json
 
 # Exclude sourcemaps
 *.map
+
+# Testing
+coverage/
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
 
 # obsidian
 data.json
 
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
+.AppleDouble
+.LSOverride
 
 # Environment variables
 .env
+.env.local
+.env.*.local
 
 # Build output
 main.js
@@ -32,3 +46,7 @@ main.js
 !rollup.config.js
 !.eslintrc.js
 dist/
+build/
+
+# Husky
+.husky/_

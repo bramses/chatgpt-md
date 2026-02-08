@@ -232,6 +232,31 @@ export interface ChatGPT_MDSettings
     ZaiFrontmatterSettings {}
 
 /**
+ * Merged frontmatter configuration type
+ * Represents the combination of default frontmatter, global settings, and note-specific frontmatter
+ */
+export interface MergedFrontmatterConfig {
+  // Core settings from ChatGPT_MDSettings
+  model: string;
+  temperature: number;
+  max_tokens: number;
+  stream: boolean;
+
+  // Runtime additions
+  aiService: string;
+  url: string;
+
+  // Optional frontmatter overrides
+  system_commands?: string[] | null;
+  top_p?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
+
+  // Allow additional frontmatter properties
+  [key: string]: unknown;
+}
+
+/**
  * Default settings
  */
 export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {

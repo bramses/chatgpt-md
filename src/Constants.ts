@@ -3,13 +3,27 @@ export const PLUGIN_NAME = "ChatGPT MD";
 export const PLUGIN_PREFIX = `[${PLUGIN_NAME}]`;
 
 // AI service identifiers
-export const AI_SERVICE_OLLAMA = "ollama";
-export const AI_SERVICE_OPENAI = "openai";
-export const AI_SERVICE_OPENROUTER = "openrouter";
-export const AI_SERVICE_LMSTUDIO = "lmstudio";
-export const AI_SERVICE_ANTHROPIC = "anthropic";
-export const AI_SERVICE_GEMINI = "gemini";
-export const AI_SERVICE_ZAI = "zai";
+export const AI_SERVICE_OLLAMA = "ollama" as const;
+export const AI_SERVICE_OPENAI = "openai" as const;
+export const AI_SERVICE_OPENROUTER = "openrouter" as const;
+export const AI_SERVICE_LMSTUDIO = "lmstudio" as const;
+export const AI_SERVICE_ANTHROPIC = "anthropic" as const;
+export const AI_SERVICE_GEMINI = "gemini" as const;
+export const AI_SERVICE_ZAI = "zai" as const;
+
+// Array of all AI services
+export const AI_SERVICES = [
+  AI_SERVICE_OLLAMA,
+  AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENROUTER,
+  AI_SERVICE_LMSTUDIO,
+  AI_SERVICE_ANTHROPIC,
+  AI_SERVICE_GEMINI,
+  AI_SERVICE_ZAI,
+] as const;
+
+// Type derived from AI service constants
+export type AiServiceType = (typeof AI_SERVICES)[number];
 
 // API endpoints for each service
 export const API_ENDPOINTS = {
