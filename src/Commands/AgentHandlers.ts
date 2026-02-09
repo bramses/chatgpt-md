@@ -58,7 +58,7 @@ export class CreateAgentHandler implements CallbackCommandHandler {
     if (!folderExists) return;
 
     const availableModels = this.modelSelectHandler.getAvailableModels();
-    new CreateAgentModal(this.services.app, agentService, settings, availableModels).open();
+    new CreateAgentModal(this.services.app, agentService, settings, availableModels, this.services).open();
   }
 
   getCommand(): CommandMetadata {
