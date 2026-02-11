@@ -1,9 +1,9 @@
 import {
+  escapeRegExp,
   extractRoleAndMessage,
   getHeadingPrefix,
   parseSettingsFrontmatter,
   removeYAMLFrontMatter,
-  escapeRegExp,
   splitMessages,
 } from "./TextHelpers";
 

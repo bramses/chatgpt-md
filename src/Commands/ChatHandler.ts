@@ -1,8 +1,9 @@
 import { Editor, MarkdownView, Notice, Platform } from "obsidian";
 import { ServiceContainer } from "src/core/ServiceContainer";
 import { getHeadingPrefix } from "src/Utilities/TextHelpers";
-import { isTitleTimestampFormat, getDefaultModelForService } from "src/Utilities/FrontmatterHelpers";
+import { getDefaultModelForService, isTitleTimestampFormat } from "src/Utilities/FrontmatterHelpers";
 import { ChatGPT_MDSettings, MergedFrontmatterConfig } from "src/Models/Config";
+import { Message } from "src/Models/Message";
 import {
   AI_SERVICE_OPENROUTER,
   CALL_CHATGPT_API_COMMAND_ID,
@@ -53,6 +54,12 @@ export class ChatHandler {
         editor,
         settings
       );
+
+      // Prepend system messages (agent body + system_commands)
+      const systemMessages = this.buildSystemMessages(frontmatter);
+      if (systemMessages.length > 0) {
+        messagesWithRoleAndMessage.unshift(...systemMessages);
+      }
 
       // Move cursor to end of file if generateAtCursor is false
       if (!settings.generateAtCursor) {
@@ -122,6 +129,30 @@ export class ChatHandler {
     }
 
     this.updateStatusBar("");
+  }
+
+  /**
+   * Build system messages from agent body and system_commands frontmatter
+   */
+  private buildSystemMessages(frontmatter: MergedFrontmatterConfig): Message[] {
+    const systemMessages: Message[] = [];
+
+    // Agent body as system message
+    const agentBody = frontmatter._agentSystemMessage as string | undefined;
+    if (agentBody) {
+      systemMessages.push({ role: "system", content: agentBody });
+    }
+
+    // system_commands from frontmatter as system messages
+    if (frontmatter.system_commands && Array.isArray(frontmatter.system_commands)) {
+      for (const cmd of frontmatter.system_commands) {
+        if (typeof cmd === "string" && cmd.trim()) {
+          systemMessages.push({ role: "system", content: cmd });
+        }
+      }
+    }
+
+    return systemMessages;
   }
 
   /**

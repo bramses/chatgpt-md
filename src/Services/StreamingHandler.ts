@@ -11,6 +11,8 @@ import {
  * Now uses utility functions for common operations
  */
 export class StreamingHandler {
+  private static readonly MAX_BUFFER_SIZE = 10000;
+
   private editor: Editor;
   private currentCursor: EditorPosition;
   private flushTimer: NodeJS.Timeout | null = null;
@@ -47,25 +49,50 @@ export class StreamingHandler {
   }
 
   /**
-   * Flush buffered text to the editor
-   * Delegates to utility function
+   * Flush buffered text to the editor up to the last complete line.
+   * Retains any trailing partial line to avoid mid-line insertions
+   * that can cause cursor offset miscalculations during markdown re-rendering.
    */
   public flush(): void {
     if (this.bufferedText.length === 0) return;
 
-    this.currentCursor = flushBufferedText(this.editor, this.bufferedText, this.currentCursor, this.setAtCursor);
-    this.bufferedText = "";
+    if (this.bufferedText.length > StreamingHandler.MAX_BUFFER_SIZE) {
+      this.forceFlush();
+      return;
+    }
+
+    const lastNewline = this.bufferedText.lastIndexOf("\n");
+    if (lastNewline === -1) {
+      // No complete line yet — wait for more text
+      return;
+    }
+
+    const toFlush = this.bufferedText.substring(0, lastNewline + 1);
+    this.bufferedText = this.bufferedText.substring(lastNewline + 1);
+
+    this.currentCursor = flushBufferedText(this.editor, toFlush, this.currentCursor, this.setAtCursor);
   }
 
   /**
-   * Stop buffering and flush any remaining text
+   * Stop buffering and flush all remaining text (including partial lines)
    */
   public stopBuffering(): void {
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
       this.flushTimer = null;
     }
-    this.flush();
+    this.forceFlush();
+  }
+
+  /**
+   * Force flush all buffered text regardless of line boundaries.
+   * Used when streaming ends to ensure no text is left in the buffer.
+   */
+  private forceFlush(): void {
+    if (this.bufferedText.length === 0) return;
+
+    this.currentCursor = flushBufferedText(this.editor, this.bufferedText, this.currentCursor, this.setAtCursor);
+    this.bufferedText = "";
   }
 
   /**

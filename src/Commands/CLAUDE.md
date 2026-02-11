@@ -1,6 +1,6 @@
 # Commands
 
-Obsidian command handlers extracted from the old `CommandRegistry.ts`.
+Obsidian command handlers extracted from the old `CommandRegistry.ts`. All commands receive dependencies via `ServiceContainer` in their constructors.
 
 ## Architecture
 
@@ -45,21 +45,24 @@ registrar.registerCallbackCommand(stopStreamingHandler);
 
 Flow:
 
-1. Get messages from editor via EditorService
-2. Parse frontmatter for model/settings
-3. Get appropriate AI service from AiProviderService
-4. Call AI API with messages + config
-5. Stream response to editor
-6. Optional auto title inference
+1. Get messages from editor via EditorService (splits by `<hr class="__chatgpt_plugin">`)
+2. Parse frontmatter for model/settings (merge with global settings, including agent resolution)
+3. Build system messages from agent body (`_agentSystemMessage`) and `system_commands` frontmatter
+4. Get appropriate AI adapter from AiProviderService (based on model prefix)
+5. Call AI API with messages + config via Vercel AI SDK
+6. Stream response to editor via StreamingHandler
+7. Optional auto title inference after 4+ messages
 
 Uses `ServiceContainer` for dependency injection.
+
+`buildSystemMessages()` prepends system messages in order: agent body first, then `system_commands` array entries.
 
 ### ModelSelectHandler.ts
 
 **Model selection modal**
 
-- Opens model selection modal
-- Fetches fresh models from all configured providers
+- Opens AiModelSuggestModal (shows cached models immediately, fetches fresh in background)
+- Fetches models from all configured providers
 - Updates note frontmatter when selected
 
 ### InferTitleHandler.ts
@@ -69,13 +72,14 @@ Uses `ServiceContainer` for dependency injection.
 - Calls AI to suggest title based on messages
 - Renames note file with inferred title
 - Validates title (no special characters)
+- Can auto-run after 4+ messages if enabled in settings
 
 ### StopStreamingHandler.ts
 
 **Abort in-progress streaming**
 
-- Calls `aiService.stopStreaming()`
-- Desktop only (uses abort controller)
+- Calls abort controller to stop streaming
+- Desktop only (mobile doesn't support Node.js streams)
 
 ## Utility Handlers
 
@@ -83,8 +87,8 @@ Uses `ServiceContainer` for dependency injection.
 
 Simple one-liner commands:
 
-- **AddDividerHandler** - Inserts `<hr class="__chatgpt_plugin">`
-- **AddCommentBlockHandler** - Inserts comment block markers
+- **AddDividerHandler** - Inserts `<hr class="__chatgpt_plugin">` (message separator)
+- **AddCommentBlockHandler** - Inserts comment block markers (`%%` ... `%%`)
 - **ClearChatHandler** - Removes messages, keeps frontmatter
 
 ### RemainingHandlers.ts
@@ -93,12 +97,23 @@ Additional commands:
 
 - **NewChatWithHighlightedTextHandler** - Create chat from selection
 - **ChooseChatTemplateHandler** - Create chat from template
+- **MoveToNewChatHandler** - Move conversation to new file
+
+### AgentHandlers.ts
+
+**Agent commands** - Two handlers for the agent system:
+
+- **ChooseAgentHandler** (`CallbackCommandHandler`): Opens `AgentSuggestModal` to pick an agent from the agent folder. Sets `agent` field in the current note's frontmatter.
+- **CreateAgentHandler** (`CallbackCommandHandler`): Opens `CreateAgentModal` for creating new agents (manual form or AI Wizard). Receives `ModelSelectHandler` to pass available models to the wizard.
+
+Both validate that `agentFolder` is configured and the folder exists before proceeding.
 
 ## CommandUtilities.ts
 
 **Shared utilities for command handlers**
 
 - `getAiApiUrls(frontmatter)` - Get service URLs from merged frontmatter
+- `getDefaultApiUrls(settings)` - Get default API URLs from settings (used by AI Wizard)
 - Status bar helpers
 
 ## StatusBarManager
@@ -111,3 +126,11 @@ class StatusBarManager {
   clear(): void;
 }
 ```
+
+## Adding a New Command
+
+1. Create handler class implementing appropriate interface (EditorCommandHandler, CallbackCommandHandler, etc.)
+2. Add `getCommand()` returning `{ id, name, icon }`
+3. Add `execute()` method with command logic
+4. Inject dependencies via constructor (from ServiceContainer)
+5. Register in `main.ts` using CommandRegistrar

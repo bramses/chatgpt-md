@@ -94,13 +94,9 @@ export class EditorService {
   private formatFrontmatter(frontmatter: Record<string, unknown>): string {
     const entries = Object.entries(frontmatter)
       .filter(([key]) => key !== "position")
-      .map(([key, value]) =>
-        typeof value === "string" ? `${key}: "${value}"` : `${key}: ${value}`
-      );
+      .map(([key, value]) => (typeof value === "string" ? `${key}: "${value}"` : `${key}: ${value}`));
 
-    return entries.length > 0
-      ? `---\n${entries.join("\n")}\n---\n\n`
-      : "";
+    return entries.length > 0 ? `---\n${entries.join("\n")}\n---\n\n` : "";
   }
 
   private positionCursorAfterClear(editor: Editor, content: string): void {

@@ -20,6 +20,7 @@ Extends multiple interfaces:
 - LmStudioFrontmatterSettings
 - AnthropicFrontmatterSettings
 - GeminiFrontmatterSettings
+- ZaiFrontmatterSettings
 - ToolCallingSettings
 
 ### Key Setting Groups
@@ -38,6 +39,7 @@ geminiApiKey: string; // Gemini
 ```typescript
 chatFolder: string; // Path for chat files
 chatTemplateFolder: string; // Path for templates
+agentFolder: string; // Path for agent files
 ```
 
 **Chat Behavior**:
@@ -73,7 +75,9 @@ system_commands: ["You are a helpful assistant."]
 ---
 ```
 
-**Merge priority**: Frontmatter > Global Settings
+**Merge priority**: defaultConfig < defaultFrontmatter < settings < agentFrontmatter < noteFrontmatter
+
+Agent frontmatter is resolved when note contains `agent: AgentName` field.
 
 ## Message.ts
 
@@ -103,7 +107,7 @@ Key constants used across the codebase:
 **Provider Types**:
 
 ```typescript
-type ProviderType = "openai" | "ollama" | "openrouter" | "lmstudio" | "anthropic" | "gemini";
+type ProviderType = "openai" | "ollama" | "openrouter" | "lmstudio" | "anthropic" | "gemini" | "zai";
 ```
 
 **Message Format**:
@@ -117,28 +121,15 @@ type ProviderType = "openai" | "ollama" | "openrouter" | "lmstudio" | "anthropic
 - `WIKI_LINKS_REGEX` - Matches `[[Title]]`
 - `MARKDOWN_LINKS_REGEX` - Matches `[Text](path)`
 
+**Agent Constants**:
+
+- `AGENT_FOLDER_TYPE` - Folder type identifier for agent folder
+- `CHOOSE_AGENT_COMMAND_ID` / `CREATE_AGENT_COMMAND_ID` - Command IDs for agent handlers
+- `AGENT_WIZARD_SYSTEM_PROMPT` - System prompt used by AI Wizard to generate agent configurations (name, temperature, prompt as JSON)
+
 ## Types/ Directory
 
-### AiTypes.ts
-
-**AI service interfaces**:
-
-```typescript
-interface IAiApiService {
-  callAiAPI(...): Promise<any>
-  inferTitle(...): Promise<string>
-  stopStreaming(): void
-  fetchAvailableModels(...): Promise<string[]>
-}
-
-type AiProvider = ReturnType<typeof createOpenAI> | ...
-
-interface StreamingResponse {
-  fullString: string
-  mode: "streaming"
-  wasAborted?: boolean
-}
-```
+See `src/Types/CLAUDE.md` for AI service interfaces.
 
 ## Settings Migration
 

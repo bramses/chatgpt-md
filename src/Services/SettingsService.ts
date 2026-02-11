@@ -5,9 +5,10 @@ import { NotificationService } from "./NotificationService";
 import { ErrorService } from "./ErrorService";
 import { SettingsMigrationService } from "./SettingsMigration";
 import { FrontmatterManager } from "./FrontmatterManager";
-import { parseSettingsFrontmatter, objectToYamlFrontmatter } from "src/Utilities/YamlHelpers";
+import { objectToYamlFrontmatter, parseSettingsFrontmatter } from "src/Utilities/YamlHelpers";
 import { getDefaultConfigForService } from "src/Utilities/FrontmatterHelpers";
 import { aiProviderFromKeys, aiProviderFromUrl } from "src/Utilities/ProviderHelpers";
+import type { AgentService } from "./AgentService";
 import {
   AI_SERVICE_ANTHROPIC,
   AI_SERVICE_GEMINI,
@@ -21,10 +22,7 @@ import {
 /**
  * Provider-specific frontmatter field mapping
  */
-const PROVIDER_FRONTMATTER_FIELDS: Record<
-  string,
-  (settings: ChatGPT_MDSettings) => Record<string, unknown>
-> = {
+const PROVIDER_FRONTMATTER_FIELDS: Record<string, (settings: ChatGPT_MDSettings) => Record<string, unknown>> = {
   [AI_SERVICE_OPENAI]: (s) => ({
     model: s.openaiDefaultModel,
     temperature: s.openaiDefaultTemperature,
@@ -81,6 +79,11 @@ const PROVIDER_FRONTMATTER_FIELDS: Record<
 export class SettingsService {
   private settings: ChatGPT_MDSettings;
   private migrationService: SettingsMigrationService;
+  private agentService?: AgentService;
+
+  setAgentService(agentService: AgentService): void {
+    this.agentService = agentService;
+  }
 
   constructor(
     private readonly plugin: Plugin,
@@ -180,11 +183,15 @@ export class SettingsService {
       ? parseSettingsFrontmatter(this.settings.defaultChatFrontmatter)
       : {};
 
+    // Resolve agent if referenced in note frontmatter
+    const agentFrontmatter = await this.resolveAgentFrontmatter(frontmatter);
+
     // Merge configurations with proper priority order
-    // Priority: defaultFrontmatter < settings < frontmatter
+    // Priority: defaultConfig < defaultFrontmatter < settings < agentFrontmatter < frontmatter
     const merged: Record<string, unknown> & Partial<MergedFrontmatterConfig> = {
       ...defaultFrontmatter,
       ...this.settings,
+      ...agentFrontmatter,
       ...frontmatter,
     };
 
@@ -199,18 +206,40 @@ export class SettingsService {
     const defaultConfig = getDefaultConfigForService(aiService);
 
     // Return final configuration with everything merged
-    // Priority order: defaultConfig < defaultFrontmatter < settings < frontmatter
-    // This ensures global settings override template defaults, but note frontmatter overrides everything
+    // Priority order: defaultConfig < defaultFrontmatter < settings < agentFrontmatter < frontmatter
     const finalConfig = {
       ...defaultConfig,
       ...defaultFrontmatter,
       ...this.settings,
+      ...agentFrontmatter,
       ...frontmatter,
       aiService,
     };
 
     // Cast to MergedFrontmatterConfig - at this point we have all necessary fields from defaults and merging
     return finalConfig as unknown as MergedFrontmatterConfig;
+  }
+
+  /**
+   * Resolve agent frontmatter and body if an agent is referenced in the note.
+   * Returns agent frontmatter (excluding position) with _agentSystemMessage attached.
+   */
+  private async resolveAgentFrontmatter(noteFrontmatter: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const agentName = noteFrontmatter.agent as string | undefined;
+    if (!agentName || !this.agentService) return {};
+
+    const agent = await this.agentService.resolveAgentByName(agentName, this.settings);
+    if (!agent) return {};
+
+    // Exclude 'position' key from agent frontmatter (Obsidian metadata)
+    const { position: _, ...agentFields } = agent.frontmatter;
+
+    // Attach agent body as a transient field consumed by ChatHandler
+    if (agent.body) {
+      agentFields._agentSystemMessage = agent.body;
+    }
+
+    return agentFields;
   }
 
   /**

@@ -27,6 +27,9 @@ coverage/
 # TypeScript
 *.tsbuildinfo
 
+# agents
+.claude
+
 # obsidian
 data.json
 

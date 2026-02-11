@@ -55,6 +55,10 @@ export const CHAT_ERROR_RESPONSE =
 
 export const CHAT_FOLDER_TYPE = "chatFolder";
 export const CHAT_TEMPLATE_FOLDER_TYPE = "chatTemplateFolder";
+export const AGENT_FOLDER_TYPE = "agentFolder";
+
+export const CHOOSE_AGENT_COMMAND_ID = "choose-agent";
+export const CREATE_AGENT_COMMAND_ID = "create-agent";
 
 export const NEWLINE = "\n\n";
 export const WIKI_LINKS_REGEX = /\[\[([^\][]+)\]\]/g;
@@ -90,6 +94,44 @@ export const PLUGIN_SYSTEM_MESSAGE = `You're chatting with a user in Obsidian, a
 Be helpful and concise. Use proper Markdown: \`\`\`language for code blocks, \`inline\` for code/filenames. Support [[Internal Links]] and [external links](url). Consider this chat is part of their personal knowledge base.
 
 When appropriate, end with an open question to keep the conversation helpful and make contextual offers based on their last message.`;
+
+// AI Agent Wizard system prompt
+export const AGENT_WIZARD_SYSTEM_PROMPT = `You are an expert AI agent architect. Your job is to create a well-designed AI agent configuration based on a user's description of what they want the agent to do.
+
+You MUST respond with ONLY valid JSON (no markdown, no explanation, no code fences). The JSON must have exactly these three fields:
+
+{
+  "name": "Short Agent Name",
+  "temperature": 0.7,
+  "prompt": "The comprehensive system prompt for the agent..."
+}
+
+## Field Guidelines
+
+### name
+- 2-4 words, descriptive and concise
+- Use title case (e.g., "Code Review Expert", "Creative Writing Coach")
+- Should clearly convey the agent's purpose at a glance
+
+### temperature (0 to 2)
+Choose based on the agent's purpose:
+- 0.0-0.3: Factual, precise, deterministic tasks (code review, data analysis, math, legal)
+- 0.4-0.7: Balanced tasks (general assistance, tutoring, summarization, Q&A)
+- 0.8-1.2: Creative tasks (writing, brainstorming, storytelling, ideation)
+- 1.3-2.0: Highly experimental/random output (only for very specific creative needs)
+
+### prompt
+Create a comprehensive system prompt that includes:
+
+1. **Role Definition**: Who the agent is, their expertise, and professional background
+2. **Core Capabilities**: What the agent can do, listed clearly
+3. **Behavioral Guidelines**: How the agent should communicate (tone, style, formality level)
+4. **Constraints & Boundaries**: What the agent should NOT do or topics to avoid
+5. **Response Format**: How responses should be structured (use of headers, lists, code blocks, etc.)
+6. **Context Awareness**: Remind the agent they operate within Obsidian, a knowledge management system with Markdown notes
+7. **Interaction Patterns**: How to handle follow-up questions, clarifications, and edge cases
+
+The prompt should be thorough (200-500 words), well-structured, and immediately usable without modification. Use clear language and avoid vague instructions.`;
 
 // Truncation error messages
 export const TRUNCATION_ERROR_FULL =

@@ -1,17 +1,17 @@
 import {
+  buildModelId,
+  getApiUrlsFromFrontmatter,
   getDefaultConfigForService,
   getDefaultModelForService,
   isTitleTimestampFormat,
-  buildModelId,
-  getApiUrlsFromFrontmatter,
 } from "./FrontmatterHelpers";
 import {
-  AI_SERVICE_OPENAI,
   AI_SERVICE_ANTHROPIC,
   AI_SERVICE_GEMINI,
-  AI_SERVICE_OLLAMA,
-  AI_SERVICE_OPENROUTER,
   AI_SERVICE_LMSTUDIO,
+  AI_SERVICE_OLLAMA,
+  AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENROUTER,
 } from "src/Constants";
 
 describe("getDefaultConfigForService", () => {

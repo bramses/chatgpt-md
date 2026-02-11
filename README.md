@@ -4,11 +4,19 @@
 
 ![Chatting with links about vacation plans](images/chat-with-link.gif)
 
-## 🚀 What's New in v3.0.0: Privacy-First AI Tool Calling (off by default - Settings → ChatGPT MD → Tool Calling)
+## 🚀 What's New
+
+### v3.1.0: Agents System
+
+**Create reusable AI personas with custom system prompts, models, and temperature settings.**
+
+Define agents as Markdown files with frontmatter and a system prompt body. Apply an agent to any note with the `Choose Agent` command, or create new agents with the **AI Wizard**—describe what you want, and AI generates the name, temperature, and a comprehensive system prompt for you.
+
+### v3.0.0: Privacy-First AI Tool Calling (off by default - Settings → ChatGPT MD → Tool Calling)
 
 **Your AI assistant can now actively search your vault, read files, and query the web—with a human-in-the-loop architecture that keeps you in control.**
 
-v3.0.0 introduces a **tool calling system** built on privacy-first principles. When your AI needs information, it requests permission to use tools—you approve execution, review results, and control exactly what gets shared back to the model. Nothing leaves your vault without explicit consent.
+Tool calling built on privacy-first principles. When your AI needs information, it requests permission to use tools—you approve execution, review results, and control exactly what gets shared back to the model. Nothing leaves your vault without explicit consent.
 
 
 ## A simple and quick Start 🏁
