@@ -46,7 +46,9 @@ Key methods:
 
 **Handles real-time streaming to editor**
 
-- Buffered text insertion for smooth UX (reduces editor updates)
+- **Line-boundary flushing**: Only flushes up to the last `\n` to prevent cursor offset race conditions during markdown re-rendering
+- **Safety valve**: `MAX_BUFFER_SIZE` (10KB) forces flush even without newlines to prevent unbounded buffer growth
+- **`forceFlush()`**: Called on stream end to write remaining partial line
 - Cursor position management
 - Abort handling via AbortController
 - Platform-specific: desktop uses Node.js streams, mobile uses fetch
@@ -114,11 +116,16 @@ Model prefix parsing:
 
 ### SettingsService.ts
 
-**Plugin settings management**
+**Plugin settings management** (now includes frontmatter operations merged from FrontmatterService)
 
 - `loadSettings()` / `saveSettings()` - Persistence
 - `migrateSettings()` - Version upgrades via SettingsMigration.ts
 - `getSettings()` - Provide settings to other services
+- `getFrontmatter(view)` - Get merged frontmatter config with full priority chain (defaultConfig < defaultFrontmatter < settings < agentFrontmatter < noteFrontmatter)
+- `updateFrontmatterField(editor, key, value)` - Update a field in note frontmatter
+- `generateFrontmatter()` - Generate frontmatter for new chats using data-driven `PROVIDER_FRONTMATTER_FIELDS` mapping
+- `resolveAgentFrontmatter()` - Private method that resolves agent by name from note's `agent` field, merges agent frontmatter and attaches `_agentSystemMessage` from agent body
+- `setAgentService()` - Late-binding for AgentService (same pattern as TemplateService)
 
 ### SettingsMigration.ts
 
@@ -178,6 +185,31 @@ Tool calling is only available for whitelisted models (configurable in settings)
 ### WhitelistValidator.ts
 
 **Model whitelist validation utilities**
+
+## Agent Service (v3.1)
+
+### AgentService.ts
+
+**Agent file CRUD and resolution**
+
+- `getAgentFiles(settings)` - List all `.md` files in the configured agent folder
+- `readAgent(file)` - Parse agent file into `AgentData` (frontmatter + body)
+- `resolveAgentByName(name, settings)` - Find and parse agent by basename
+- `createAgentFile(name, model, temperature, message, settings)` - Create new agent file with frontmatter (model, temperature, stream) and body (system prompt)
+- Private helpers: `extractBody()` strips YAML frontmatter, `buildAgentFrontmatter()` generates YAML
+
+**Agent file format**:
+
+```markdown
+---
+model: gpt-4o
+temperature: 0.7
+stream: true
+---
+You are a helpful coding assistant specializing in TypeScript...
+```
+
+Dependencies: `App`, `FileService`, `FrontmatterManager`
 
 ## Utility Services
 

@@ -39,6 +39,7 @@ geminiApiKey: string; // Gemini
 ```typescript
 chatFolder: string; // Path for chat files
 chatTemplateFolder: string; // Path for templates
+agentFolder: string; // Path for agent files
 ```
 
 **Chat Behavior**:
@@ -74,7 +75,9 @@ system_commands: ["You are a helpful assistant."]
 ---
 ```
 
-**Merge priority**: Frontmatter > Global Settings
+**Merge priority**: defaultConfig < defaultFrontmatter < settings < agentFrontmatter < noteFrontmatter
+
+Agent frontmatter is resolved when note contains `agent: AgentName` field.
 
 ## Message.ts
 
@@ -117,6 +120,12 @@ type ProviderType = "openai" | "ollama" | "openrouter" | "lmstudio" | "anthropic
 
 - `WIKI_LINKS_REGEX` - Matches `[[Title]]`
 - `MARKDOWN_LINKS_REGEX` - Matches `[Text](path)`
+
+**Agent Constants**:
+
+- `AGENT_FOLDER_TYPE` - Folder type identifier for agent folder
+- `CHOOSE_AGENT_COMMAND_ID` / `CREATE_AGENT_COMMAND_ID` - Command IDs for agent handlers
+- `AGENT_WIZARD_SYSTEM_PROMPT` - System prompt used by AI Wizard to generate agent configurations (name, temperature, prompt as JSON)
 
 ## Types/ Directory
 

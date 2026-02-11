@@ -1,5 +1,46 @@
 # ChatGPT MD Changelog
 
+## v3.1.0 - Agents System
+
+### 🤖 Major Features
+
+- **Agents System**: Create reusable AI personas with custom system prompts, models, and temperature settings
+  - Agent files are Markdown notes with frontmatter (model, temperature, stream) and a body that serves as the system prompt
+  - Agents live in a configurable folder (default: `ChatGPT_MD/agents`)
+- **Choose Agent Command**: Select an agent from your agent folder and apply it to the current note
+  - Sets the `agent` field in the note's frontmatter
+  - Agent settings (model, temperature) and system prompt are merged into the chat configuration at runtime
+- **Create Agent Command**: Two creation modes:
+  - **Manual**: Configure name, model (with autocomplete), temperature (slider), and system prompt yourself
+  - **AI Wizard**: Describe what you want the agent to do, and an AI generates the name, temperature, and a comprehensive system prompt
+  - The wizard pre-fills the manual form so you can review and edit before saving
+
+### 🏗️ Technical Architecture
+
+- **AgentService**: New service for agent file CRUD and resolution (`getAgentFiles`, `readAgent`, `resolveAgentByName`, `createAgentFile`)
+- **Agent Resolution in SettingsService**: When a note has `agent: AgentName` in frontmatter, the agent's frontmatter and body are resolved and merged into the configuration
+- **Merge Priority**: `defaultConfig < defaultFrontmatter < settings < agentFrontmatter < noteFrontmatter`
+- **System Message Injection**: Agent body is prepended as a system message before `system_commands` entries in ChatHandler
+
+### 🎨 User Interface
+
+- **AgentSuggestModal**: Fuzzy-search modal for picking agents from the configured folder
+- **CreateAgentModal**: Multi-step wizard modal with mode selection, AI generation, loading state, and manual form
+- **Settings**: New "Agent Folder" setting in the Folders section
+
+### 🔧 Streaming Improvements
+
+- **Line-Boundary Flushing**: StreamingHandler now flushes only up to the last newline to prevent cursor offset race conditions during markdown re-rendering
+- **Safety Valve**: MAX_BUFFER_SIZE (10KB) forces flush even without newlines to prevent unbounded buffer growth
+- **Force Flush on End**: Remaining partial line is written when streaming completes
+
+### 📦 Under the Hood
+
+- **New Files**: `AgentService.ts`, `AgentHandlers.ts`, `AgentSuggestModal.ts`, `CreateAgentModal.ts`
+- **Constants**: `AGENT_FOLDER_TYPE`, `CHOOSE_AGENT_COMMAND_ID`, `CREATE_AGENT_COMMAND_ID`, `AGENT_WIZARD_SYSTEM_PROMPT`
+- **ServiceContainer**: AgentService wired with late-binding to SettingsService (same pattern as TemplateService)
+- **StreamingHandler Tests**: New test suite for line-boundary flushing behavior
+
 ## v3.0.0 - Privacy-First AI Tool Calling
 
 ### 🎯 Major Features

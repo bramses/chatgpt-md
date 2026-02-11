@@ -6,9 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ChatGPT MD is an Obsidian plugin that integrates multiple AI providers (OpenAI, OpenRouter, Anthropic, Gemini, Ollama, LM Studio) into Obsidian for seamless chat interactions within markdown notes. Users can have AI conversations directly in their notes, with support for note linking, streaming responses, and per-note configuration via frontmatter.
 
-## v3.0.0 - Privacy-First AI Tool Calling
+## v3.1.0 - Agents System
 
-Major feature: **Privacy-first AI tool calling** with human-in-the-loop approval:
+- **Agent files**: Markdown files in a configurable agent folder with frontmatter (model, temperature, stream) and a body that becomes the system prompt
+- **Choose Agent command**: Select an agent to apply to the current note (sets `agent` frontmatter field)
+- **Create Agent command**: Create agents manually or via AI Wizard (AI generates name, temperature, system prompt from a description)
+- **Agent resolution**: When a note has `agent: AgentName` in frontmatter, the agent's settings (model, temperature) and body (system message) are merged into the chat configuration
+- **Merge priority**: defaultConfig < defaultFrontmatter < settings < agentFrontmatter < noteFrontmatter
+
+## v3.0.0 - Privacy-First AI Tool Calling
 
 - **Vault Search**: AI can search your notes (you approve which files to share)
 - **File Reading**: AI can request access to specific files (you select which ones)
@@ -55,7 +61,7 @@ The plugin uses **constructor injection** via a centralized `ServiceContainer`:
 Each directory has its own CLAUDE.md with detailed context:
 
 - `src/core/` - ServiceContainer (DI), plugin initialization
-- `src/Commands/` - Obsidian command handlers (ChatHandler, ModelSelectHandler, etc.)
+- `src/Commands/` - Obsidian command handlers (ChatHandler, ModelSelectHandler, AgentHandlers, etc.)
 - `src/Services/` - Service implementations + `Adapters/` subdirectory
 - `src/Views/` - UI components and modals
 - `src/Models/` - TypeScript interfaces
@@ -75,6 +81,7 @@ Each directory has its own CLAUDE.md with detailed context:
 4. **Streaming responses** - Real-time AI output via Vercel AI SDK with platform-specific handling (desktop Node.js vs mobile Web API)
 5. **Link context injection** - Wiki links `[[Note Name]]` are resolved and content injected into prompts
 6. **Command Handler Interface** - Commands implement `CommandHandler` with metadata; registered via `CommandRegistrar`
+7. **Agent system** - Agent files (markdown with frontmatter + body) override model/temperature and provide system prompts; resolved at runtime via `agent` frontmatter field
 
 ## Adding a New AI Provider
 
