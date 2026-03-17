@@ -134,6 +134,14 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "Chat Behavior",
       },
       {
+        id: "sendSelectedTextOnly",
+        name: "Send Selected Text Only",
+        description:
+          "When enabled, the Chat command will ONLY send the currently selected text to the AI (requires a non-empty selection).",
+        type: "toggle",
+        group: "Chat Behavior",
+      },
+      {
         id: "autoInferTitle",
         name: "Automatically Infer Title",
         description: "Automatically infer title after 4 messages have been exchanged",

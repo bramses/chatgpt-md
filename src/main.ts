@@ -60,6 +60,16 @@ export default class ChatGPT_MD extends Plugin {
       },
     });
 
+    // Chat (selection only) command
+    this.addCommand({
+      ...ChatHandler.getSelectionOnlyCommand(),
+      editorCallback: (editor, view) => {
+        if (view instanceof MarkdownView) {
+          void this.chatHandler.execute(editor, view, { selectionOnly: true });
+        }
+      },
+    });
+
     // Select model command
     this.addCommand({
       ...ModelSelectHandler.getCommand(),
