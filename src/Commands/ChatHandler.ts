@@ -49,6 +49,11 @@ export class ChatHandler {
     this.stopStreamingHandler.setCurrentAiService(aiService);
 
     try {
+      await this.services.openAIOAuthService.refreshAccessTokenIfNeeded(
+        settings,
+        settingsService.saveSettings.bind(settingsService)
+      );
+
       // Get messages from editor
       const { messagesWithRole: messagesWithRoleAndMessage, messages } = await editorService.getMessagesFromEditor(
         editor,

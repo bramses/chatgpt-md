@@ -149,7 +149,13 @@ export class SettingsService {
   /**
    * Add settings tab to the plugin
    */
-  async addSettingTab(): Promise<void> {
+  async addSettingTab(options?: {
+    openAIOAuthActions?: {
+      startConnect: () => Promise<void>;
+      exchangeCallbackUrl: (callbackUrl: string) => Promise<void>;
+      verifyToken: () => Promise<{ ok: boolean; message: string }>;
+    };
+  }): Promise<void> {
     // Load settings and run migrations if needed
     await this.loadSettings();
 
@@ -158,6 +164,7 @@ export class SettingsService {
       new ChatGPT_MDSettingsTab(this.plugin.app, this.plugin, {
         settings: this.settings,
         saveSettings: this.saveSettings.bind(this),
+        openAIOAuthActions: options?.openAIOAuthActions,
       })
     );
   }

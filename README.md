@@ -23,8 +23,13 @@ Tool calling built on privacy-first principles. When your AI needs information, 
 Get started in just a few simple steps:
 
 1. **Install ChatGPT MD**: Go to `Settings > Community Plugins > Browse`, search for `ChatGPT MD` and click `Install`.
-2. **Add your OpenAI API key**: In the plugin settings, add your OpenAI API key and/or install Ollama and local LLMs of your choice.
-3. **Start chatting**: Use the `ChatGPT MD: Chat` command (`cmd + p` or `ctrl + p`) to start a conversation from any note.
+2. **Configure OpenAI auth**: In plugin settings, choose either:
+  - OpenAI API key (default), or
+  - OpenAI OAuth bridge token (for OpenAI-compatible gateways that use your subscription auth upstream).
+
+  You can also install Ollama/LM Studio and use local models.
+3. **OAuth bridge automation (optional)**: If using OAuth bridge mode, fill in OAuth endpoints/client info and click `Connect` in settings. The plugin opens your browser and auto-captures callback on desktop localhost redirects.
+4. **Start chatting**: Use the `ChatGPT MD: Chat` command (`cmd + p` or `ctrl + p`) to start a conversation from any note.
 
 💡 *Pro tip*: Set up a hotkey for the best experience! Go to `Settings > Hotkeys`, search for `ChatGPT MD: Chat` and add your preferred keybinding (e.g., `cmd + j`).
 
@@ -100,7 +105,7 @@ Want to keep your conversations private and avoid API costs? Use local LLMs with
 * **Markdown Support:** 
   * Enjoy full rendering of lists, code blocks, and more from all responses.
 * **Minimal Setup:** 
-  * Utilize your OpenAI API key, OpenRouter.ai API key, or install any LLM locally via Ollama.
+  * Utilize your OpenAI API key, OpenAI OAuth bridge token, OpenRouter.ai API key, or install any LLM locally via Ollama.
 * **Comment Blocks:** 
   * Ignore parts of your notes using comment blocks.
 * **Chat Templates**: 
@@ -255,6 +260,25 @@ The default URLs are:
 
 Note: Previous versions used a single `url` parameter which is now deprecated. Please update your templates and notes to use the service-specific URL parameters.
 
+### OpenAI OAuth Bridge (Automated)
+
+If your OpenAI-compatible gateway supports OAuth authorization code flow, ChatGPT MD can automate login and token exchange.
+
+1. Open `Settings -> ChatGPT MD -> API Keys`
+2. Set `OpenAI Auth Mode` to `OAuth Bridge Token`
+3. Configure:
+  - `OpenAI OAuth Authorize URL`
+  - `OpenAI OAuth Token URL`
+  - `OpenAI OAuth Client ID`
+  - `OpenAI OAuth Redirect URI` (default: `http://127.0.0.1:8765/callback`)
+4. Click `Connect`
+5. Complete login in browser
+6. Return to Obsidian (token is stored automatically after callback)
+
+If your environment cannot auto-capture callback, use `Exchange Callback URL` in the same settings section by pasting the full redirect URL.
+
+Use `Verify OpenAI OAuth Token` to run a quick `/v1/models` health check.
+
 ### Commands 👨‍💻
 Run commands from Obsidian's command pallet via `cmd + p` or `ctrl + p` and start typing `chatgpt` or set hotkeys
 (a chat command hotkey is highly recommended for effortless chats (I use `cmd + j`, which works fantastic, because your index finger is already resting on that key)).
@@ -270,6 +294,7 @@ Run commands from Obsidian's command pallet via `cmd + p` or `ctrl + p` and star
 - **Infer Title**: Automatically generate a note title based on the notes content. Configurable to auto-run after 4+ messages.
 - **Add Comment Block**: Insert comment blocks for parts of your note that should be ignored.
 - **Select Model**: Choose from all available LLMs (OpenAI, OpenRouter.ai, Ollama) and set the current model for your note.
+- **Connect OpenAI OAuth Bridge**: Starts OAuth browser login flow and auto-captures callback when possible.
 
 #### Maintenance Commands
 - **Clear Chat**: Remove all messages while retaining frontmatter.
@@ -306,6 +331,21 @@ Ensure your custom API adheres to OpenAI's specifications, such as Azure's hoste
 
 #### Where should I add my OpenAI API key?
 In the plugin settings, add your OpenAI API key and/or install Ollama and local LLMs of your choice.
+
+#### Can I use OpenAI OAuth/subscription via a gateway?
+Yes, if you have an OpenAI-compatible gateway that handles OAuth/subscription authentication upstream.
+
+Configure:
+- `Settings -> ChatGPT MD -> API Keys -> OpenAI Auth Mode = OAuth Bridge Token`
+- Configure OAuth fields (`Authorize URL`, `Token URL`, `Client ID`, `Redirect URI`)
+- Click `Connect` to automate browser login and callback exchange
+- Optional fallback: paste callback URL into `Exchange Callback URL`
+- `OpenAI URL` = your gateway base URL
+
+Notes:
+- The plugin still communicates using OpenAI-compatible HTTP APIs.
+- Subscription/OAuth logic is handled by your gateway, not by this plugin directly.
+- Refresh tokens are used automatically when available and near expiry.
 
 #### What happened to the 'url' parameter in the frontmatter?
 The single 'url' parameter is now deprecated. In v2.2.0 and higher, we've introduced service-specific URL parameters: `openaiUrl`, `openrouterUrl`, and `ollamaUrl`. This allows for more flexibility and clarity when configuring different services. Please update your templates and notes accordingly.

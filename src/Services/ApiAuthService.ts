@@ -40,7 +40,7 @@ export class ApiAuthService {
   getApiKey(settings: ChatGPT_MDSettings, serviceType: string): string {
     switch (serviceType) {
       case AI_SERVICE_OPENAI:
-        return settings.apiKey;
+        return settings.openaiAuthMode === "oauth_bridge" ? settings.openaiOAuthAccessToken : settings.apiKey;
       case AI_SERVICE_OPENROUTER:
         return settings.openrouterApiKey;
       case AI_SERVICE_ANTHROPIC:
@@ -56,6 +56,14 @@ export class ApiAuthService {
       default:
         return "";
     }
+  }
+
+  /**
+   * Check whether OpenAI has usable credentials for the configured auth mode.
+   */
+  hasOpenAICredentials(settings: ChatGPT_MDSettings): boolean {
+    const key = this.getApiKey(settings, AI_SERVICE_OPENAI);
+    return isValidApiKey(key);
   }
 
   /**

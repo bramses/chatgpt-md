@@ -5,7 +5,12 @@ import { ModelSelectHandler } from "./Commands/ModelSelectHandler";
 import { AddCommentBlockHandler, AddDividerHandler } from "./Commands/SimpleHandlers";
 import { StopStreamingHandler } from "./Commands/StopStreamingHandler";
 import { InferTitleHandler } from "./Commands/InferTitleHandler";
-import { ChooseChatTemplateHandler, ClearChatHandler, MoveToNewChatHandler } from "./Commands/RemainingHandlers";
+import {
+  ChooseChatTemplateHandler,
+  ClearChatHandler,
+  ConnectOpenAIOAuthHandler,
+  MoveToNewChatHandler,
+} from "./Commands/RemainingHandlers";
 import { ChooseAgentHandler, CreateAgentHandler } from "./Commands/AgentHandlers";
 import { CommandRegistrar } from "./Commands/CommandRegistrar";
 
@@ -26,7 +31,29 @@ export default class ChatGPT_MD extends Plugin {
     await settingsService.migrateSettings();
 
     // Add settings tab after migrations have completed
-    await settingsService.addSettingTab();
+    await settingsService.addSettingTab({
+      openAIOAuthActions: {
+        startConnect: async () => {
+          const settings = settingsService.getSettings();
+          await this.services.openAIOAuthService.beginOAuthFlow(
+            settings,
+            settingsService.saveSettings.bind(settingsService)
+          );
+        },
+        exchangeCallbackUrl: async (callbackUrl: string) => {
+          const settings = settingsService.getSettings();
+          await this.services.openAIOAuthService.exchangeCallbackUrl(
+            callbackUrl,
+            settings,
+            settingsService.saveSettings.bind(settingsService)
+          );
+        },
+        verifyToken: async () => {
+          const settings = settingsService.getSettings();
+          return this.services.openAIOAuthService.verifyCurrentToken(settings);
+        },
+      },
+    });
 
     // Create handlers with constructor injection
     this.stopStreamingHandler = new StopStreamingHandler(this.services);
@@ -90,6 +117,9 @@ export default class ChatGPT_MD extends Plugin {
 
     // Clear chat command
     registrar.registerEditorCommand(new ClearChatHandler(this.services));
+
+    // OpenAI OAuth connect command
+    registrar.registerCallbackCommand(new ConnectOpenAIOAuthHandler(this.services));
 
     // Agent commands
     registrar.registerCallbackCommand(new ChooseAgentHandler(this.services));

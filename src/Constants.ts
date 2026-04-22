@@ -59,6 +59,7 @@ export const AGENT_FOLDER_TYPE = "agentFolder";
 
 export const CHOOSE_AGENT_COMMAND_ID = "choose-agent";
 export const CREATE_AGENT_COMMAND_ID = "create-agent";
+export const CONNECT_OPENAI_OAUTH_COMMAND_ID = "connect-openai-oauth";
 
 export const NEWLINE = "\n\n";
 export const WIKI_LINKS_REGEX = /\[\[([^\][]+)\]\]/g;

@@ -49,6 +49,11 @@ export class ModelSelectHandler {
     // --- Step 2: Fetch fresh models asynchronously ---
     void (async () => {
       try {
+        await this.services.openAIOAuthService.refreshAccessTokenIfNeeded(
+          settings,
+          settingsService.saveSettings.bind(settingsService)
+        );
+
         const frontmatter = await editorService.getFrontmatter(view, settings, this.services.app);
         const openAiKey = apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
         const openRouterKey = apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
@@ -120,6 +125,12 @@ export class ModelSelectHandler {
     try {
       const { settingsService, apiAuthService } = this.services;
       const settings = settingsService.getSettings();
+
+      await this.services.openAIOAuthService.refreshAccessTokenIfNeeded(
+        settings,
+        settingsService.saveSettings.bind(settingsService)
+      );
+
       const openAiKey = apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
       const openRouterKey = apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
 

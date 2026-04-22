@@ -83,10 +83,12 @@ export async function fetchAvailableModels(
     );
 
     // Conditionally add OpenAI promise
-    if (isValidApiKey(apiKey)) {
+    const settings = settingsService.getSettings();
+    const isOpenAiOauthBridgeMode = settings.openaiAuthMode === "oauth_bridge";
+    if (isValidApiKey(apiKey) || isOpenAiOauthBridgeMode) {
       promises.push(
         withTimeout(
-          aiService.fetchAvailableModels(urls[AI_SERVICE_OPENAI], apiKey, settingsService.getSettings(), "openai"),
+          aiService.fetchAvailableModels(urls[AI_SERVICE_OPENAI], apiKey, settings, "openai"),
           FETCH_MODELS_TIMEOUT_MS,
           []
         )
@@ -97,12 +99,7 @@ export async function fetchAvailableModels(
     if (isValidApiKey(openrouterApiKey)) {
       promises.push(
         withTimeout(
-          aiService.fetchAvailableModels(
-            urls[AI_SERVICE_OPENROUTER],
-            openrouterApiKey,
-            settingsService.getSettings(),
-            "openrouter"
-          ),
+          aiService.fetchAvailableModels(urls[AI_SERVICE_OPENROUTER], openrouterApiKey, settings, "openrouter"),
           FETCH_MODELS_TIMEOUT_MS,
           []
         )
@@ -114,12 +111,7 @@ export async function fetchAvailableModels(
     if (isValidApiKey(anthropicApiKey)) {
       promises.push(
         withTimeout(
-          aiService.fetchAvailableModels(
-            urls[AI_SERVICE_ANTHROPIC],
-            anthropicApiKey,
-            settingsService.getSettings(),
-            "anthropic"
-          ),
+          aiService.fetchAvailableModels(urls[AI_SERVICE_ANTHROPIC], anthropicApiKey, settings, "anthropic"),
           FETCH_MODELS_TIMEOUT_MS,
           []
         )
@@ -131,12 +123,7 @@ export async function fetchAvailableModels(
     if (isValidApiKey(geminiApiKey)) {
       promises.push(
         withTimeout(
-          aiService.fetchAvailableModels(
-            urls[AI_SERVICE_GEMINI],
-            geminiApiKey,
-            settingsService.getSettings(),
-            "gemini"
-          ),
+          aiService.fetchAvailableModels(urls[AI_SERVICE_GEMINI], geminiApiKey, settings, "gemini"),
           FETCH_MODELS_TIMEOUT_MS,
           []
         )
@@ -148,7 +135,7 @@ export async function fetchAvailableModels(
     if (isValidApiKey(zaiApiKey)) {
       promises.push(
         withTimeout(
-          aiService.fetchAvailableModels(urls[AI_SERVICE_ZAI], zaiApiKey, settingsService.getSettings(), "zai"),
+          aiService.fetchAvailableModels(urls[AI_SERVICE_ZAI], zaiApiKey, settings, "zai"),
           FETCH_MODELS_TIMEOUT_MS,
           []
         )

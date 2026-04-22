@@ -1,6 +1,11 @@
 import { Editor, Notice } from "obsidian";
 import { ServiceContainer } from "src/core/ServiceContainer";
-import { CHOOSE_CHAT_TEMPLATE_COMMAND_ID, CLEAR_CHAT_COMMAND_ID, MOVE_TO_CHAT_COMMAND_ID } from "src/Constants";
+import {
+  CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
+  CLEAR_CHAT_COMMAND_ID,
+  CONNECT_OPENAI_OAUTH_COMMAND_ID,
+  MOVE_TO_CHAT_COMMAND_ID,
+} from "src/Constants";
 import { CallbackCommandHandler, CommandMetadata, EditorCommandHandler } from "./CommandHandler";
 
 /**
@@ -72,6 +77,32 @@ export class ClearChatHandler implements EditorCommandHandler {
       id: CLEAR_CHAT_COMMAND_ID,
       name: "Clear chat (except frontmatter)",
       icon: "trash",
+    };
+  }
+}
+
+/**
+ * Handler for connecting OpenAI OAuth bridge
+ */
+export class ConnectOpenAIOAuthHandler implements CallbackCommandHandler {
+  constructor(private services: ServiceContainer) {}
+
+  async execute(): Promise<void> {
+    const { settingsService, openAIOAuthService } = this.services;
+    const settings = settingsService.getSettings();
+
+    try {
+      await openAIOAuthService.beginOAuthFlow(settings, settingsService.saveSettings.bind(settingsService));
+    } catch (error: any) {
+      new Notice(`[ChatGPT MD] OpenAI OAuth connect failed: ${error?.message || String(error)}`);
+    }
+  }
+
+  getCommand(): CommandMetadata {
+    return {
+      id: CONNECT_OPENAI_OAUTH_COMMAND_ID,
+      name: "Connect OpenAI OAuth Bridge",
+      icon: "shield-check",
     };
   }
 }

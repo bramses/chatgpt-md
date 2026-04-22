@@ -36,7 +36,17 @@ temperature: ${DEFAULT_OPENAI_CONFIG.temperature}
  * All fields are actively used by ApiAuthService for provider authentication.
  * See src/Services/ApiAuthService.ts::getApiKey() for usage.
  *
- * - apiKey: Used for OpenAI API authentication (Bearer token)
+ * - apiKey: Used for OpenAI API authentication when openaiAuthMode is "api_key"
+ * - openaiAuthMode: Selects OpenAI auth source (API key or OAuth bridge token)
+ * - openaiOAuthAccessToken: Used for OpenAI-compatible OAuth bridge authentication
+ * - openaiOAuthAuthorizeUrl: Authorization endpoint for OAuth bridge login
+ * - openaiOAuthTokenUrl: Token endpoint for authorization code / refresh exchange
+ * - openaiOAuthClientId: OAuth client identifier used for bridge authentication
+ * - openaiOAuthClientSecret: Optional client secret for confidential OAuth clients
+ * - openaiOAuthScopes: Space-delimited scopes requested during OAuth login
+ * - openaiOAuthRedirectUri: Redirect URI used by the OAuth bridge callback
+ * - openaiOAuthRefreshToken: Refresh token used for automatic access token renewal
+ * - openaiOAuthAccessTokenExpiresAt: Epoch milliseconds for access token expiry tracking
  * - openrouterApiKey: Used for OpenRouter API authentication
  * - anthropicApiKey: Used for Anthropic API authentication (x-api-key header)
  * - geminiApiKey: Used for Gemini API authentication (x-goog-api-key header)
@@ -44,6 +54,26 @@ temperature: ${DEFAULT_OPENAI_CONFIG.temperature}
 export interface ApiKeySettings {
   /** API Key for OpenAI - used for OpenAI API calls */
   apiKey: string;
+  /** OpenAI authentication mode: API key or OAuth bridge token */
+  openaiAuthMode: "api_key" | "oauth_bridge";
+  /** OAuth bridge token for OpenAI-compatible gateways */
+  openaiOAuthAccessToken: string;
+  /** OAuth bridge authorization endpoint */
+  openaiOAuthAuthorizeUrl: string;
+  /** OAuth bridge token endpoint */
+  openaiOAuthTokenUrl: string;
+  /** OAuth bridge client id */
+  openaiOAuthClientId: string;
+  /** Optional OAuth bridge client secret */
+  openaiOAuthClientSecret: string;
+  /** Space-delimited OAuth scopes */
+  openaiOAuthScopes: string;
+  /** OAuth redirect URI for callback capture */
+  openaiOAuthRedirectUri: string;
+  /** OAuth refresh token for automatic renewal */
+  openaiOAuthRefreshToken: string;
+  /** Epoch milliseconds at which OAuth access token expires */
+  openaiOAuthAccessTokenExpiresAt: number;
   /** API Key for OpenRouter - used for OpenRouter proxy API calls */
   openrouterApiKey: string;
   /** API Key for Anthropic - used for Claude models via Anthropic API */
@@ -264,6 +294,16 @@ export interface MergedFrontmatterConfig {
 export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   // API Keys
   apiKey: "",
+  openaiAuthMode: "api_key",
+  openaiOAuthAccessToken: "",
+  openaiOAuthAuthorizeUrl: "",
+  openaiOAuthTokenUrl: "",
+  openaiOAuthClientId: "",
+  openaiOAuthClientSecret: "",
+  openaiOAuthScopes: "openid profile email offline_access",
+  openaiOAuthRedirectUri: "http://127.0.0.1:8765/callback",
+  openaiOAuthRefreshToken: "",
+  openaiOAuthAccessTokenExpiresAt: 0,
   openrouterApiKey: "",
   anthropicApiKey: "",
   geminiApiKey: "",
