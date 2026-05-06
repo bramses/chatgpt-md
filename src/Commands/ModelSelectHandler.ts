@@ -7,6 +7,7 @@ import {
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENAI_CODEX,
   AI_SERVICE_OPENROUTER,
   AI_SERVICE_ZAI,
 } from "src/Constants";
@@ -53,6 +54,10 @@ export class ModelSelectHandler {
           settings,
           settingsService.saveSettings.bind(settingsService)
         );
+        await this.services.openAICodexOAuthService.refreshAccessTokenIfNeeded(
+          settings,
+          settingsService.saveSettings.bind(settingsService)
+        );
 
         const frontmatter = await editorService.getFrontmatter(view, settings, this.services.app);
         const openAiKey = apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
@@ -61,6 +66,9 @@ export class ModelSelectHandler {
         // Use the same URL structure as initializeAvailableModels
         const currentUrls: { [key: string]: string } = {
           [AI_SERVICE_OPENAI]: String(frontmatter.openaiUrl || settings.openaiUrl || getAiApiUrls(frontmatter).openai),
+          [AI_SERVICE_OPENAI_CODEX]: String(
+            frontmatter.openaiCodexUrl || settings.openaiCodexUrl || getAiApiUrls(frontmatter)[AI_SERVICE_OPENAI_CODEX]
+          ),
           [AI_SERVICE_OPENROUTER]: String(
             frontmatter.openrouterUrl || settings.openrouterUrl || getAiApiUrls(frontmatter).openrouter
           ),
@@ -130,6 +138,10 @@ export class ModelSelectHandler {
         settings,
         settingsService.saveSettings.bind(settingsService)
       );
+      await this.services.openAICodexOAuthService.refreshAccessTokenIfNeeded(
+        settings,
+        settingsService.saveSettings.bind(settingsService)
+      );
 
       const openAiKey = apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI);
       const openRouterKey = apiAuthService.getApiKey(settings, AI_SERVICE_OPENROUTER);
@@ -137,6 +149,7 @@ export class ModelSelectHandler {
       // Use default URLs for initialization, assuming frontmatter isn't available yet
       const defaultUrls = {
         [AI_SERVICE_OPENAI]: settings.openaiUrl || getAiApiUrls({}).openai,
+        [AI_SERVICE_OPENAI_CODEX]: settings.openaiCodexUrl || getAiApiUrls({})[AI_SERVICE_OPENAI_CODEX],
         [AI_SERVICE_OPENROUTER]: settings.openrouterUrl || getAiApiUrls({}).openrouter,
         [AI_SERVICE_OLLAMA]: settings.ollamaUrl || getAiApiUrls({}).ollama,
         [AI_SERVICE_LMSTUDIO]: settings.lmstudioUrl || getAiApiUrls({}).lmstudio,

@@ -4,6 +4,7 @@ import {
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENAI_CODEX,
   AI_SERVICE_OPENROUTER,
   AI_SERVICE_ZAI,
 } from "src/Constants";
@@ -41,10 +42,12 @@ export class ApiAuthService {
     switch (serviceType) {
       case AI_SERVICE_OPENAI:
         return settings.openaiAuthMode === "oauth_bridge" ? settings.openaiOAuthAccessToken : settings.apiKey;
+      case AI_SERVICE_OPENAI_CODEX:
+        return settings.openaiCodexAccessToken;
       case AI_SERVICE_OPENROUTER:
         return settings.openrouterApiKey;
       case AI_SERVICE_ANTHROPIC:
-        return settings.anthropicApiKey;
+        return settings.anthropicAuthMode === "subscription" ? "" : settings.anthropicApiKey;
       case AI_SERVICE_GEMINI:
         return settings.geminiApiKey;
       case AI_SERVICE_ZAI:
@@ -102,13 +105,18 @@ export class ApiAuthService {
       case AI_SERVICE_OPENAI:
         headers["Authorization"] = `Bearer ${apiKey}`;
         break;
+      case AI_SERVICE_OPENAI_CODEX:
+        headers["Authorization"] = `Bearer ${apiKey}`;
+        break;
       case AI_SERVICE_OPENROUTER:
         headers["Authorization"] = `Bearer ${apiKey}`;
         headers["HTTP-Referer"] = "https://github.com/bramses/chatgpt-md";
         headers["X-Title"] = "Obsidian ChatGPT MD Plugin";
         break;
       case AI_SERVICE_ANTHROPIC:
-        headers["x-api-key"] = apiKey;
+        if (apiKey?.trim()) {
+          headers["x-api-key"] = apiKey;
+        }
         headers["anthropic-version"] = "2023-06-01";
         break;
       case AI_SERVICE_GEMINI:

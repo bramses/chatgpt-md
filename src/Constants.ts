@@ -5,6 +5,7 @@ export const PLUGIN_PREFIX = `[${PLUGIN_NAME}]`;
 // AI service identifiers
 export const AI_SERVICE_OLLAMA = "ollama" as const;
 export const AI_SERVICE_OPENAI = "openai" as const;
+export const AI_SERVICE_OPENAI_CODEX = "openai-codex" as const;
 export const AI_SERVICE_OPENROUTER = "openrouter" as const;
 export const AI_SERVICE_LMSTUDIO = "lmstudio" as const;
 export const AI_SERVICE_ANTHROPIC = "anthropic" as const;
@@ -15,6 +16,7 @@ export const AI_SERVICE_ZAI = "zai" as const;
 export const AI_SERVICES = [
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENAI_CODEX,
   AI_SERVICE_OPENROUTER,
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_ANTHROPIC,
@@ -28,6 +30,7 @@ export type AiServiceType = (typeof AI_SERVICES)[number];
 // API endpoints for each service
 export const API_ENDPOINTS = {
   [AI_SERVICE_OPENAI]: "/v1/chat/completions",
+  [AI_SERVICE_OPENAI_CODEX]: "/v1/chat/completions",
   [AI_SERVICE_OPENROUTER]: "/api/v1/chat/completions",
   [AI_SERVICE_OLLAMA]: "/api/chat",
   [AI_SERVICE_LMSTUDIO]: "/v1/chat/completions",
@@ -60,6 +63,7 @@ export const AGENT_FOLDER_TYPE = "agentFolder";
 export const CHOOSE_AGENT_COMMAND_ID = "choose-agent";
 export const CREATE_AGENT_COMMAND_ID = "create-agent";
 export const CONNECT_OPENAI_OAUTH_COMMAND_ID = "connect-openai-oauth";
+export const CONNECT_OPENAI_CODEX_OAUTH_COMMAND_ID = "connect-openai-codex-oauth";
 
 export const NEWLINE = "\n\n";
 export const WIKI_LINKS_REGEX = /\[\[([^\][]+)\]\]/g;

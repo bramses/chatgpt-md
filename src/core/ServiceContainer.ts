@@ -15,6 +15,7 @@ import { VaultSearchService } from "src/Services/VaultSearchService";
 import { WebSearchService } from "src/Services/WebSearchService";
 import { AgentService } from "src/Services/AgentService";
 import { OpenAIOAuthService } from "src/Services/OpenAIOAuthService";
+import { OpenAICodexOAuthService } from "src/Services/OpenAICodexOAuthService";
 
 /**
  * Simple service container with readonly service instances.
@@ -37,6 +38,7 @@ export class ServiceContainer {
   readonly apiService: ApiService;
   readonly apiAuthService: ApiAuthService;
   readonly openAIOAuthService: OpenAIOAuthService;
+  readonly openAICodexOAuthService: OpenAICodexOAuthService;
 
   // Content services
   readonly fileService: FileService;
@@ -67,6 +69,7 @@ export class ServiceContainer {
     apiService: ApiService,
     apiAuthService: ApiAuthService,
     openAIOAuthService: OpenAIOAuthService,
+    openAICodexOAuthService: OpenAICodexOAuthService,
     fileService: FileService,
     frontmatterManager: FrontmatterManager,
     messageService: MessageService,
@@ -86,6 +89,7 @@ export class ServiceContainer {
     this.apiService = apiService;
     this.apiAuthService = apiAuthService;
     this.openAIOAuthService = openAIOAuthService;
+    this.openAICodexOAuthService = openAICodexOAuthService;
     this.fileService = fileService;
     this.frontmatterManager = frontmatterManager;
     this.messageService = messageService;
@@ -113,6 +117,7 @@ export class ServiceContainer {
     const apiService = new ApiService(errorService, notificationService);
     const apiAuthService = new ApiAuthService(notificationService);
     const openAIOAuthService = new OpenAIOAuthService();
+    const openAICodexOAuthService = new OpenAICodexOAuthService();
 
     // === Content services ===
     const fileService = new FileService(app);
@@ -169,6 +174,7 @@ export class ServiceContainer {
       apiService,
       apiAuthService,
       openAIOAuthService,
+      openAICodexOAuthService,
       fileService,
       frontmatterManager,
       messageService,

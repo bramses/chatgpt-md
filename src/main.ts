@@ -8,6 +8,7 @@ import { InferTitleHandler } from "./Commands/InferTitleHandler";
 import {
   ChooseChatTemplateHandler,
   ClearChatHandler,
+  ConnectOpenAICodexOAuthHandler,
   ConnectOpenAIOAuthHandler,
   MoveToNewChatHandler,
 } from "./Commands/RemainingHandlers";
@@ -51,6 +52,38 @@ export default class ChatGPT_MD extends Plugin {
         verifyToken: async () => {
           const settings = settingsService.getSettings();
           return this.services.openAIOAuthService.verifyCurrentToken(settings);
+        },
+      },
+      openAICodexOAuthActions: {
+        startConnect: async () => {
+          const settings = settingsService.getSettings();
+          await this.services.openAICodexOAuthService.beginOAuthFlow(
+            settings,
+            settingsService.saveSettings.bind(settingsService)
+          );
+        },
+        exchangeCallbackUrl: async (callbackUrl: string) => {
+          const settings = settingsService.getSettings();
+          await this.services.openAICodexOAuthService.exchangeCallbackUrl(
+            callbackUrl,
+            settings,
+            settingsService.saveSettings.bind(settingsService)
+          );
+        },
+        verifyToken: async () => {
+          const settings = settingsService.getSettings();
+          return this.services.openAICodexOAuthService.verifyCurrentToken(settings);
+        },
+        verifyHealth: async () => {
+          const settings = settingsService.getSettings();
+          return this.services.openAICodexOAuthService.verifyBridgeHealth(settings);
+        },
+        disconnect: async () => {
+          const settings = settingsService.getSettings();
+          await this.services.openAICodexOAuthService.disconnect(
+            settings,
+            settingsService.saveSettings.bind(settingsService)
+          );
         },
       },
     });
@@ -120,6 +153,7 @@ export default class ChatGPT_MD extends Plugin {
 
     // OpenAI OAuth connect command
     registrar.registerCallbackCommand(new ConnectOpenAIOAuthHandler(this.services));
+    registrar.registerCallbackCommand(new ConnectOpenAICodexOAuthHandler(this.services));
 
     // Agent commands
     registrar.registerCallbackCommand(new ChooseAgentHandler(this.services));

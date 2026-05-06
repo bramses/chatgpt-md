@@ -53,6 +53,10 @@ export class ChatHandler {
         settings,
         settingsService.saveSettings.bind(settingsService)
       );
+      await this.services.openAICodexOAuthService.refreshAccessTokenIfNeeded(
+        settings,
+        settingsService.saveSettings.bind(settingsService)
+      );
 
       // Get messages from editor
       const { messagesWithRole: messagesWithRoleAndMessage, messages } = await editorService.getMessagesFromEditor(

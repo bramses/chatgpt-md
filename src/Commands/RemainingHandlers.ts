@@ -3,6 +3,7 @@ import { ServiceContainer } from "src/core/ServiceContainer";
 import {
   CHOOSE_CHAT_TEMPLATE_COMMAND_ID,
   CLEAR_CHAT_COMMAND_ID,
+  CONNECT_OPENAI_CODEX_OAUTH_COMMAND_ID,
   CONNECT_OPENAI_OAUTH_COMMAND_ID,
   MOVE_TO_CHAT_COMMAND_ID,
 } from "src/Constants";
@@ -102,6 +103,32 @@ export class ConnectOpenAIOAuthHandler implements CallbackCommandHandler {
     return {
       id: CONNECT_OPENAI_OAUTH_COMMAND_ID,
       name: "Connect OpenAI OAuth Bridge",
+      icon: "shield-check",
+    };
+  }
+}
+
+/**
+ * Handler for connecting the local OpenAI Codex OAuth provider
+ */
+export class ConnectOpenAICodexOAuthHandler implements CallbackCommandHandler {
+  constructor(private services: ServiceContainer) {}
+
+  async execute(): Promise<void> {
+    const { settingsService, openAICodexOAuthService } = this.services;
+    const settings = settingsService.getSettings();
+
+    try {
+      await openAICodexOAuthService.beginOAuthFlow(settings, settingsService.saveSettings.bind(settingsService));
+    } catch (error: any) {
+      new Notice(`[ChatGPT MD] OpenAI Codex OAuth connect failed: ${error?.message || String(error)}`);
+    }
+  }
+
+  getCommand(): CommandMetadata {
+    return {
+      id: CONNECT_OPENAI_CODEX_OAUTH_COMMAND_ID,
+      name: "Connect OpenAI Codex OAuth",
       icon: "shield-check",
     };
   }

@@ -9,6 +9,7 @@ import {
   DEFAULT_GEMINI_CONFIG,
   DEFAULT_LMSTUDIO_CONFIG,
   DEFAULT_OLLAMA_CONFIG,
+  DEFAULT_OPENAI_CODEX_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
   DEFAULT_ZAI_CONFIG,
@@ -49,6 +50,7 @@ temperature: ${DEFAULT_OPENAI_CONFIG.temperature}
  * - openaiOAuthAccessTokenExpiresAt: Epoch milliseconds for access token expiry tracking
  * - openrouterApiKey: Used for OpenRouter API authentication
  * - anthropicApiKey: Used for Anthropic API authentication (x-api-key header)
+ * - anthropicAuthMode: Selects Anthropic auth source (API key or subscription bridge/session mode)
  * - geminiApiKey: Used for Gemini API authentication (x-goog-api-key header)
  */
 export interface ApiKeySettings {
@@ -74,10 +76,32 @@ export interface ApiKeySettings {
   openaiOAuthRefreshToken: string;
   /** Epoch milliseconds at which OAuth access token expires */
   openaiOAuthAccessTokenExpiresAt: number;
+  /** Local OpenAI Codex OAuth bridge bearer token */
+  openaiCodexAccessToken: string;
+  /** OpenAI Codex OAuth authorization endpoint on the local bridge */
+  openaiCodexOAuthAuthorizeUrl: string;
+  /** OpenAI Codex OAuth token endpoint on the local bridge */
+  openaiCodexOAuthTokenUrl: string;
+  /** OpenAI Codex local OAuth client id */
+  openaiCodexOAuthClientId: string;
+  /** Optional OpenAI Codex local OAuth client secret */
+  openaiCodexOAuthClientSecret: string;
+  /** Space-delimited OpenAI Codex OAuth scopes understood by the local bridge */
+  openaiCodexOAuthScopes: string;
+  /** OpenAI Codex OAuth redirect URI for callback capture */
+  openaiCodexOAuthRedirectUri: string;
+  /** Local bridge refresh token, if the bridge issues one */
+  openaiCodexRefreshToken: string;
+  /** Epoch milliseconds at which local bridge access token expires */
+  openaiCodexAccessTokenExpiresAt: number;
   /** API Key for OpenRouter - used for OpenRouter proxy API calls */
   openrouterApiKey: string;
   /** API Key for Anthropic - used for Claude models via Anthropic API */
   anthropicApiKey: string;
+  /** Anthropic auth mode: direct API key or subscription bridge/session mode */
+  anthropicAuthMode: "api_key" | "subscription";
+  /** OpenAI Codex auth mode: explicit token only or native/session fallback */
+  openaiCodexAuthMode: "token" | "native";
   /** API Key for Gemini - used for Google Gemini models */
   geminiApiKey: string;
   /** API Key for Z.AI - used for GLM models (both Standard API and Coding Plan) */
@@ -138,6 +162,18 @@ export interface OpenAIFrontmatterSettings {
   openaiDefaultMaxTokens: number;
   openaiDefaultPresencePenalty: number;
   openaiDefaultFrequencyPenalty: number;
+}
+
+/**
+ * Provider-specific frontmatter settings for OpenAI Codex OAuth
+ */
+export interface OpenAICodexFrontmatterSettings {
+  openaiCodexDefaultModel: string;
+  openaiCodexDefaultTemperature: number;
+  openaiCodexDefaultTopP: number;
+  openaiCodexDefaultMaxTokens: number;
+  openaiCodexDefaultPresencePenalty: number;
+  openaiCodexDefaultFrequencyPenalty: number;
 }
 
 /**
@@ -215,6 +251,8 @@ export interface TemplateSettings {
 export interface ServiceUrlSettings {
   /** URL for OpenAI API */
   openaiUrl: string;
+  /** URL for local OpenAI Codex OAuth bridge */
+  openaiCodexUrl: string;
   /** URL for OpenRouter API */
   openrouterUrl: string;
   /** URL for Ollama API */
@@ -256,6 +294,7 @@ export interface ChatGPT_MDSettings
     ServiceUrlSettings,
     WebSearchSettings,
     OpenAIFrontmatterSettings,
+    OpenAICodexFrontmatterSettings,
     AnthropicFrontmatterSettings,
     GeminiFrontmatterSettings,
     OpenRouterFrontmatterSettings,
@@ -304,13 +343,25 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   openaiOAuthRedirectUri: "http://127.0.0.1:8765/callback",
   openaiOAuthRefreshToken: "",
   openaiOAuthAccessTokenExpiresAt: 0,
+  openaiCodexAccessToken: "",
+  openaiCodexOAuthAuthorizeUrl: "http://openai-codex.local:1455/oauth/authorize",
+  openaiCodexOAuthTokenUrl: "http://openai-codex.local:1455/oauth/token",
+  openaiCodexOAuthClientId: "chatgpt-md",
+  openaiCodexOAuthClientSecret: "",
+  openaiCodexOAuthScopes: "codex offline_access",
+  openaiCodexOAuthRedirectUri: "http://127.0.0.1:8766/callback",
+  openaiCodexRefreshToken: "",
+  openaiCodexAccessTokenExpiresAt: 0,
   openrouterApiKey: "",
   anthropicApiKey: "",
+  anthropicAuthMode: "api_key",
+  openaiCodexAuthMode: "native",
   geminiApiKey: "",
   zaiApiKey: "",
 
   // Service URLs
   openaiUrl: DEFAULT_OPENAI_CONFIG.url,
+  openaiCodexUrl: DEFAULT_OPENAI_CODEX_CONFIG.url,
   openrouterUrl: DEFAULT_OPENROUTER_CONFIG.url,
   ollamaUrl: DEFAULT_OLLAMA_CONFIG.url,
   lmstudioUrl: DEFAULT_LMSTUDIO_CONFIG.url,
@@ -353,6 +404,14 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   openaiDefaultMaxTokens: DEFAULT_OPENAI_CONFIG.max_tokens,
   openaiDefaultPresencePenalty: DEFAULT_OPENAI_CONFIG.presence_penalty,
   openaiDefaultFrequencyPenalty: DEFAULT_OPENAI_CONFIG.frequency_penalty,
+
+  // OpenAI Codex OAuth Defaults
+  openaiCodexDefaultModel: DEFAULT_OPENAI_CODEX_CONFIG.model,
+  openaiCodexDefaultTemperature: DEFAULT_OPENAI_CODEX_CONFIG.temperature,
+  openaiCodexDefaultTopP: DEFAULT_OPENAI_CODEX_CONFIG.top_p,
+  openaiCodexDefaultMaxTokens: DEFAULT_OPENAI_CODEX_CONFIG.max_tokens,
+  openaiCodexDefaultPresencePenalty: DEFAULT_OPENAI_CODEX_CONFIG.presence_penalty,
+  openaiCodexDefaultFrequencyPenalty: DEFAULT_OPENAI_CODEX_CONFIG.frequency_penalty,
 
   // Anthropic Defaults
   anthropicDefaultModel: DEFAULT_ANTHROPIC_CONFIG.model,

@@ -23,6 +23,7 @@ import { generateText, LanguageModel, streamText } from "ai";
 // Adapters
 import { AiProviderConfig, ProviderAdapter, ProviderType } from "./Adapters/ProviderAdapter";
 import { OpenAIAdapter } from "./Adapters/OpenAIAdapter";
+import { OpenAICodexAdapter } from "./Adapters/OpenAICodexAdapter";
 import { AnthropicAdapter } from "./Adapters/AnthropicAdapter";
 import { OllamaAdapter } from "./Adapters/OllamaAdapter";
 import { OpenRouterAdapter } from "./Adapters/OpenRouterAdapter";
@@ -63,6 +64,7 @@ export class AiProviderService implements IAiApiService {
     // Register all adapters
     this.adapters = new Map<ProviderType, ProviderAdapter>([
       ["openai", new OpenAIAdapter()],
+      ["openai-codex", new OpenAICodexAdapter()],
       ["anthropic", new AnthropicAdapter()],
       ["ollama", new OllamaAdapter()],
       ["openrouter", new OpenRouterAdapter()],
@@ -103,6 +105,9 @@ export class AiProviderService implements IAiApiService {
    * Check if a model supports tools (whitelist check)
    */
   private modelSupportsTools(modelName: string, settings: ChatGPT_MDSettings): boolean {
+    if (!this.currentAdapter.supportsToolCalling()) {
+      return false;
+    }
     return isModelWhitelisted(modelName, settings.toolEnabledModels || "");
   }
 
@@ -358,12 +363,17 @@ export class AiProviderService implements IAiApiService {
     // This allows OpenRouter to use /api/v1 while others use /v1
     const apiPathSuffix = this.currentAdapter.getApiPathSuffix(config.url);
 
-    this.provider = providerFactory({
-      apiKey: apiKey || "",
+    const providerOptions: Record<string, unknown> = {
       baseURL: `${config.url}${apiPathSuffix}`,
       fetch: customFetch,
       name: this.currentAdapter.type, // Required for OpenAICompatible providers
-    });
+    };
+
+    if (typeof apiKey === "string" && apiKey.trim().length > 0) {
+      providerOptions.apiKey = apiKey;
+    }
+
+    this.provider = providerFactory(providerOptions);
   }
 
   /**
@@ -375,6 +385,8 @@ export class AiProviderService implements IAiApiService {
     switch (type) {
       case "openai":
         return createOpenAI;
+      case "openai-codex":
+        return createOpenAICompatible;
       case "anthropic":
         return createAnthropic;
       case "gemini":

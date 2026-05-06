@@ -15,6 +15,7 @@ import {
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENAI_CODEX,
   AI_SERVICE_OPENROUTER,
   AI_SERVICE_ZAI,
 } from "src/Constants";
@@ -30,6 +31,15 @@ const PROVIDER_FRONTMATTER_FIELDS: Record<string, (settings: ChatGPT_MDSettings)
     max_tokens: s.openaiDefaultMaxTokens,
     presence_penalty: s.openaiDefaultPresencePenalty,
     frequency_penalty: s.openaiDefaultFrequencyPenalty,
+  }),
+  [AI_SERVICE_OPENAI_CODEX]: (s) => ({
+    model: s.openaiCodexDefaultModel,
+    openaiCodexUrl: s.openaiCodexUrl,
+    temperature: s.openaiCodexDefaultTemperature,
+    top_p: s.openaiCodexDefaultTopP,
+    max_tokens: s.openaiCodexDefaultMaxTokens,
+    presence_penalty: s.openaiCodexDefaultPresencePenalty,
+    frequency_penalty: s.openaiCodexDefaultFrequencyPenalty,
   }),
   [AI_SERVICE_OLLAMA]: (s) => ({
     url: s.ollamaUrl,
@@ -155,6 +165,13 @@ export class SettingsService {
       exchangeCallbackUrl: (callbackUrl: string) => Promise<void>;
       verifyToken: () => Promise<{ ok: boolean; message: string }>;
     };
+    openAICodexOAuthActions?: {
+      startConnect: () => Promise<void>;
+      exchangeCallbackUrl: (callbackUrl: string) => Promise<void>;
+      verifyToken: () => Promise<{ ok: boolean; message: string }>;
+      verifyHealth: () => Promise<{ ok: boolean; message: string }>;
+      disconnect: () => Promise<void>;
+    };
   }): Promise<void> {
     // Load settings and run migrations if needed
     await this.loadSettings();
@@ -165,6 +182,7 @@ export class SettingsService {
         settings: this.settings,
         saveSettings: this.saveSettings.bind(this),
         openAIOAuthActions: options?.openAIOAuthActions,
+        openAICodexOAuthActions: options?.openAICodexOAuthActions,
       })
     );
   }

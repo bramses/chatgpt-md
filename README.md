@@ -264,6 +264,10 @@ Note: Previous versions used a single `url` parameter which is now deprecated. P
 
 If your OpenAI-compatible gateway supports OAuth authorization code flow, ChatGPT MD can automate login and token exchange.
 
+For the planned local `openai-codex` provider that uses Codex OAuth with supported ChatGPT plans instead of OpenAI API keys, see [docs/openai-oauth-roadmap.md](docs/openai-oauth-roadmap.md).
+
+Development smoke test: run `yarn dev:codex-bridge`, set the OpenAI Codex URLs to `http://127.0.0.1:1455`, connect, verify health/models, then use `model: openai-codex@gpt-5.2-codex`.
+
 1. Open `Settings -> ChatGPT MD -> API Keys`
 2. Set `OpenAI Auth Mode` to `OAuth Bridge Token`
 3. Configure:

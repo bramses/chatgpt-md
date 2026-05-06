@@ -25,6 +25,10 @@ export class InferTitleHandler implements EditorViewCommandHandler {
       settings,
       settingsService.saveSettings.bind(settingsService)
     );
+    await this.services.openAICodexOAuthService.refreshAccessTokenIfNeeded(
+      settings,
+      settingsService.saveSettings.bind(settingsService)
+    );
 
     // Get frontmatter
     const frontmatter = await editorService.getFrontmatter(view, settings, this.services.app);

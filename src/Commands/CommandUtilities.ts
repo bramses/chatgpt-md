@@ -8,6 +8,7 @@ import {
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENAI_CODEX,
   AI_SERVICE_OPENROUTER,
   AI_SERVICE_ZAI,
   FETCH_MODELS_TIMEOUT_MS,
@@ -37,6 +38,7 @@ export function getAiApiUrls(frontmatter: any): { [key: string]: string } {
 export function getDefaultApiUrls(settings: ChatGPT_MDSettings): { [key: string]: string } {
   return {
     [AI_SERVICE_OPENAI]: settings.openaiUrl || DEFAULT_OPENAI_CONFIG.url,
+    [AI_SERVICE_OPENAI_CODEX]: settings.openaiCodexUrl || "http://openai-codex.local:1455",
     [AI_SERVICE_OPENROUTER]: settings.openrouterUrl || DEFAULT_OPENROUTER_CONFIG.url,
     [AI_SERVICE_OLLAMA]: settings.ollamaUrl || DEFAULT_OLLAMA_CONFIG.url,
     [AI_SERVICE_LMSTUDIO]: settings.lmstudioUrl || DEFAULT_LMSTUDIO_CONFIG.url,
@@ -57,6 +59,28 @@ export async function fetchAvailableModels(
   apiAuthService: { getApiKey(settings: ChatGPT_MDSettings, serviceType: string): string },
   settingsService: { getSettings(): ChatGPT_MDSettings }
 ): Promise<string[]> {
+  function isLocalOpenAICodexBridgeUrl(url: string | undefined): boolean {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+      return host === "openai-codex.local" || host === "localhost" || host === "127.0.0.1";
+    } catch {
+      return false;
+    }
+  }
+
+  function isLocalAnthropicBridgeUrl(url: string | undefined): boolean {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+      return host === "claude.local" || host === "anthropic.local" || host === "localhost" || host === "127.0.0.1";
+    } catch {
+      return false;
+    }
+  }
+
   function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
     return Promise.race([promise, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
   }
@@ -95,6 +119,21 @@ export async function fetchAvailableModels(
       );
     }
 
+    // Conditionally add OpenAI Codex OAuth local bridge promise
+    const openAICodexKey = apiAuthService.getApiKey(settings, AI_SERVICE_OPENAI_CODEX);
+    const codexUrl = urls[AI_SERVICE_OPENAI_CODEX];
+    const codexAuthMode = settings.openaiCodexAuthMode || "native";
+    const allowNativeCodexFetchWithoutToken = codexAuthMode === "native" && isLocalOpenAICodexBridgeUrl(codexUrl);
+    if (isValidApiKey(openAICodexKey) || allowNativeCodexFetchWithoutToken) {
+      promises.push(
+        withTimeout(
+          aiService.fetchAvailableModels(codexUrl, openAICodexKey, settings, "openai-codex"),
+          FETCH_MODELS_TIMEOUT_MS,
+          []
+        )
+      );
+    }
+
     // Conditionally add OpenRouter promise
     if (isValidApiKey(openrouterApiKey)) {
       promises.push(
@@ -108,7 +147,10 @@ export async function fetchAvailableModels(
 
     // Conditionally add Anthropic promise
     const anthropicApiKey = apiAuthService.getApiKey(settingsService.getSettings(), AI_SERVICE_ANTHROPIC);
-    if (isValidApiKey(anthropicApiKey)) {
+    const anthropicAuthMode = settings.anthropicAuthMode || "api_key";
+    const allowAnthropicSubscriptionBridgeFetchWithoutKey =
+      anthropicAuthMode === "subscription" && isLocalAnthropicBridgeUrl(urls[AI_SERVICE_ANTHROPIC]);
+    if (isValidApiKey(anthropicApiKey) || allowAnthropicSubscriptionBridgeFetchWithoutKey) {
       promises.push(
         withTimeout(
           aiService.fetchAvailableModels(urls[AI_SERVICE_ANTHROPIC], anthropicApiKey, settings, "anthropic"),
