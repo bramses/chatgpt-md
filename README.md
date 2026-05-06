@@ -283,6 +283,36 @@ If your environment cannot auto-capture callback, use `Exchange Callback URL` in
 
 Use `Verify OpenAI OAuth Token` to run a quick `/v1/models` health check.
 
+### Subscription Bridge Modes (OpenAI Codex + Claude)
+
+ChatGPT MD now supports explicit auth-mode toggles for two bridge-style flows where a local gateway can handle subscription/session auth upstream.
+
+#### 1) OpenAI Codex Auth Mode
+
+Path: `Settings -> ChatGPT MD -> API Keys -> OpenAI Codex Auth Mode`
+
+- `Native/Session (Local Bridge)`:
+  - Allows model discovery and requests without a local token when `OpenAI Codex URL` points to a local bridge (`openai-codex.local`, `localhost`, or `127.0.0.1`).
+  - Intended for Paperclip-style local session/native auth handled by the bridge.
+- `Token Only`:
+  - Requires `OpenAI Codex Local Token`.
+  - No tokenless fallback.
+
+#### 2) Anthropic Auth Mode (Claude)
+
+Path: `Settings -> ChatGPT MD -> API Keys -> Anthropic Auth Mode`
+
+- `API Key (Default)`:
+  - Standard Anthropic usage with `Anthropic API Key`.
+  - Works with `https://api.anthropic.com` and compatible key-based endpoints.
+- `Subscription (Bridge/Session)`:
+  - Allows no-key flow only for local Claude-compatible bridge URLs (`claude.local`, `anthropic.local`, `localhost`, or `127.0.0.1`).
+  - Non-local endpoints still require explicit credentials.
+
+#### Important safety rule
+
+Tokenless/keyless bridge mode is intentionally limited to local bridge hosts. This prevents accidentally sending unauthenticated requests to remote endpoints.
+
 ### Commands 👨‍💻
 Run commands from Obsidian's command pallet via `cmd + p` or `ctrl + p` and start typing `chatgpt` or set hotkeys
 (a chat command hotkey is highly recommended for effortless chats (I use `cmd + j`, which works fantastic, because your index finger is already resting on that key)).
