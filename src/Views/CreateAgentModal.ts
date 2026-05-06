@@ -424,7 +424,7 @@ export class CreateAgentModal extends Modal {
   }
 
   private getProviderTypeFromModel(model: string): string {
-    const prefixes = ["ollama", "openrouter", "lmstudio", "anthropic", "gemini", "zai"];
+    const prefixes = ["ollama", "openrouter", "openai-codex", "lmstudio", "anthropic", "gemini", "zai"];
     for (const prefix of prefixes) {
       if (model.startsWith(`${prefix}@`)) {
         return prefix;

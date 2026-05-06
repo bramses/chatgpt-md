@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 import {
@@ -24,11 +24,24 @@ interface SettingDefinition {
 interface SettingsProvider {
   settings: ChatGPT_MDSettings;
   saveSettings: () => Promise<void>;
+  openAIOAuthActions?: {
+    startConnect: () => Promise<void>;
+    exchangeCallbackUrl: (callbackUrl: string) => Promise<void>;
+    verifyToken: () => Promise<{ ok: boolean; message: string }>;
+  };
+  openAICodexOAuthActions?: {
+    startConnect: () => Promise<void>;
+    exchangeCallbackUrl: (callbackUrl: string) => Promise<void>;
+    verifyToken: () => Promise<{ ok: boolean; message: string }>;
+    verifyHealth: () => Promise<{ ok: boolean; message: string }>;
+    disconnect: () => Promise<void>;
+  };
 }
 
 // Groups that should be collapsible (provider-specific settings)
 const COLLAPSIBLE_GROUPS = [
   "OpenAI",
+  "OpenAI Codex",
   "Anthropic",
   "Gemini",
   "OpenRouter",
@@ -39,6 +52,8 @@ const COLLAPSIBLE_GROUPS = [
 
 export class ChatGPT_MDSettingsTab extends PluginSettingTab {
   settingsProvider: SettingsProvider;
+  private callbackUrlDraft = "";
+  private codexCallbackUrlDraft = "";
 
   constructor(app: App, plugin: Plugin, settingsProvider: SettingsProvider) {
     super(app, plugin);
@@ -68,6 +83,75 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "API Keys",
       },
       {
+        id: "openaiAuthMode",
+        name: "OpenAI Auth Mode",
+        description:
+          "Choose between direct OpenAI API key auth or OAuth bridge mode (for OpenAI-compatible gateways backed by subscription auth).",
+        type: "dropdown",
+        options: {
+          api_key: "API Key (Default)",
+          oauth_bridge: "OAuth Bridge Token",
+        },
+        group: "API Keys",
+      },
+      {
+        id: "openaiOAuthAccessToken",
+        name: "OpenAI OAuth Bridge Token",
+        description:
+          "Bearer token for your OpenAI-compatible OAuth bridge endpoint. Used when OpenAI Auth Mode is set to OAuth Bridge Token.",
+        type: "text",
+        placeholder: "your OAuth bridge access token",
+        group: "API Keys",
+      },
+      {
+        id: "openaiOAuthAuthorizeUrl",
+        name: "OpenAI OAuth Authorize URL",
+        description: "OAuth authorization endpoint for your OpenAI-compatible gateway",
+        type: "text",
+        placeholder: "https://your-gateway.example.com/oauth/authorize",
+        group: "API Keys",
+      },
+      {
+        id: "openaiOAuthTokenUrl",
+        name: "OpenAI OAuth Token URL",
+        description: "OAuth token endpoint for code and refresh exchanges",
+        type: "text",
+        placeholder: "https://your-gateway.example.com/oauth/token",
+        group: "API Keys",
+      },
+      {
+        id: "openaiOAuthClientId",
+        name: "OpenAI OAuth Client ID",
+        description: "OAuth client id registered with your OpenAI-compatible gateway",
+        type: "text",
+        placeholder: "your-client-id",
+        group: "API Keys",
+      },
+      {
+        id: "openaiOAuthClientSecret",
+        name: "OpenAI OAuth Client Secret (Optional)",
+        description: "Optional client secret for confidential OAuth clients",
+        type: "text",
+        placeholder: "your-client-secret",
+        group: "API Keys",
+      },
+      {
+        id: "openaiOAuthScopes",
+        name: "OpenAI OAuth Scopes",
+        description: "Space-delimited OAuth scopes",
+        type: "text",
+        placeholder: "openid profile email offline_access",
+        group: "API Keys",
+      },
+      {
+        id: "openaiOAuthRedirectUri",
+        name: "OpenAI OAuth Redirect URI",
+        description: "Redirect URI for OAuth callback auto-capture. Use localhost/127.0.0.1 for desktop auto-connect.",
+        type: "text",
+        placeholder: "http://127.0.0.1:8765/callback",
+        group: "API Keys",
+      },
+      {
         id: "openrouterApiKey",
         name: "OpenRouter.ai API Key",
         description: "API Key for OpenRouter.ai",
@@ -76,11 +160,43 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "API Keys",
       },
       {
+        id: "openaiCodexAccessToken",
+        name: "OpenAI Codex Local Token",
+        description:
+          "Optional bearer token for the local openai-codex bridge. Leave empty when your local bridge uses native/session auth. This is separate from OpenAI API keys and used only by the openai-codex provider.",
+        type: "text",
+        placeholder: "local bridge bearer token",
+        group: "API Keys",
+      },
+      {
+        id: "openaiCodexAuthMode",
+        name: "OpenAI Codex Auth Mode",
+        description: "Choose token-only auth or native/session fallback for local openai-codex bridge usage.",
+        type: "dropdown",
+        options: {
+          native: "Native/Session (Local Bridge)",
+          token: "Token Only",
+        },
+        group: "API Keys",
+      },
+      {
         id: "anthropicApiKey",
         name: "Anthropic API Key",
         description: "API Key for Anthropic (Claude)",
         type: "text",
         placeholder: "your Anthropic API Key",
+        group: "API Keys",
+      },
+      {
+        id: "anthropicAuthMode",
+        name: "Anthropic Auth Mode",
+        description:
+          "Choose direct Anthropic API key auth or subscription bridge/session mode for Claude-compatible gateways.",
+        type: "dropdown",
+        options: {
+          api_key: "API Key (Default)",
+          subscription: "Subscription (Bridge/Session)",
+        },
         group: "API Keys",
       },
       {
@@ -191,6 +307,88 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         type: "text",
         placeholder: "400",
         group: "OpenAI",
+      },
+
+      // OpenAI Codex Defaults
+      {
+        id: "openaiCodexUrl",
+        name: "API URL",
+        description: `URL for the local OpenAI Codex OAuth bridge\nDefault URL: http://openai-codex.local:1455`,
+        type: "text",
+        placeholder: "http://openai-codex.local:1455",
+        group: "OpenAI Codex",
+      },
+      {
+        id: "openaiCodexDefaultModel",
+        name: "Default Model",
+        description: "Default model for OpenAI Codex OAuth chats",
+        type: "text",
+        placeholder: "openai-codex@gpt-5.2-codex",
+        group: "OpenAI Codex",
+      },
+      {
+        id: "openaiCodexDefaultTemperature",
+        name: "Default Temperature",
+        description: "Default temperature for OpenAI Codex chats (0.0 to 2.0)",
+        type: "text",
+        placeholder: "0.7",
+        group: "OpenAI Codex",
+      },
+      {
+        id: "openaiCodexDefaultMaxTokens",
+        name: "Default Max Tokens",
+        description: "Default max tokens for OpenAI Codex chats",
+        type: "text",
+        placeholder: "400",
+        group: "OpenAI Codex",
+      },
+      {
+        id: "openaiCodexOAuthAuthorizeUrl",
+        name: "OAuth Authorize URL",
+        description: "Authorization endpoint exposed by your local openai-codex bridge",
+        type: "text",
+        placeholder: "http://openai-codex.local:1455/oauth/authorize",
+        group: "OpenAI Codex",
+      },
+      {
+        id: "openaiCodexOAuthTokenUrl",
+        name: "OAuth Token URL",
+        description: "Token endpoint exposed by your local openai-codex bridge",
+        type: "text",
+        placeholder: "http://openai-codex.local:1455/oauth/token",
+        group: "OpenAI Codex",
+      },
+      {
+        id: "openaiCodexOAuthClientId",
+        name: "OAuth Client ID",
+        description: "Client id registered with your local openai-codex bridge",
+        type: "text",
+        placeholder: "chatgpt-md",
+        group: "OpenAI Codex",
+      },
+      {
+        id: "openaiCodexOAuthClientSecret",
+        name: "OAuth Client Secret (Optional)",
+        description: "Optional local bridge client secret",
+        type: "text",
+        placeholder: "local client secret",
+        group: "OpenAI Codex",
+      },
+      {
+        id: "openaiCodexOAuthScopes",
+        name: "OAuth Scopes",
+        description: "Space-delimited scopes understood by the local openai-codex bridge",
+        type: "text",
+        placeholder: "codex offline_access",
+        group: "OpenAI Codex",
+      },
+      {
+        id: "openaiCodexOAuthRedirectUri",
+        name: "OAuth Redirect URI",
+        description: "Redirect URI for callback auto-capture. Use localhost/127.0.0.1 for desktop auto-connect.",
+        type: "text",
+        placeholder: "http://127.0.0.1:8766/callback",
+        group: "OpenAI Codex",
       },
 
       // Anthropic Defaults
@@ -502,6 +700,8 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
       regularGroups["API Keys"].forEach((setting) => {
         this.createSettingElement(containerEl, setting);
       });
+      this.renderOpenAiOAuthActions(containerEl);
+      this.renderOpenAiCodexOAuthActions(containerEl);
       containerEl.createEl("hr");
       delete regularGroups["API Keys"];
     }
@@ -542,6 +742,164 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
       });
       containerEl.createEl("hr");
     });
+  }
+
+  private renderOpenAiOAuthActions(container: HTMLElement): void {
+    const actions = this.settingsProvider.openAIOAuthActions;
+    if (!actions) {
+      return;
+    }
+
+    container.createEl("h4", { text: "OpenAI OAuth Bridge Actions" });
+
+    new Setting(container)
+      .setName("Connect OpenAI OAuth")
+      .setDesc("Starts OAuth login in your browser and automatically captures callback when possible.")
+      .addButton((btn) =>
+        btn
+          .setButtonText("Connect")
+          .setCta()
+          .onClick(async () => {
+            try {
+              await actions.startConnect();
+            } catch (error: any) {
+              new Notice(`OpenAI OAuth connect failed: ${error?.message || String(error)}`);
+            }
+          })
+      );
+
+    new Setting(container)
+      .setName("Exchange Callback URL")
+      .setDesc("If auto-capture is unavailable, paste full callback URL and exchange it for a token.")
+      .addText((text) => {
+        text
+          .setPlaceholder("https://your-redirect/callback?code=...&state=...")
+          .setValue(this.callbackUrlDraft)
+          .onChange((value) => {
+            this.callbackUrlDraft = value;
+          });
+        text.inputEl.style.width = "420px";
+        return text;
+      })
+      .addButton((btn) =>
+        btn.setButtonText("Exchange").onClick(async () => {
+          if (!this.callbackUrlDraft.trim()) {
+            new Notice("Please paste the callback URL first.");
+            return;
+          }
+
+          try {
+            await actions.exchangeCallbackUrl(this.callbackUrlDraft.trim());
+            this.callbackUrlDraft = "";
+            this.display();
+          } catch (error: any) {
+            new Notice(`OAuth callback exchange failed: ${error?.message || String(error)}`);
+          }
+        })
+      );
+
+    new Setting(container)
+      .setName("Verify OpenAI OAuth Token")
+      .setDesc("Checks whether the currently stored OAuth bridge token can access model listing.")
+      .addButton((btn) =>
+        btn.setButtonText("Verify").onClick(async () => {
+          try {
+            const result = await actions.verifyToken();
+            new Notice(result.message);
+          } catch (error: any) {
+            new Notice(`OAuth token verification failed: ${error?.message || String(error)}`);
+          }
+        })
+      );
+  }
+
+  private renderOpenAiCodexOAuthActions(container: HTMLElement): void {
+    const actions = this.settingsProvider.openAICodexOAuthActions;
+    if (!actions) {
+      return;
+    }
+
+    container.createEl("h4", { text: "OpenAI Codex OAuth Actions" });
+
+    new Setting(container)
+      .setName("Connect OpenAI Codex")
+      .setDesc("Starts local Codex OAuth login through your openai-codex bridge.")
+      .addButton((btn) =>
+        btn
+          .setButtonText("Connect")
+          .setCta()
+          .onClick(async () => {
+            try {
+              await actions.startConnect();
+            } catch (error: any) {
+              new Notice(`OpenAI Codex OAuth connect failed: ${error?.message || String(error)}`);
+            }
+          })
+      );
+
+    new Setting(container)
+      .setName("Exchange Codex Callback URL")
+      .setDesc("If auto-capture is unavailable, paste the full callback URL and exchange it for a local bridge token.")
+      .addText((text) => {
+        text
+          .setPlaceholder("http://127.0.0.1:8766/callback?code=...&state=...")
+          .setValue(this.codexCallbackUrlDraft)
+          .onChange((value) => {
+            this.codexCallbackUrlDraft = value;
+          });
+        text.inputEl.style.width = "420px";
+        return text;
+      })
+      .addButton((btn) =>
+        btn.setButtonText("Exchange").onClick(async () => {
+          if (!this.codexCallbackUrlDraft.trim()) {
+            new Notice("Please paste the OpenAI Codex callback URL first.");
+            return;
+          }
+
+          try {
+            await actions.exchangeCallbackUrl(this.codexCallbackUrlDraft.trim());
+            this.codexCallbackUrlDraft = "";
+            this.display();
+          } catch (error: any) {
+            new Notice(`OpenAI Codex callback exchange failed: ${error?.message || String(error)}`);
+          }
+        })
+      );
+
+    new Setting(container)
+      .setName("Verify OpenAI Codex Bridge")
+      .setDesc("Checks whether the configured local bridge is reachable.")
+      .addButton((btn) =>
+        btn.setButtonText("Health").onClick(async () => {
+          try {
+            const result = await actions.verifyHealth();
+            new Notice(result.message);
+          } catch (error: any) {
+            new Notice(`OpenAI Codex bridge health check failed: ${error?.message || String(error)}`);
+          }
+        })
+      )
+      .addButton((btn) =>
+        btn.setButtonText("Models").onClick(async () => {
+          try {
+            const result = await actions.verifyToken();
+            new Notice(result.message);
+          } catch (error: any) {
+            new Notice(`OpenAI Codex token verification failed: ${error?.message || String(error)}`);
+          }
+        })
+      )
+      .addButton((btn) =>
+        btn.setButtonText("Disconnect").onClick(async () => {
+          try {
+            await actions.disconnect();
+            this.display();
+          } catch (error: any) {
+            new Notice(`OpenAI Codex disconnect failed: ${error?.message || String(error)}`);
+          }
+        })
+      );
   }
 
   /**

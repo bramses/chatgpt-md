@@ -5,6 +5,7 @@ import {
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENAI_CODEX,
   AI_SERVICE_OPENROUTER,
   AI_SERVICE_ZAI,
 } from "src/Constants";
@@ -13,6 +14,7 @@ import {
   DEFAULT_GEMINI_CONFIG,
   DEFAULT_LMSTUDIO_CONFIG,
   DEFAULT_OLLAMA_CONFIG,
+  DEFAULT_OPENAI_CODEX_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
   DEFAULT_ZAI_CONFIG,
@@ -26,6 +28,7 @@ import {
 export function getDefaultConfigForService(serviceType: string): Record<string, any> {
   const defaults: Record<string, any> = {
     [AI_SERVICE_OPENAI]: DEFAULT_OPENAI_CONFIG,
+    [AI_SERVICE_OPENAI_CODEX]: DEFAULT_OPENAI_CODEX_CONFIG,
     [AI_SERVICE_OLLAMA]: DEFAULT_OLLAMA_CONFIG,
     [AI_SERVICE_OPENROUTER]: DEFAULT_OPENROUTER_CONFIG,
     [AI_SERVICE_LMSTUDIO]: DEFAULT_LMSTUDIO_CONFIG,
@@ -51,6 +54,7 @@ export function getDefaultModelForService(aiService: string): string {
 export function getApiUrlsFromFrontmatter(frontmatter: any): Record<string, string> {
   const configs: Record<string, { url: string }> = {
     [AI_SERVICE_OPENAI]: DEFAULT_OPENAI_CONFIG,
+    [AI_SERVICE_OPENAI_CODEX]: DEFAULT_OPENAI_CODEX_CONFIG,
     [AI_SERVICE_OPENROUTER]: DEFAULT_OPENROUTER_CONFIG,
     [AI_SERVICE_OLLAMA]: DEFAULT_OLLAMA_CONFIG,
     [AI_SERVICE_LMSTUDIO]: DEFAULT_LMSTUDIO_CONFIG,
@@ -61,6 +65,7 @@ export function getApiUrlsFromFrontmatter(frontmatter: any): Record<string, stri
 
   const providers = [
     AI_SERVICE_OPENAI,
+    AI_SERVICE_OPENAI_CODEX,
     AI_SERVICE_OPENROUTER,
     AI_SERVICE_OLLAMA,
     AI_SERVICE_LMSTUDIO,

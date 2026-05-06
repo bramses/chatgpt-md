@@ -4,6 +4,7 @@ import {
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENAI_CODEX,
   AI_SERVICE_OPENROUTER,
   AI_SERVICE_ZAI,
 } from "src/Constants";
@@ -24,6 +25,24 @@ export const DEFAULT_OPENAI_CONFIG = {
   title: "Untitled",
   top_p: 1,
   url: "https://api.openai.com",
+};
+
+/**
+ * Default configuration for OpenAI Codex OAuth via local bridge
+ */
+export const DEFAULT_OPENAI_CODEX_CONFIG = {
+  aiService: AI_SERVICE_OPENAI_CODEX,
+  frequency_penalty: 0,
+  max_tokens: 400,
+  model: "openai-codex@gpt-5.2-codex",
+  presence_penalty: 0,
+  stream: true,
+  system_commands: null,
+  tags: [],
+  temperature: 0.7,
+  title: "Untitled",
+  top_p: 1,
+  url: "http://openai-codex.local:1455",
 };
 
 /**

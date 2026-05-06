@@ -21,6 +21,15 @@ export class InferTitleHandler implements EditorViewCommandHandler {
     const { editorService, settingsService, apiAuthService } = this.services;
     const settings = settingsService.getSettings();
 
+    await this.services.openAIOAuthService.refreshAccessTokenIfNeeded(
+      settings,
+      settingsService.saveSettings.bind(settingsService)
+    );
+    await this.services.openAICodexOAuthService.refreshAccessTokenIfNeeded(
+      settings,
+      settingsService.saveSettings.bind(settingsService)
+    );
+
     // Get frontmatter
     const frontmatter = await editorService.getFrontmatter(view, settings, this.services.app);
     const aiService = this.services.aiProviderService();

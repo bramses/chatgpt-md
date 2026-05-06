@@ -37,16 +37,32 @@ export class OpenAIAdapter extends BaseProviderAdapter {
     settings: ChatGPT_MDSettings | undefined,
     makeGetRequest: (url: string, headers: Record<string, string>, provider: string) => Promise<any>
   ): Promise<string[]> {
-    if (!this.validateApiKey(apiKey)) {
+    const isOauthBridgeMode = settings?.openaiAuthMode === "oauth_bridge";
+    const isOfficialOpenAiUrl = this.isOfficialOpenAiUrl(url);
+    const canFetchWithoutApiKey = isOauthBridgeMode && !isOfficialOpenAiUrl;
+
+    if (!canFetchWithoutApiKey && !this.validateApiKey(apiKey)) {
       return [];
     }
 
     try {
-      const headers = this.getAuthHeaders(apiKey!); // Non-null assertion: validated above
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (apiKey?.trim()) {
+        headers.Authorization = `Bearer ${apiKey}`;
+      }
+
       const models = await makeGetRequest(`${url}/v1/models`, headers, this.type);
 
-      return models.data
-        .filter((model: OpenAIModel) => this.isValidChatModel(model))
+      const modelData = Array.isArray(models?.data) ? models.data : [];
+      const useStrictFiltering = isOfficialOpenAiUrl && !isOauthBridgeMode;
+
+      const filteredModels = useStrictFiltering
+        ? modelData.filter((model: OpenAIModel) => this.isValidChatModel(model))
+        : modelData.filter((model: OpenAIModel) => typeof model?.id === "string" && model.id.trim().length > 0);
+
+      return filteredModels
         .sort((a: OpenAIModel, b: OpenAIModel) => {
           if (a.id < b.id) return 1;
           if (a.id > b.id) return -1;
@@ -81,6 +97,16 @@ export class OpenAIAdapter extends BaseProviderAdapter {
       id.includes("tts");
 
     return isGenerationModel && !isExcluded;
+  }
+
+  private isOfficialOpenAiUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+      return host === "api.openai.com";
+    } catch {
+      return false;
+    }
   }
 
   getSystemMessageRole(): "system" | "developer" {

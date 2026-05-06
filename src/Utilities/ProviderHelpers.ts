@@ -5,6 +5,7 @@ import {
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
+  AI_SERVICE_OPENAI_CODEX,
   AI_SERVICE_OPENROUTER,
   AI_SERVICE_ZAI,
 } from "src/Constants";
@@ -21,6 +22,7 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
   // Canonical: Check explicit provider prefixes
   const prefixMap: [string, string][] = [
     ["openai@", AI_SERVICE_OPENAI],
+    ["openai-codex@", AI_SERVICE_OPENAI_CODEX],
     ["anthropic@", AI_SERVICE_ANTHROPIC],
     ["gemini@", AI_SERVICE_GEMINI],
     ["ollama@", AI_SERVICE_OLLAMA],
@@ -45,6 +47,15 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
     // OpenRouter detection
     if (baseUrl.includes("openrouter.ai")) {
       return AI_SERVICE_OPENROUTER;
+    }
+
+    // OpenAI Codex local bridge detection
+    if (
+      baseUrl.includes("openai-codex.local") ||
+      baseUrl.includes("localhost:1455") ||
+      baseUrl.includes("127.0.0.1:1455")
+    ) {
+      return AI_SERVICE_OPENAI_CODEX;
     }
 
     // LM Studio detection
@@ -83,12 +94,15 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
 export const aiProviderFromKeys = (config: Record<string, any>): string | null => {
   const hasOpenRouterKey = isValidApiKey(config.openrouterApiKey);
   const hasOpenAIKey = isValidApiKey(config.apiKey);
+  const hasOpenAICodexKey = isValidApiKey(config.openaiCodexAccessToken);
   const hasAnthropicKey = isValidApiKey(config.anthropicApiKey);
   const hasGeminiKey = isValidApiKey(config.geminiApiKey);
   const hasZaiKey = isValidApiKey(config.zaiApiKey);
 
   // Priority order: OpenAI > Anthropic > Gemini > OpenRouter > Z.AI
-  if (hasOpenAIKey) {
+  if (hasOpenAICodexKey) {
+    return AI_SERVICE_OPENAI_CODEX;
+  } else if (hasOpenAIKey) {
     return AI_SERVICE_OPENAI;
   } else if (hasAnthropicKey) {
     return AI_SERVICE_ANTHROPIC;

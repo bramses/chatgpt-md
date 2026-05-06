@@ -3,6 +3,7 @@ import {
   DEFAULT_ANTHROPIC_CONFIG,
   DEFAULT_GEMINI_CONFIG,
   DEFAULT_LMSTUDIO_CONFIG,
+  DEFAULT_OPENAI_CODEX_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
 } from "./DefaultConfigs";
@@ -164,6 +165,14 @@ export class SettingsMigrationService {
       openaiDefaultMaxTokens: DEFAULT_OPENAI_CONFIG.max_tokens,
       openaiDefaultPresencePenalty: DEFAULT_OPENAI_CONFIG.presence_penalty,
       openaiDefaultFrequencyPenalty: DEFAULT_OPENAI_CONFIG.frequency_penalty,
+
+      // OpenAI Codex OAuth defaults
+      openaiCodexDefaultModel: DEFAULT_OPENAI_CODEX_CONFIG.model,
+      openaiCodexDefaultTemperature: DEFAULT_OPENAI_CODEX_CONFIG.temperature,
+      openaiCodexDefaultTopP: DEFAULT_OPENAI_CODEX_CONFIG.top_p,
+      openaiCodexDefaultMaxTokens: DEFAULT_OPENAI_CODEX_CONFIG.max_tokens,
+      openaiCodexDefaultPresencePenalty: DEFAULT_OPENAI_CODEX_CONFIG.presence_penalty,
+      openaiCodexDefaultFrequencyPenalty: DEFAULT_OPENAI_CODEX_CONFIG.frequency_penalty,
 
       // Anthropic defaults
       anthropicDefaultModel: DEFAULT_ANTHROPIC_CONFIG.model,

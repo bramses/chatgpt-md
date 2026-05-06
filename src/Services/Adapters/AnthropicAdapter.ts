@@ -24,12 +24,17 @@ export class AnthropicAdapter extends BaseProviderAdapter {
   }
 
   getAuthHeaders(apiKey: string): Record<string, string> {
-    return {
-      "x-api-key": apiKey,
+    const headers: Record<string, string> = {
       "anthropic-version": "2023-06-01",
       "anthropic-dangerous-direct-browser-access": "true",
       "Content-Type": "application/json",
     };
+
+    if (apiKey.trim()) {
+      headers["x-api-key"] = apiKey;
+    }
+
+    return headers;
   }
 
   async fetchModels(
@@ -38,14 +43,19 @@ export class AnthropicAdapter extends BaseProviderAdapter {
     settings: ChatGPT_MDSettings | undefined,
     makeGetRequest: (url: string, headers: Record<string, string>, provider: string) => Promise<any>
   ): Promise<string[]> {
-    if (!this.validateApiKey(apiKey)) {
+    const authMode = settings?.anthropicAuthMode || "api_key";
+    const hasApiKey = typeof apiKey === "string" && apiKey.trim().length > 0;
+    const canUseSubscriptionBridgeWithoutKey = authMode === "subscription" && this.isLocalBridgeUrl(url);
+
+    if (!hasApiKey && !canUseSubscriptionBridgeWithoutKey) {
+      this.handleFetchError(new Error("Anthropic API key is required unless subscription mode targets a local bridge"));
       return [];
     }
 
     try {
       const apiPath = this.getApiPathSuffix(url);
       const modelsUrl = `${url.replace(/\/$/, "")}${apiPath}/models`;
-      const headers = this.getAuthHeaders(apiKey!); // Non-null assertion: validated above
+      const headers = this.getAuthHeaders(apiKey || "");
 
       // Anthropic uses requestUrl directly (not through apiService)
       const response = await requestUrl({
@@ -73,5 +83,15 @@ export class AnthropicAdapter extends BaseProviderAdapter {
 
   supportsSystemField(): boolean {
     return true; // Anthropic supports system field in payload
+  }
+
+  private isLocalBridgeUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+      return host === "claude.local" || host === "anthropic.local" || host === "localhost" || host === "127.0.0.1";
+    } catch {
+      return false;
+    }
   }
 }

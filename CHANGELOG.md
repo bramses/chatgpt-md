@@ -1,5 +1,38 @@
 # ChatGPT MD Changelog
 
+## v3.2.0 - OpenAI OAuth Bridge Automation
+
+### 🔐 OpenAI OAuth Bridge Flow
+
+- Added OAuth bridge mode for OpenAI-compatible gateways in plugin settings
+- Added automated OAuth authorization code flow:
+  - Opens browser login from Obsidian
+  - Auto-captures localhost callback on desktop
+  - Exchanges auth code for access token and stores it in settings
+- Added manual fallback callback exchange for environments where auto-capture is unavailable
+
+### ⚙️ Token Lifecycle & Health
+
+- Added optional refresh-token based access token renewal
+- Added token expiry tracking (`openaiOAuthAccessTokenExpiresAt`)
+- Added token health verification action (checks `/v1/models`)
+
+### 🧭 UX & Commands
+
+- Added settings actions in API Keys:
+  - Connect OpenAI OAuth
+  - Exchange Callback URL
+  - Verify OpenAI OAuth Token
+- Added command palette action: `Connect OpenAI OAuth Bridge`
+
+### 🧪 Tests
+
+- Added OpenAI adapter tests for oauth_bridge model-discovery behavior
+
+### 📝 Documentation
+
+- Updated README with automated OAuth bridge setup and fallback flow
+
 ## v3.1.0 - Agents System
 
 ### 🤖 Major Features
