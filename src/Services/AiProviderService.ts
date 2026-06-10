@@ -446,7 +446,7 @@ export class AiProviderService implements IAiApiService {
 
     // Get tools only if toolService is available and settings are provided
     const tools = toolService && settings ? toolService.getToolsForRequest(settings) : undefined;
-    return this.callAiSdkGenerateText(model, config.model, messages, tools, toolService, settings);
+    return this.callAiSdkGenerateText(model, config.model, messages, config, tools, toolService, settings);
   }
 
   /**
@@ -456,6 +456,7 @@ export class AiProviderService implements IAiApiService {
     model: LanguageModel,
     modelName: string,
     messages: Message[],
+    config: AiProviderConfig,
     tools?: unknown,
     toolService?: ToolService,
     settings?: ChatGPT_MDSettings
@@ -469,6 +470,10 @@ export class AiProviderService implements IAiApiService {
       model,
       messages: aiSdkMessages,
     };
+    const providerOptions = this.getProviderOptionsForRequest(config);
+    if (providerOptions) {
+      request.providerOptions = providerOptions;
+    }
 
     const toolsAvailable = tools && typeof tools === "object" && Object.keys(tools as object).length > 0;
     const shouldUseTool = toolsAvailable && settings && this.modelSupportsTools(modelName, settings);
@@ -500,6 +505,7 @@ export class AiProviderService implements IAiApiService {
       const continuationResponse = await generateText({
         model,
         messages: updatedMessages,
+        providerOptions,
       });
 
       return { fullString: continuationResponse.text, mode: "non-streaming" };
@@ -532,7 +538,15 @@ export class AiProviderService implements IAiApiService {
     );
 
     try {
-      const request = this.buildStreamRequest(model, aiSdkMessages, abortController.signal, tools, modelName, settings);
+      const request = this.buildStreamRequest(
+        model,
+        aiSdkMessages,
+        abortController.signal,
+        tools,
+        modelName,
+        config,
+        settings
+      );
 
       handler.startBuffering();
       const result = streamText(request);
@@ -553,7 +567,8 @@ export class AiProviderService implements IAiApiService {
             model,
             aiSdkMessages,
             toolService,
-            modelName
+            modelName,
+            config
           );
         }
       }
@@ -619,6 +634,35 @@ export class AiProviderService implements IAiApiService {
   }
 
   /**
+   * Preserve OpenAI's default system-message handling for api.openai.com, but
+   * keep custom OpenAI-compatible endpoints on the broadly supported system role.
+   */
+  private getProviderOptionsForRequest(
+    config: AiProviderConfig
+  ): Parameters<typeof generateText>[0]["providerOptions"] | undefined {
+    if (this.currentAdapter.type !== "openai") {
+      return undefined;
+    }
+
+    const configuredBaseUrl = this.normalizeBaseUrl(config.url);
+    const defaultOpenAiBaseUrl = this.normalizeBaseUrl(this.currentAdapter.getDefaultBaseUrl());
+
+    if (configuredBaseUrl === defaultOpenAiBaseUrl) {
+      return undefined;
+    }
+
+    return {
+      openai: {
+        systemMessageMode: "system",
+      },
+    };
+  }
+
+  private normalizeBaseUrl(url: string): string {
+    return url.trim().replace(/\/+$/, "").toLowerCase();
+  }
+
+  /**
    * Build stream request with optional tools
    */
   private buildStreamRequest(
@@ -627,6 +671,7 @@ export class AiProviderService implements IAiApiService {
     abortSignal: AbortSignal,
     tools: unknown,
     modelName: string,
+    config: AiProviderConfig,
     settings?: ChatGPT_MDSettings
   ): Parameters<typeof streamText>[0] {
     const request: Parameters<typeof streamText>[0] = {
@@ -634,6 +679,10 @@ export class AiProviderService implements IAiApiService {
       messages,
       abortSignal,
     };
+    const providerOptions = this.getProviderOptionsForRequest(config);
+    if (providerOptions) {
+      request.providerOptions = providerOptions;
+    }
 
     const toolsAvailable = tools && typeof tools === "object" && Object.keys(tools as object).length > 0;
     const shouldUseTool = toolsAvailable && settings && this.modelSupportsTools(modelName, settings);
@@ -689,7 +738,8 @@ export class AiProviderService implements IAiApiService {
     model: LanguageModel,
     aiSdkMessages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
     toolService: ToolService,
-    modelName: string
+    modelName: string,
+    config: AiProviderConfig
   ): Promise<string> {
     // Insert tool notice
     const toolNotice = "_[Tool approval required...]_\n";
@@ -709,7 +759,7 @@ export class AiProviderService implements IAiApiService {
     // Continue with tool results
     const updatedMessages = [...aiSdkMessages, { role: "assistant" as const, content: fullText }, ...contextMessages];
 
-    return this.streamContinuation(model, updatedMessages, handler, fullText);
+    return this.streamContinuation(model, updatedMessages, handler, fullText, config);
   }
 
   /**
@@ -719,9 +769,14 @@ export class AiProviderService implements IAiApiService {
     model: LanguageModel,
     messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
     handler: StreamingHandler,
-    initialText: string
+    initialText: string,
+    config: AiProviderConfig
   ): Promise<string> {
-    const continuationResult = streamText({ model, messages });
+    const continuationResult = streamText({
+      model,
+      messages,
+      providerOptions: this.getProviderOptionsForRequest(config),
+    });
 
     const continuationCursor = handler.getCursor();
     handler.reset(continuationCursor);
