@@ -1,5 +1,5 @@
 import { Message } from "src/Models/Message";
-import { Editor, MarkdownView } from "obsidian";
+import { App, Editor, MarkdownView, TFile } from "obsidian";
 import { ToolService } from "src/Services/ToolService";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "src/Services/EditorService";
@@ -51,7 +51,9 @@ export interface IAiApiService {
     setAtCursor?: boolean,
     apiKey?: string,
     settings?: ChatGPT_MDSettings,
-    toolService?: ToolService
+    toolService?: ToolService,
+    app?: App,
+    targetFile?: TFile | null
   ): Promise<{
     fullString: string;
     mode: string;
@@ -65,7 +67,8 @@ export interface IAiApiService {
     view: MarkdownView,
     settings: ChatGPT_MDSettings,
     messages: string[],
-    editorService: EditorService
+    editorService: EditorService,
+    targetFile?: TFile | null
   ): Promise<string>;
 
   /**

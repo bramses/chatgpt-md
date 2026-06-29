@@ -1,4 +1,4 @@
-import { App, MarkdownView, Notice, TFile } from "obsidian";
+import { App, Notice, TFile } from "obsidian";
 import { createFolderModal } from "src/Utilities/ModalHelpers";
 
 /**
@@ -10,8 +10,7 @@ export class FileService {
   /**
    * Write an inferred title to a file by renaming it
    */
-  async writeInferredTitle(view: MarkdownView, title: string): Promise<void> {
-    const file = view.file;
+  async writeInferredTitle(file: TFile | null, title: string): Promise<void> {
     if (!file) {
       throw new Error("No file is currently open");
     }

@@ -1,4 +1,4 @@
-import { Editor, MarkdownView } from "obsidian";
+import { App, Editor, MarkdownView, TFile } from "obsidian";
 import { Message } from "src/Models/Message";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { EditorService } from "./EditorService";
@@ -187,7 +187,9 @@ export class AiProviderService implements IAiApiService {
     setAtCursor?: boolean,
     apiKey?: string,
     settings?: ChatGPT_MDSettings,
-    toolService?: ToolService
+    toolService?: ToolService,
+    app?: App,
+    targetFile?: TFile | null
   ): Promise<{ fullString: string; mode: string; wasAborted?: boolean }> {
     const config = { ...this.getDefaultConfig(), ...options };
 
@@ -200,7 +202,18 @@ export class AiProviderService implements IAiApiService {
     }
 
     return config.stream && editor
-      ? this.callStreamingAPI(apiKey, messages, config, editor, headingPrefix, setAtCursor, settings, toolService)
+      ? this.callStreamingAPI(
+          apiKey,
+          messages,
+          config,
+          editor,
+          headingPrefix,
+          setAtCursor,
+          settings,
+          toolService,
+          app,
+          targetFile
+        )
       : this.callNonStreamingAPI(apiKey, messages, config, settings, toolService);
   }
 
@@ -211,10 +224,14 @@ export class AiProviderService implements IAiApiService {
     view: MarkdownView,
     settings: ChatGPT_MDSettings,
     messages: string[],
-    editorService: EditorService
+    editorService: EditorService,
+    targetFile?: TFile | null
   ): Promise<string> {
     try {
-      if (!view.file) {
+      // Prefer the file captured when the command was invoked. The live view
+      // may already point at a different note if the user navigated away.
+      const fileToRename = targetFile ?? view.file;
+      if (!fileToRename) {
         throw new Error("No active file found");
       }
 
@@ -233,7 +250,7 @@ export class AiProviderService implements IAiApiService {
 
       if (typeof titleResponse === "string") {
         if (this.isTruncationError(titleResponse)) {
-          this.handleTitleTruncationError(view, titleResponse);
+          this.handleTitleTruncationError(view, titleResponse, fileToRename);
           this.showNoTitleInferredNotification();
           return "";
         }
@@ -243,7 +260,7 @@ export class AiProviderService implements IAiApiService {
         const responseText = responseObj.fullString || "";
 
         if (this.isTruncationError(responseText)) {
-          this.handleTitleTruncationError(view, responseText);
+          this.handleTitleTruncationError(view, responseText, fileToRename);
           this.showNoTitleInferredNotification();
           return "";
         }
@@ -252,7 +269,7 @@ export class AiProviderService implements IAiApiService {
       }
 
       if (titleStr && titleStr.trim().length > 0) {
-        await editorService.writeInferredTitle(view, titleStr.trim());
+        await editorService.writeInferredTitle(fileToRename, titleStr.trim());
         return titleStr.trim();
       } else {
         this.showNoTitleInferredNotification();
@@ -282,7 +299,14 @@ export class AiProviderService implements IAiApiService {
   /**
    * Handle truncation error in title inference
    */
-  private handleTitleTruncationError(view: MarkdownView, errorMessage: string): void {
+  private handleTitleTruncationError(view: MarkdownView, errorMessage: string, targetFile?: TFile | null): void {
+    // Only write the error into the editor if it still displays the note we
+    // were working on; otherwise the user navigated away and we must not edit
+    // the now-active note.
+    if (targetFile && view.file?.path !== targetFile.path) {
+      return;
+    }
+
     const editor = view.editor;
     const lastLine = editor.lastLine();
     const lastLineLength = editor.getLine(lastLine).length;
@@ -428,7 +452,9 @@ export class AiProviderService implements IAiApiService {
     headingPrefix: string,
     setAtCursor?: boolean,
     settings?: ChatGPT_MDSettings,
-    toolService?: ToolService
+    toolService?: ToolService,
+    app?: App,
+    targetFile?: TFile | null
   ): Promise<StreamingResponse> {
     this.ensureProvider(apiKey, config);
     const modelName = this.extractModelName(config.model);
@@ -446,7 +472,9 @@ export class AiProviderService implements IAiApiService {
       setAtCursor,
       tools,
       toolService,
-      settings
+      settings,
+      app,
+      targetFile
     );
   }
 
@@ -541,14 +569,18 @@ export class AiProviderService implements IAiApiService {
     setAtCursor?: boolean,
     tools?: unknown,
     toolService?: ToolService,
-    settings?: ChatGPT_MDSettings
+    settings?: ChatGPT_MDSettings,
+    app?: App,
+    targetFile?: TFile | null
   ): Promise<StreamingResponse> {
     const { aiSdkMessages, handler, abortController } = this.setupStreamingContext(
       messages,
       editor,
       headingPrefix,
       modelName,
-      setAtCursor
+      setAtCursor,
+      app,
+      targetFile
     );
 
     try {
@@ -578,7 +610,14 @@ export class AiProviderService implements IAiApiService {
         }
       }
 
-      if (!setAtCursor) {
+      // Ensure any output redirected to the original file has been committed
+      // before the caller appends the trailing user delimiter.
+      await handler.flushPendingFileWrites();
+
+      // Only move the visible cursor if the editor still shows the note we
+      // streamed into; otherwise the user navigated away and the cursor in the
+      // now-active note must not be touched.
+      if (!setAtCursor && handler.canWriteToEditor()) {
         editor.setCursor(handler.getCursor());
       }
 
@@ -588,7 +627,7 @@ export class AiProviderService implements IAiApiService {
         wasAborted: this.apiService.wasAborted(),
       };
     } catch (err: any) {
-      return this.handleStreamError(err, handler, editor);
+      return this.handleStreamError(err, handler);
     }
   }
 
@@ -600,7 +639,9 @@ export class AiProviderService implements IAiApiService {
     editor: Editor,
     headingPrefix: string,
     modelName: string,
-    setAtCursor?: boolean
+    setAtCursor?: boolean,
+    app?: App,
+    targetFile?: TFile | null
   ) {
     const aiSdkMessages = this.prepareAiSdkMessages(messages);
     const cursorPositions = insertAssistantHeader(editor, headingPrefix, modelName);
@@ -609,7 +650,7 @@ export class AiProviderService implements IAiApiService {
     this.apiService.setAbortController(abortController);
 
     const initialCursor = setAtCursor ? cursorPositions.initialCursor : cursorPositions.newCursor;
-    const handler = new StreamingHandler(editor, initialCursor, setAtCursor);
+    const handler = new StreamingHandler(editor, initialCursor, setAtCursor, undefined, app, targetFile);
 
     return { aiSdkMessages, handler, abortController };
   }
@@ -617,11 +658,13 @@ export class AiProviderService implements IAiApiService {
   /**
    * Handle streaming error
    */
-  private handleStreamError(err: any, handler: StreamingHandler, editor: Editor): StreamingResponse {
+  private async handleStreamError(err: any, handler: StreamingHandler): Promise<StreamingResponse> {
     handler.stopBuffering();
     const errorMessage = this.formatStreamError(err);
-    const errorCursor = handler.getCursor();
-    editor.replaceRange(errorMessage, errorCursor);
+    // Route the error to wherever the stream was going (editor or, if the user
+    // navigated away mid-stream, the original file).
+    handler.writeImmediate(errorMessage);
+    await handler.flushPendingFileWrites();
     return { fullString: errorMessage, mode: "streaming" };
   }
 
@@ -711,20 +754,26 @@ export class AiProviderService implements IAiApiService {
     toolService: ToolService,
     modelName: string
   ): Promise<string> {
-    // Insert tool notice
+    // Insert tool notice (only when the editor still shows the streamed note;
+    // if the user navigated away we skip the transient placeholder).
+    const canEdit = handler.canWriteToEditor();
     const toolNotice = "_[Tool approval required...]_\n";
-    const indicatorCursor = handler.getCursor();
-    editor.replaceRange(toolNotice, indicatorCursor);
-    handler.updateCursorAfterInsert(toolNotice, indicatorCursor);
+    if (canEdit) {
+      const indicatorCursor = handler.getCursor();
+      editor.replaceRange(toolNotice, indicatorCursor);
+      handler.updateCursorAfterInsert(toolNotice, indicatorCursor);
+    }
 
     // Execute tools
     const toolResults = await toolService.handleToolCalls(toolCalls, modelName);
     const { contextMessages } = await toolService.processToolResults(toolCalls, toolResults, modelName);
 
     // Clean up notice
-    const toolCursor = handler.getCursor();
-    editor.replaceRange("", { line: toolCursor.line - 1, ch: 0 }, toolCursor);
-    handler.setCursor({ line: toolCursor.line - 1, ch: 0 });
+    if (canEdit && handler.canWriteToEditor()) {
+      const toolCursor = handler.getCursor();
+      editor.replaceRange("", { line: toolCursor.line - 1, ch: 0 }, toolCursor);
+      handler.setCursor({ line: toolCursor.line - 1, ch: 0 });
+    }
 
     // Continue with tool results
     const updatedMessages = [...aiSdkMessages, { role: "assistant" as const, content: fullText }, ...contextMessages];

@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView } from "obsidian";
+import { App, Editor, MarkdownView, TFile } from "obsidian";
 import { ChatGPT_MDSettings, MergedFrontmatterConfig } from "src/Models/Config";
 import { FileService } from "./FileService";
 import { MessageService } from "./MessageService";
@@ -44,8 +44,8 @@ export class EditorService {
 
   // FileService delegations
 
-  async writeInferredTitle(view: MarkdownView, title: string): Promise<void> {
-    return this.fileService.writeInferredTitle(view, title);
+  async writeInferredTitle(file: TFile | null, title: string): Promise<void> {
+    return this.fileService.writeInferredTitle(file, title);
   }
 
   async ensureFolderExists(folderPath: string, folderType: string): Promise<boolean> {
@@ -145,8 +145,13 @@ export class EditorService {
 
   // ResponseProcessingService delegations
 
-  processResponse(editor: Editor, response: { fullString: string; mode: string }, settings: ChatGPT_MDSettings): void {
-    this.messageService.processResponse(editor, response, settings);
+  processResponse(
+    editor: Editor,
+    response: { fullString: string; mode: string },
+    settings: ChatGPT_MDSettings,
+    targetFile?: TFile | null
+  ): void {
+    this.messageService.processResponse(editor, response, settings, this.app, targetFile);
   }
 
   /**

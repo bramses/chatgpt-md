@@ -1,4 +1,4 @@
-import { Editor } from "obsidian";
+import { App, Editor, TFile } from "obsidian";
 import { Message } from "src/Models/Message";
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { FileService } from "./FileService";
@@ -16,6 +16,7 @@ import {
   removeYAMLFrontMatter,
   splitMessages,
 } from "../Utilities/MessageHelpers";
+import { getFileForEditor } from "../Utilities/EditorHelpers";
 
 /**
  * Service responsible for all message-related operations
@@ -166,11 +167,17 @@ export class MessageService {
   /**
    * Process an AI response and update the editor
    */
-  processResponse(editor: Editor, response: any, settings: ChatGPT_MDSettings): void {
+  processResponse(
+    editor: Editor,
+    response: any,
+    settings: ChatGPT_MDSettings,
+    app?: App,
+    targetFile?: TFile | null
+  ): void {
     if (response.mode === "streaming") {
       // Only add user section if streaming was not aborted
       if (!response.wasAborted) {
-        this.processStreamingResponse(editor, settings);
+        this.processStreamingResponse(editor, settings, app, targetFile);
       }
     } else {
       this.processStandardResponse(editor, response, settings);
@@ -180,9 +187,22 @@ export class MessageService {
   /**
    * Process a streaming response by adding user delimiter
    */
-  private processStreamingResponse(editor: Editor, settings: ChatGPT_MDSettings): void {
+  private processStreamingResponse(
+    editor: Editor,
+    settings: ChatGPT_MDSettings,
+    app?: App,
+    targetFile?: TFile | null
+  ): void {
     const headingPrefix = getHeadingPrefix(settings.headingLevel);
     const userHeader = getHeaderRole(headingPrefix, ROLE_USER);
+
+    // If the user navigated to a different note while streaming, the live
+    // editor now shows the wrong file. Append the delimiter to the original
+    // file directly instead of corrupting the now-active note.
+    if (app && targetFile && getFileForEditor(app, editor)?.path !== targetFile.path) {
+      void app.vault.process(targetFile, (data) => data + userHeader);
+      return;
+    }
 
     // Get cursor position set by ApiResponseParser after streaming completes
     const cursorBeforeHeader = editor.getCursor();

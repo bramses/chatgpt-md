@@ -45,6 +45,11 @@ export class ChatHandler {
     const settings = settingsService.getSettings();
     const frontmatter: MergedFrontmatterConfig = await editorService.getFrontmatter(view, settings, this.services.app);
 
+    // Capture the originating file now. Obsidian reuses one editor per leaf and
+    // swaps its document when the user navigates to another note, so we must
+    // pin all output to this file rather than to the live editor/view.
+    const targetFile = view?.file ?? null;
+
     const aiService = this.services.aiProviderService();
     this.stopStreamingHandler.setCurrentAiService(aiService);
 
@@ -87,14 +92,16 @@ export class ChatHandler {
         settings.generateAtCursor,
         apiKeyToUse,
         settings,
-        toolServiceToUse
+        toolServiceToUse,
+        this.services.app,
+        targetFile
       );
 
-      editorService.processResponse(editor, response, settings);
+      editorService.processResponse(editor, response, settings, targetFile);
 
       if (
         settings.autoInferTitle &&
-        isTitleTimestampFormat(view?.file?.basename, settings.dateFormat) &&
+        isTitleTimestampFormat(targetFile?.basename, settings.dateFormat) &&
         messagesWithRoleAndMessage.length > MIN_AUTO_INFER_MESSAGES
       ) {
         // Create a settings object with the correct API key and model
@@ -119,7 +126,7 @@ export class ChatHandler {
           }
         }
 
-        await aiService.inferTitle(view, settingsWithApiKey as ChatGPT_MDSettings, messages, editorService);
+        await aiService.inferTitle(view, settingsWithApiKey as ChatGPT_MDSettings, messages, editorService, targetFile);
       }
     } catch (err) {
       if (Platform.isMobile) {
