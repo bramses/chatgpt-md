@@ -6,6 +6,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_REQUESTY,
   AI_SERVICE_ZAI,
   AiServiceType,
 } from "src/Constants";
@@ -16,6 +17,7 @@ import {
   DEFAULT_OLLAMA_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
+  DEFAULT_REQUESTY_CONFIG,
   DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
 import { ProviderAdapter } from "src/Services/Adapters/ProviderAdapter";
@@ -26,6 +28,7 @@ import { GeminiAdapter } from "src/Services/Adapters/GeminiAdapter";
 import { LmStudioAdapter } from "src/Services/Adapters/LmStudioAdapter";
 import { OllamaAdapter } from "src/Services/Adapters/OllamaAdapter";
 import { OpenRouterAdapter } from "src/Services/Adapters/OpenRouterAdapter";
+import { RequestyAdapter } from "src/Services/Adapters/RequestyAdapter";
 import { ZaiAdapter } from "src/Services/Adapters/ZaiAdapter";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -33,17 +36,24 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 
-export type ApiKeySettingKey = "apiKey" | "openrouterApiKey" | "anthropicApiKey" | "geminiApiKey" | "zaiApiKey";
+export type ApiKeySettingKey =
+  | "apiKey"
+  | "openrouterApiKey"
+  | "requestyApiKey"
+  | "anthropicApiKey"
+  | "geminiApiKey"
+  | "zaiApiKey";
 export type SecretIdSettingKey =
   | "apiKeySecretId"
   | "openrouterApiKeySecretId"
+  | "requestyApiKeySecretId"
   | "anthropicApiKeySecretId"
   | "geminiApiKeySecretId"
   | "zaiApiKeySecretId"
   | "webSearchApiKeySecretId";
 
 export interface CredentialDefinition {
-  category: "openai" | "openrouter" | "anthropic" | "gemini" | "zai" | "web-search";
+  category: "openai" | "openrouter" | "requesty" | "anthropic" | "gemini" | "zai" | "web-search";
   legacySetting: ApiKeySettingKey | "webSearchApiKey";
   secretIdSetting: SecretIdSettingKey;
   ownedSecretId: string;
@@ -51,7 +61,14 @@ export interface CredentialDefinition {
 }
 
 export type UrlSettingKey =
-  "openaiUrl" | "openrouterUrl" | "ollamaUrl" | "lmstudioUrl" | "anthropicUrl" | "geminiUrl" | "zaiUrl";
+  | "openaiUrl"
+  | "openrouterUrl"
+  | "requestyUrl"
+  | "ollamaUrl"
+  | "lmstudioUrl"
+  | "anthropicUrl"
+  | "geminiUrl"
+  | "zaiUrl";
 
 export interface ProviderDefinition {
   id: AiServiceType;
@@ -137,6 +154,34 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
       max_tokens: settings.openrouterDefaultMaxTokens,
       presence_penalty: settings.openrouterDefaultPresencePenalty,
       frequency_penalty: settings.openrouterDefaultFrequencyPenalty,
+    }),
+  },
+  {
+    id: AI_SERVICE_REQUESTY,
+    label: "Requesty",
+    requiresApiKey: true,
+    local: false,
+    apiKeySetting: "requestyApiKey",
+    credential: {
+      category: "requesty",
+      legacySetting: "requestyApiKey",
+      secretIdSetting: "requestyApiKeySecretId",
+      ownedSecretId: "chatgpt-md-requesty-api-key",
+      label: "Requesty",
+    },
+    urlSetting: "requestyUrl",
+    defaultUrl: DEFAULT_REQUESTY_CONFIG.url,
+    defaultConfig: DEFAULT_REQUESTY_CONFIG,
+    createAdapter: () => new RequestyAdapter(),
+    createProviderFactory: () => createOpenAICompatible,
+    getFrontmatterFields: (settings) => ({
+      model: settings.requestyDefaultModel,
+      url: settings.requestyUrl,
+      temperature: settings.requestyDefaultTemperature,
+      top_p: settings.requestyDefaultTopP,
+      max_tokens: settings.requestyDefaultMaxTokens,
+      presence_penalty: settings.requestyDefaultPresencePenalty,
+      frequency_penalty: settings.requestyDefaultFrequencyPenalty,
     }),
   },
   {

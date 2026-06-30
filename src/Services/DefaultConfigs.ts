@@ -5,6 +5,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_REQUESTY,
   AI_SERVICE_ZAI,
 } from "src/Constants";
 
@@ -73,6 +74,27 @@ export const DEFAULT_OPENROUTER_CONFIG = {
   title: "Untitled",
   top_p: 1,
   url: "https://openrouter.ai",
+};
+
+/**
+ * Default configuration for Requesty
+ * Requesty is an OpenAI-compatible LLM gateway (https://requesty.ai) using
+ * provider/model naming, similar to OpenRouter.
+ */
+export const DEFAULT_REQUESTY_CONFIG = {
+  aiService: AI_SERVICE_REQUESTY,
+  frequency_penalty: 0.5,
+  max_tokens: 400,
+  model: "requesty@openai/gpt-4.1-mini",
+  requestyApiKey: "",
+  presence_penalty: 0.5,
+  stream: true,
+  system_commands: null,
+  tags: [],
+  temperature: 0.7,
+  title: "Untitled",
+  top_p: 1,
+  url: "https://router.requesty.ai",
 };
 
 /**

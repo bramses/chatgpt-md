@@ -6,6 +6,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_REQUESTY,
   AI_SERVICE_ZAI,
 } from "src/Constants";
 
@@ -26,6 +27,7 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
     ["ollama@", AI_SERVICE_OLLAMA],
     ["lmstudio@", AI_SERVICE_LMSTUDIO],
     ["openrouter@", AI_SERVICE_OPENROUTER],
+    ["requesty@", AI_SERVICE_REQUESTY],
     ["zai@", AI_SERVICE_ZAI],
     ["local@", AI_SERVICE_OLLAMA], // backward compatibility
   ];
@@ -45,6 +47,11 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
     // OpenRouter detection
     if (baseUrl.includes("openrouter.ai")) {
       return AI_SERVICE_OPENROUTER;
+    }
+
+    // Requesty detection
+    if (baseUrl.includes("requesty.ai")) {
+      return AI_SERVICE_REQUESTY;
     }
 
     // LM Studio detection

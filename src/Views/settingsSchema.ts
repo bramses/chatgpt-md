@@ -8,6 +8,7 @@ import {
   DEFAULT_OLLAMA_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
+  DEFAULT_REQUESTY_CONFIG,
   DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
 
@@ -60,6 +61,15 @@ const SETTINGS_SCHEMA: SettingDefinition[] = [
     type: "credential",
     secretIdSetting: "openrouterApiKeySecretId",
     placeholder: "your openRouter API Key",
+    group: "API Keys",
+  },
+  {
+    id: "requestyApiKey",
+    name: "Requesty API Key",
+    description: "API Key for Requesty (OpenAI-compatible LLM gateway). Get your key at https://app.requesty.ai/api-keys",
+    type: "credential",
+    secretIdSetting: "requestyApiKeySecretId",
+    placeholder: "your Requesty API Key",
     group: "API Keys",
   },
   {
@@ -302,6 +312,47 @@ const SETTINGS_SCHEMA: SettingDefinition[] = [
     ["openrouterDefaultTopP", "Top P", "1"],
     ["openrouterDefaultPresencePenalty", "Presence Penalty", "0.5"],
     ["openrouterDefaultFrequencyPenalty", "Frequency Penalty", "0.5"],
+  ]),
+
+  // Requesty Defaults
+  {
+    id: "requestyUrl",
+    name: "API URL",
+    description: `URL for Requesty API\nDefault URL: ${DEFAULT_REQUESTY_CONFIG.url}`,
+    type: "text",
+    placeholder: DEFAULT_REQUESTY_CONFIG.url,
+    group: "Requesty",
+  },
+  {
+    id: "requestyDefaultModel",
+    name: "Default Model",
+    description: "Default model for Requesty chats. Model ids use provider/model naming, see https://app.requesty.ai/model-library",
+    type: "text",
+    placeholder: DEFAULT_REQUESTY_CONFIG.model,
+    group: "Requesty",
+  },
+  {
+    id: "requestyDefaultTemperature",
+    valueType: "number",
+    name: "Default Temperature",
+    description: "Default temperature for Requesty chats (0.0 to 2.0)",
+    type: "text",
+    placeholder: "0.7",
+    group: "Requesty",
+  },
+  {
+    id: "requestyDefaultMaxTokens",
+    valueType: "number",
+    name: "Default Max Tokens",
+    description: "Default max tokens for Requesty chats",
+    type: "text",
+    placeholder: "400",
+    group: "Requesty",
+  },
+  ...numericProviderSettings("Requesty", [
+    ["requestyDefaultTopP", "Top P", "1"],
+    ["requestyDefaultPresencePenalty", "Presence Penalty", "0.5"],
+    ["requestyDefaultFrequencyPenalty", "Frequency Penalty", "0.5"],
   ]),
 
   // Z.AI Defaults
