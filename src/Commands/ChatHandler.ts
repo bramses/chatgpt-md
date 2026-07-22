@@ -7,6 +7,8 @@ import { Message } from "src/Models/Message";
 import {
   AI_SERVICE_OPENROUTER,
   CALL_CHATGPT_API_COMMAND_ID,
+  CALL_CHATGPT_API_SELECTION_ONLY_COMMAND_ID,
+  MATH_DELIMITERS_SYSTEM_MESSAGE,
   MIN_AUTO_INFER_MESSAGES,
   NOTICE_DURATION_LONG_MS,
   NOTICE_DURATION_SHORT_MS,
@@ -37,10 +39,18 @@ export class ChatHandler {
     };
   }
 
+  static getSelectionOnlyCommand() {
+    return {
+      id: CALL_CHATGPT_API_SELECTION_ONLY_COMMAND_ID,
+      name: "Chat (Selection Only)",
+      icon: "highlighter",
+    };
+  }
+
   /**
    * Execute the chat command
    */
-  async execute(editor: Editor, view: MarkdownView): Promise<void> {
+  async execute(editor: Editor, view: MarkdownView, options?: { selectionOnly?: boolean }): Promise<void> {
     const { editorService, settingsService, apiAuthService, toolService } = this.services;
     const settings = settingsService.getSettings();
     const frontmatter: MergedFrontmatterConfig = await editorService.getFrontmatter(view, settings, this.services.app);
@@ -49,14 +59,37 @@ export class ChatHandler {
     this.stopStreamingHandler.setCurrentAiService(aiService);
 
     try {
-      // Get messages from editor
-      const { messagesWithRole: messagesWithRoleAndMessage, messages } = await editorService.getMessagesFromEditor(
-        editor,
-        settings
-      );
+      const selectionOnly = options?.selectionOnly ?? settings.sendSelectedTextOnly;
+
+      // Get messages from editor (full note) OR selection-only mode (user selection only)
+      let messagesWithRoleAndMessage: Message[];
+      let messages: string[];
+
+      if (selectionOnly) {
+        const selectedText = editor.getSelection();
+        if (!selectedText || selectedText.trim().length === 0) {
+          new Notice(`${PLUGIN_PREFIX} No text selected. Please select the content you want to send.`);
+          return;
+        }
+
+        // If user is using selection-only prompting and also wants "generate at cursor",
+        // ensure insertion happens AFTER the selected text (not replacing it).
+        if (settings.generateAtCursor) {
+          // Obsidian Editor supports getCursor("to") to get the end of the selection.
+          const selectionEnd = (editor as unknown as { getCursor: (pos?: any) => any }).getCursor("to");
+          editor.setCursor(selectionEnd);
+        }
+
+        messagesWithRoleAndMessage = [{ role: "user", content: selectedText }];
+        messages = [selectedText];
+      } else {
+        const parsed = await editorService.getMessagesFromEditor(editor, settings);
+        messagesWithRoleAndMessage = parsed.messagesWithRole;
+        messages = parsed.messages;
+      }
 
       // Prepend system messages (agent body + system_commands)
-      const systemMessages = this.buildSystemMessages(frontmatter);
+      const systemMessages = this.buildSystemMessages(frontmatter, settings);
       if (systemMessages.length > 0) {
         messagesWithRoleAndMessage.unshift(...systemMessages);
       }
@@ -134,8 +167,13 @@ export class ChatHandler {
   /**
    * Build system messages from agent body and system_commands frontmatter
    */
-  private buildSystemMessages(frontmatter: MergedFrontmatterConfig): Message[] {
+  private buildSystemMessages(frontmatter: MergedFrontmatterConfig, settings: ChatGPT_MDSettings): Message[] {
     const systemMessages: Message[] = [];
+
+    // Plugin system message (user-configurable)
+    if (settings.pluginSystemMessage && settings.pluginSystemMessage.trim()) {
+      systemMessages.push({ role: "system", content: settings.pluginSystemMessage });
+    }
 
     // Agent body as system message
     const agentBody = frontmatter._agentSystemMessage as string | undefined;
@@ -151,6 +189,9 @@ export class ChatHandler {
         }
       }
     }
+
+    // Ensure LaTeX math renders correctly in Obsidian
+    systemMessages.push({ role: "system", content: MATH_DELIMITERS_SYSTEM_MESSAGE });
 
     return systemMessages;
   }

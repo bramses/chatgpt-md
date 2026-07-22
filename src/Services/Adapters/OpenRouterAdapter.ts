@@ -28,6 +28,12 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     return "https://openrouter.ai";
   }
 
+  // OpenRouter's /models endpoint is typically public; allow model listing without an API key.
+  // Chat/completions still require a key and will fail normally if not provided.
+  override requiresApiKey(): boolean {
+    return false;
+  }
+
   getAuthHeaders(apiKey: string): Record<string, string> {
     return {
       Authorization: `Bearer ${apiKey}`,
@@ -57,12 +63,8 @@ export class OpenRouterAdapter extends BaseProviderAdapter {
     settings: ChatGPT_MDSettings | undefined,
     makeGetRequest: (url: string, headers: Record<string, string>, provider: string) => Promise<any>
   ): Promise<string[]> {
-    if (!this.validateApiKey(apiKey)) {
-      return [];
-    }
-
     try {
-      const headers = this.getAuthHeaders(apiKey!); // Non-null assertion: validated above
+      const headers = apiKey ? this.getAuthHeaders(apiKey) : {};
       const apiPath = this.getApiPathSuffix(url);
       const models = await makeGetRequest(`${url}${apiPath}/models`, headers, this.type);
 

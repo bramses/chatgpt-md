@@ -74,6 +74,8 @@ export interface ChatBehaviorSettings {
   stream: boolean;
   /** Whether to generate text at cursor instead of end of file */
   generateAtCursor: boolean;
+  /** When enabled, only send the editor's current selection to the AI (requires a non-empty selection) */
+  sendSelectedTextOnly: boolean;
   /** Whether to automatically infer title after 4 messages have been exchanged */
   autoInferTitle: boolean;
   /** Whether to enable AI tool calling (vault search, file read) */
@@ -286,6 +288,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   // Chat Behavior
   stream: true,
   generateAtCursor: false,
+  sendSelectedTextOnly: false,
   autoInferTitle: false,
   enableToolCalling: false,
   toolEnabledModels: getDefaultToolWhitelist(),

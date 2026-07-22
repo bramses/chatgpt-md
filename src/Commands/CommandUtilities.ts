@@ -94,20 +94,20 @@ export async function fetchAvailableModels(
     }
 
     // Conditionally add OpenRouter promise
-    if (isValidApiKey(openrouterApiKey)) {
-      promises.push(
-        withTimeout(
-          aiService.fetchAvailableModels(
-            urls[AI_SERVICE_OPENROUTER],
-            openrouterApiKey,
-            settingsService.getSettings(),
-            "openrouter"
-          ),
-          FETCH_MODELS_TIMEOUT_MS,
-          []
-        )
-      );
-    }
+    // OpenRouter model listing is typically public; if the endpoint requires a key,
+    // the adapter will gracefully return an empty list.
+    promises.push(
+      withTimeout(
+        aiService.fetchAvailableModels(
+          urls[AI_SERVICE_OPENROUTER],
+          isValidApiKey(openrouterApiKey) ? openrouterApiKey : undefined,
+          settingsService.getSettings(),
+          "openrouter"
+        ),
+        FETCH_MODELS_TIMEOUT_MS,
+        []
+      )
+    );
 
     // Conditionally add Anthropic promise
     const anthropicApiKey = apiAuthService.getApiKey(settingsService.getSettings(), AI_SERVICE_ANTHROPIC);

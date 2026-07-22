@@ -38,6 +38,7 @@ export const API_ENDPOINTS = {
 export const ADD_COMMENT_BLOCK_COMMAND_ID = "add-comment-block";
 export const ADD_HR_COMMAND_ID = "add-hr";
 export const CALL_CHATGPT_API_COMMAND_ID = "call-chatgpt-api";
+export const CALL_CHATGPT_API_SELECTION_ONLY_COMMAND_ID = "call-chatgpt-api-selection-only";
 export const STOP_STREAMING_COMMAND_ID = "stop-streaming";
 export const MOVE_TO_CHAT_COMMAND_ID = "move-to-chat";
 export const INFER_TITLE_COMMAND_ID = "infer-title";
@@ -87,6 +88,10 @@ export const ROLE_USER = "user";
 export const FETCH_MODELS_TIMEOUT_MS = 6000;
 export const NOTICE_DURATION_SHORT_MS = 6000; // Short notification duration (6 seconds)
 export const NOTICE_DURATION_LONG_MS = 9000; // Long notification duration (9 seconds)
+
+// Formatting hint to ensure Obsidian renders LaTeX math correctly
+export const MATH_DELIMITERS_SYSTEM_MESSAGE =
+  "When writing LaTeX math in Markdown, always wrap inline math with `$...$` and display math with `$$...$$` (do not omit the dollar delimiters).";
 
 // Plugin-specific system message to help LLM understand the context
 export const PLUGIN_SYSTEM_MESSAGE = `You're chatting with a user in Obsidian, a knowledge management system where they organize notes in interconnected Markdown files. This conversation appears as a chat within their active document.
