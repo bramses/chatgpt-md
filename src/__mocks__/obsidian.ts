@@ -1,4 +1,5 @@
 // Mock Obsidian API for testing
+import { jest } from "@jest/globals";
 
 export class App {
   workspace = {

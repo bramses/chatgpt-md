@@ -29,8 +29,10 @@ export class VaultSearchService {
   /**
    * Search vault for files matching query
    *
-   * Searches both filename and content. Supports multi-word queries with OR logic:
+   * Searches filename, file path (including folder names), and content. Supports
+   * multi-word queries with OR logic:
    * - "project plan" matches files containing "project" OR "plan"
+   * - "LectureNotes" matches files inside the "LectureNotes" folder
    * - Words are split by whitespace
    *
    * Excludes the current file from search results to avoid redundancy.
@@ -70,11 +72,12 @@ export class VaultSearchService {
       }
 
       const lowerBasename = file.basename.toLowerCase();
+      const lowerPath = file.path.toLowerCase();
 
-      // Check if filename matches any query word
+      // Check if filename or path (including folder names) matches any query word
       let filenameMatch = false;
       for (const word of queryWords) {
-        if (lowerBasename.includes(word)) {
+        if (lowerBasename.includes(word) || lowerPath.includes(word)) {
           filenameMatch = true;
           break;
         }

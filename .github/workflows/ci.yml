@@ -23,7 +23,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Lint
-        run: yarn lint || echo "Linting found issues (warnings/errors), but continuing..."
+        run: yarn lint
 
       - name: Type check
         run: yarn tsc --noEmit --skipLibCheck
@@ -34,8 +34,17 @@ jobs:
       - name: Build
         run: yarn build
 
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-build
+          path: |
+            main.js
+            manifest.json
+            styles.css
+
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           files: ./coverage/lcov.info
           fail_ci_if_error: false
