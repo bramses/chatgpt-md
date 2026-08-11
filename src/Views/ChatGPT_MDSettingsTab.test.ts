@@ -7,12 +7,12 @@ function numericSetting(id: SettingDefinition["id"], name = "Value"): SettingDef
 }
 
 describe("credential settings schema", () => {
-  it("associates all six legacy fields with distinct reference fields", () => {
+  it("associates all seven legacy fields with distinct reference fields", () => {
     const credentials = createSettingsSchema(DEFAULT_SETTINGS).filter((setting) => setting.type === "credential");
 
-    expect(credentials).toHaveLength(6);
-    expect(new Set(credentials.map((setting) => setting.id)).size).toBe(6);
-    expect(new Set(credentials.map((setting) => setting.secretIdSetting)).size).toBe(6);
+    expect(credentials).toHaveLength(7);
+    expect(new Set(credentials.map((setting) => setting.id)).size).toBe(7);
+    expect(new Set(credentials.map((setting) => setting.secretIdSetting)).size).toBe(7);
   });
 });
 

@@ -55,7 +55,7 @@ describe("ApiAuthService secure credentials", () => {
     ).toBe(false);
   });
 
-  it("migrates all six categories independently and persists references only", async () => {
+  it("migrates all seven categories independently and persists references only", async () => {
     const { storage, service } = createSupported();
     const settings = allPlaintextSettings();
     const snapshots: ChatGPT_MDSettings[] = [];
@@ -65,7 +65,7 @@ describe("ApiAuthService secure credentials", () => {
     });
 
     expect(summary.results.every((result) => result.status === "migrated")).toBe(true);
-    expect(snapshots).toHaveLength(6);
+    expect(snapshots).toHaveLength(7);
     for (const definition of getCredentialDefinitions()) {
       expect(settings[definition.legacySetting]).toBe("");
       expect(settings[definition.secretIdSetting]).toBe(definition.ownedSecretId);

@@ -5,6 +5,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_ORCAROUTER,
   AI_SERVICE_ZAI,
 } from "src/Constants";
 
@@ -121,4 +122,20 @@ export const DEFAULT_ZAI_CONFIG = {
   title: "Untitled",
   top_p: 1,
   url: "https://api.z.ai",
+};
+
+/**
+ * Default configuration for OrcaRouter
+ */
+export const DEFAULT_ORCAROUTER_CONFIG = {
+  aiService: AI_SERVICE_ORCAROUTER,
+  max_tokens: 400,
+  model: "orcarouter@orcarouter/auto",
+  stream: true,
+  system_commands: null,
+  tags: [],
+  temperature: 0.7,
+  title: "Untitled",
+  top_p: 1,
+  url: "https://api.orcarouter.ai",
 };

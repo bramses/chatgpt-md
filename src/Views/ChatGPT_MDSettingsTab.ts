@@ -21,6 +21,7 @@ const NUMERIC_RANGES: Partial<Record<keyof ChatGPT_MDSettings, { min: number; ma
   geminiDefaultTemperature: { min: 0, max: 2 },
   openrouterDefaultTemperature: { min: 0, max: 2 },
   zaiDefaultTemperature: { min: 0, max: 1 },
+  orcarouterDefaultTemperature: { min: 0, max: 2 },
   ollamaDefaultTemperature: { min: 0, max: 2 },
   lmstudioDefaultTemperature: { min: 0, max: 2 },
   openaiDefaultTopP: { min: 0, max: 1 },

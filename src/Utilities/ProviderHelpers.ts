@@ -6,6 +6,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_ORCAROUTER,
   AI_SERVICE_ZAI,
 } from "src/Constants";
 
@@ -27,6 +28,7 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
     ["lmstudio@", AI_SERVICE_LMSTUDIO],
     ["openrouter@", AI_SERVICE_OPENROUTER],
     ["zai@", AI_SERVICE_ZAI],
+    ["orcarouter@", AI_SERVICE_ORCAROUTER],
     ["local@", AI_SERVICE_OLLAMA], // backward compatibility
   ];
 
@@ -71,6 +73,11 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
     if (baseUrl.includes("api.z.ai")) {
       return AI_SERVICE_ZAI;
     }
+
+    // OrcaRouter API detection
+    if (baseUrl.includes("api.orcarouter.ai")) {
+      return AI_SERVICE_ORCAROUTER;
+    }
   }
 
   return undefined;
@@ -78,7 +85,7 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
 
 /**
  * Determine the AI provider from available API keys
- * Uses a priority order: OpenAI > Anthropic > Gemini > OpenRouter > Z.AI
+ * Uses a priority order: OpenAI > Anthropic > Gemini > OpenRouter > Z.AI > OrcaRouter
  */
 export const aiProviderFromKeys = (config: Record<string, unknown>): string | null => {
   const key = (name: string): string | undefined =>
@@ -88,8 +95,9 @@ export const aiProviderFromKeys = (config: Record<string, unknown>): string | nu
   const hasAnthropicKey = isValidApiKey(key("anthropicApiKey"));
   const hasGeminiKey = isValidApiKey(key("geminiApiKey"));
   const hasZaiKey = isValidApiKey(key("zaiApiKey"));
+  const hasOrcaRouterKey = isValidApiKey(key("orcarouterApiKey"));
 
-  // Priority order: OpenAI > Anthropic > Gemini > OpenRouter > Z.AI
+  // Priority order: OpenAI > Anthropic > Gemini > OpenRouter > Z.AI > OrcaRouter
   if (hasOpenAIKey) {
     return AI_SERVICE_OPENAI;
   } else if (hasAnthropicKey) {
@@ -100,6 +108,8 @@ export const aiProviderFromKeys = (config: Record<string, unknown>): string | nu
     return AI_SERVICE_OPENROUTER;
   } else if (hasZaiKey) {
     return AI_SERVICE_ZAI;
+  } else if (hasOrcaRouterKey) {
+    return AI_SERVICE_ORCAROUTER;
   }
 
   return null;

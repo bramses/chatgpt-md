@@ -11,6 +11,7 @@ import {
   DEFAULT_OLLAMA_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
+  DEFAULT_ORCAROUTER_CONFIG,
   DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
 import { getDefaultToolWhitelist } from "./DefaultToolWhitelist";
@@ -57,6 +58,9 @@ export interface ApiKeySettings {
   /** API Key for Z.AI - used for GLM models (both Standard API and Coding Plan) */
   zaiApiKey: string;
   zaiApiKeySecretId: string;
+  /** API Key for OrcaRouter - used for model routing via the OrcaRouter gateway */
+  orcarouterApiKey: string;
+  orcarouterApiKeySecretId: string;
 }
 
 /**
@@ -177,6 +181,18 @@ export interface ZaiFrontmatterSettings {
 }
 
 /**
+ * Provider-specific frontmatter settings for OrcaRouter
+ */
+export interface OrcaRouterFrontmatterSettings {
+  /** Default model for OrcaRouter chats */
+  orcarouterDefaultModel: string;
+  /** Default temperature for OrcaRouter chats */
+  orcarouterDefaultTemperature: number;
+  /** Default max tokens for OrcaRouter chats */
+  orcarouterDefaultMaxTokens: number;
+}
+
+/**
  * Chat template settings
  */
 export interface TemplateSettings {
@@ -202,6 +218,8 @@ export interface ServiceUrlSettings {
   geminiUrl: string;
   /** URL for Z.AI API (Standard: /api/paas/v4, Coding Plan: /api/anthropic) */
   zaiUrl: string;
+  /** URL for OrcaRouter API */
+  orcarouterUrl: string;
 }
 
 /**
@@ -238,7 +256,8 @@ export interface ChatGPT_MDSettings
     OpenRouterFrontmatterSettings,
     OllamaFrontmatterSettings,
     LmStudioFrontmatterSettings,
-    ZaiFrontmatterSettings {}
+    ZaiFrontmatterSettings,
+    OrcaRouterFrontmatterSettings {}
 
 /**
  * Merged frontmatter configuration type
@@ -280,6 +299,8 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   geminiApiKeySecretId: "",
   zaiApiKey: "",
   zaiApiKeySecretId: "",
+  orcarouterApiKey: "",
+  orcarouterApiKeySecretId: "",
 
   // Service URLs
   openaiUrl: DEFAULT_OPENAI_CONFIG.url,
@@ -289,6 +310,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   anthropicUrl: DEFAULT_ANTHROPIC_CONFIG.url,
   geminiUrl: DEFAULT_GEMINI_CONFIG.url,
   zaiUrl: DEFAULT_ZAI_CONFIG.url,
+  orcarouterUrl: DEFAULT_ORCAROUTER_CONFIG.url,
 
   // Folders
   chatFolder: "ChatGPT_MD/chats",
@@ -360,4 +382,9 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   zaiDefaultModel: DEFAULT_ZAI_CONFIG.model,
   zaiDefaultTemperature: DEFAULT_ZAI_CONFIG.temperature,
   zaiDefaultMaxTokens: DEFAULT_ZAI_CONFIG.max_tokens,
+
+  // OrcaRouter Defaults
+  orcarouterDefaultModel: DEFAULT_ORCAROUTER_CONFIG.model,
+  orcarouterDefaultTemperature: DEFAULT_ORCAROUTER_CONFIG.temperature,
+  orcarouterDefaultMaxTokens: DEFAULT_ORCAROUTER_CONFIG.max_tokens,
 };

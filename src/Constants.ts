@@ -10,6 +10,7 @@ export const AI_SERVICE_LMSTUDIO = "lmstudio" as const;
 export const AI_SERVICE_ANTHROPIC = "anthropic" as const;
 export const AI_SERVICE_GEMINI = "gemini" as const;
 export const AI_SERVICE_ZAI = "zai" as const;
+export const AI_SERVICE_ORCAROUTER = "orcarouter" as const;
 
 // Array of all AI services
 export const AI_SERVICES = [
@@ -20,6 +21,7 @@ export const AI_SERVICES = [
   AI_SERVICE_ANTHROPIC,
   AI_SERVICE_GEMINI,
   AI_SERVICE_ZAI,
+  AI_SERVICE_ORCAROUTER,
 ] as const;
 
 // Type derived from AI service constants

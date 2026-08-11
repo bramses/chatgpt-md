@@ -130,6 +130,7 @@ You: Select what to share ✓
 | **Gemini** | Google's models | Pay per use |
 | **OpenRouter** | Access to ALL models | Pay per use |
 | **Z.AI** | GLM models | Pay per use |
+| **OrcaRouter** | Route to 190+ models via one gateway | Pay per use |
 | **Ollama** | Local, private | **Free** |
 | **LM Studio** | Local, private | **Free** |
 
@@ -138,6 +139,8 @@ You: Select what to share ✓
 - Anthropic: `anthropic@claude-sonnet-4-20250514`
 - Gemini: `gemini@gemini-2.5-flash-lite`
 - OpenRouter: `openrouter@openai/gpt-4.1-mini`
+- Z.AI: `zai@glm-4.7`
+- OrcaRouter: `orcarouter@orcarouter/auto`
 - Local: `ollama@llama3.2` or `lmstudio@model-name`
 
 OpenAI search-preview models such as `openai@gpt-4o-mini-search-preview` are supported through OpenAI's chat-completions endpoint.

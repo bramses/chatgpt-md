@@ -6,6 +6,7 @@ import {
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_ORCAROUTER,
   AI_SERVICE_ZAI,
   AiServiceType,
 } from "src/Constants";
@@ -16,6 +17,7 @@ import {
   DEFAULT_OLLAMA_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
+  DEFAULT_ORCAROUTER_CONFIG,
   DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
 import { ProviderAdapter } from "src/Services/Adapters/ProviderAdapter";
@@ -27,23 +29,26 @@ import { LmStudioAdapter } from "src/Services/Adapters/LmStudioAdapter";
 import { OllamaAdapter } from "src/Services/Adapters/OllamaAdapter";
 import { OpenRouterAdapter } from "src/Services/Adapters/OpenRouterAdapter";
 import { ZaiAdapter } from "src/Services/Adapters/ZaiAdapter";
+import { OrcaRouterAdapter } from "src/Services/Adapters/OrcaRouterAdapter";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 
-export type ApiKeySettingKey = "apiKey" | "openrouterApiKey" | "anthropicApiKey" | "geminiApiKey" | "zaiApiKey";
+export type ApiKeySettingKey =
+  "apiKey" | "openrouterApiKey" | "anthropicApiKey" | "geminiApiKey" | "zaiApiKey" | "orcarouterApiKey";
 export type SecretIdSettingKey =
   | "apiKeySecretId"
   | "openrouterApiKeySecretId"
   | "anthropicApiKeySecretId"
   | "geminiApiKeySecretId"
   | "zaiApiKeySecretId"
+  | "orcarouterApiKeySecretId"
   | "webSearchApiKeySecretId";
 
 export interface CredentialDefinition {
-  category: "openai" | "openrouter" | "anthropic" | "gemini" | "zai" | "web-search";
+  category: "openai" | "openrouter" | "anthropic" | "gemini" | "zai" | "orcarouter" | "web-search";
   legacySetting: ApiKeySettingKey | "webSearchApiKey";
   secretIdSetting: SecretIdSettingKey;
   ownedSecretId: string;
@@ -51,7 +56,14 @@ export interface CredentialDefinition {
 }
 
 export type UrlSettingKey =
-  "openaiUrl" | "openrouterUrl" | "ollamaUrl" | "lmstudioUrl" | "anthropicUrl" | "geminiUrl" | "zaiUrl";
+  | "openaiUrl"
+  | "openrouterUrl"
+  | "ollamaUrl"
+  | "lmstudioUrl"
+  | "anthropicUrl"
+  | "geminiUrl"
+  | "zaiUrl"
+  | "orcarouterUrl";
 
 export interface ProviderDefinition {
   id: AiServiceType;
@@ -232,6 +244,31 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
       url: settings.zaiUrl,
       temperature: settings.zaiDefaultTemperature,
       max_tokens: settings.zaiDefaultMaxTokens,
+    }),
+  },
+  {
+    id: AI_SERVICE_ORCAROUTER,
+    label: "OrcaRouter",
+    requiresApiKey: true,
+    local: false,
+    apiKeySetting: "orcarouterApiKey",
+    credential: {
+      category: "orcarouter",
+      legacySetting: "orcarouterApiKey",
+      secretIdSetting: "orcarouterApiKeySecretId",
+      ownedSecretId: "chatgpt-md-orcarouter-api-key",
+      label: "OrcaRouter",
+    },
+    urlSetting: "orcarouterUrl",
+    defaultUrl: DEFAULT_ORCAROUTER_CONFIG.url,
+    defaultConfig: DEFAULT_ORCAROUTER_CONFIG,
+    createAdapter: () => new OrcaRouterAdapter(),
+    createProviderFactory: () => createOpenAICompatible as ProviderFactory,
+    getFrontmatterFields: (settings) => ({
+      model: settings.orcarouterDefaultModel,
+      url: settings.orcarouterUrl,
+      temperature: settings.orcarouterDefaultTemperature,
+      max_tokens: settings.orcarouterDefaultMaxTokens,
     }),
   },
 ] as const;

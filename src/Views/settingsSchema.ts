@@ -8,6 +8,7 @@ import {
   DEFAULT_OLLAMA_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
+  DEFAULT_ORCAROUTER_CONFIG,
   DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
 
@@ -88,6 +89,15 @@ const SETTINGS_SCHEMA: SettingDefinition[] = [
     type: "credential",
     secretIdSetting: "zaiApiKeySecretId",
     placeholder: "your Z.AI API Key",
+    group: "API Keys",
+  },
+  {
+    id: "orcarouterApiKey",
+    name: "OrcaRouter API Key",
+    description: "API Key for OrcaRouter. Get your key at https://www.orcarouter.ai",
+    type: "credential",
+    secretIdSetting: "orcarouterApiKeySecretId",
+    placeholder: "sk-orca-...",
     group: "API Keys",
   },
 
@@ -338,6 +348,42 @@ const SETTINGS_SCHEMA: SettingDefinition[] = [
     type: "text",
     placeholder: "400",
     group: "Z.AI",
+  },
+
+  // OrcaRouter Defaults
+  {
+    id: "orcarouterUrl",
+    name: "API URL",
+    description: `URL for OrcaRouter API\nDefault URL: ${DEFAULT_ORCAROUTER_CONFIG.url}`,
+    type: "text",
+    placeholder: DEFAULT_ORCAROUTER_CONFIG.url,
+    group: "OrcaRouter",
+  },
+  {
+    id: "orcarouterDefaultModel",
+    name: "Default Model",
+    description: "Default model for OrcaRouter chats (e.g., orcarouter@orcarouter/auto)",
+    type: "text",
+    placeholder: DEFAULT_ORCAROUTER_CONFIG.model,
+    group: "OrcaRouter",
+  },
+  {
+    id: "orcarouterDefaultTemperature",
+    valueType: "number",
+    name: "Default Temperature",
+    description: "Default temperature for OrcaRouter chats (0.0 to 2.0)",
+    type: "text",
+    placeholder: "0.7",
+    group: "OrcaRouter",
+  },
+  {
+    id: "orcarouterDefaultMaxTokens",
+    valueType: "number",
+    name: "Default Max Tokens",
+    description: "Default max tokens for OrcaRouter chats",
+    type: "text",
+    placeholder: "400",
+    group: "OrcaRouter",
   },
 
   // Ollama Defaults (Local)

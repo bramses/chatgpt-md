@@ -128,7 +128,7 @@ Extends `SuggestModal<TFile>`
 
 Settings organized in sections:
 
-**API Keys**: OpenAI, OpenRouter, Anthropic, Gemini, Z.AI
+**API Keys**: OpenAI, OpenRouter, Anthropic, Gemini, Z.AI, OrcaRouter
 
 **Service URLs**: Per-provider base URLs with defaults
 
