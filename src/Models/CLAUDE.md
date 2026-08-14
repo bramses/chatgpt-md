@@ -35,6 +35,7 @@ openrouterApiKey: string; // OpenRouter
 anthropicApiKey: string; // Anthropic
 geminiApiKey: string; // Gemini
 zaiApiKey: string; // Z.AI
+orcarouterApiKey: string; // OrcaRouter
 ```
 
 **Folders**:
@@ -76,6 +77,7 @@ lmstudioUrl: string;
 anthropicUrl: string;
 geminiUrl: string;
 zaiUrl: string;
+orcarouterUrl: string;
 ```
 
 ### Frontmatter Override

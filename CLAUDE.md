@@ -100,5 +100,6 @@ Models are specified with provider prefix:
 - OpenRouter: `openrouter@anthropic/claude-3-5-sonnet`
 - LM Studio: `lmstudio@model-name`
 - Z.AI: `zai@glm-4.7`
+- OrcaRouter: `orcarouter@orcarouter/auto`
 
 The prefix determines which adapter handles the request in `AiProviderService`. OpenAI `search-preview` models must use the OpenAI chat-completions factory (`provider.chat(...)`) because the default Responses API path can return `Model not found` for those IDs.

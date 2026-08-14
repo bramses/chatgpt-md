@@ -32,10 +32,10 @@ describe("ProviderRegistry", () => {
   it("defines complete, unique, stable metadata for every credential category", () => {
     const credentials = getCredentialDefinitions();
 
-    expect(credentials).toHaveLength(6);
-    expect(new Set(credentials.map((item) => item.legacySetting)).size).toBe(6);
-    expect(new Set(credentials.map((item) => item.secretIdSetting)).size).toBe(6);
-    expect(new Set(credentials.map((item) => item.ownedSecretId)).size).toBe(6);
+    expect(credentials).toHaveLength(7);
+    expect(new Set(credentials.map((item) => item.legacySetting)).size).toBe(7);
+    expect(new Set(credentials.map((item) => item.secretIdSetting)).size).toBe(7);
+    expect(new Set(credentials.map((item) => item.ownedSecretId)).size).toBe(7);
     for (const credential of credentials) {
       expect(credential.ownedSecretId).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
       expect(DEFAULT_SETTINGS[credential.legacySetting]).toBe("");
@@ -62,6 +62,12 @@ describe("ProviderRegistry", () => {
 
   it("selects the Anthropic-compatible factory for the Z.AI coding endpoint", () => {
     expect(getProviderFactory("zai", "https://api.z.ai/api/anthropic")).not.toBe(
+      getProviderFactory("zai", "https://api.z.ai/api/paas/v4")
+    );
+  });
+
+  it("uses the OpenAI-compatible factory for OrcaRouter", () => {
+    expect(getProviderFactory("orcarouter", "https://api.orcarouter.ai")).toBe(
       getProviderFactory("zai", "https://api.z.ai/api/paas/v4")
     );
   });
