@@ -53,3 +53,21 @@ build/
 
 # Husky
 .husky/_
+
+# ChatGPT knowledge importer - never commit personal data
+# (exports, generated knowledge, import state, or a vault checked out here)
+conversations.json
+conversations.json.*
+chat.html
+user.json
+shared_conversations.json
+message_feedback.json
+model_comparisons.json
+*chatgpt*export*.zip
+ChatGPT Inbox/
+knowledge-import-manifest.json
+90 ChatGPT Sources/
+99 System/
+14 Horizon/
+15 Fragments/
+16 Strange Connections/

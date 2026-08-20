@@ -1,6 +1,7 @@
 import { App, TFile } from "obsidian";
 import { FileService } from "./FileService";
 import { FileReadResult, ToolExecutionContext, VaultSearchResult } from "src/Models/Tool";
+import { isSuppressedLifecycle } from "src/Models/Knowledge/Epistemics";
 import { Logger } from "src/Utilities/Logger";
 
 /**
@@ -61,6 +62,12 @@ export class VaultSearchService {
         continue;
       }
 
+      // Skip notes the user retired. Forgetting is allowed: a retired reading
+      // keeps its history on disk but stops being surfaced to the model.
+      if (this.isRetired(file)) {
+        continue;
+      }
+
       if (this.matchesFileName(file, queryWords)) {
         results.push({
           path: file.path,
@@ -85,6 +92,23 @@ export class VaultSearchService {
     }
 
     return results;
+  }
+
+  /**
+   * A note is out of retrieval when its lifecycle says so. This is how the
+   * vault lets old models about a person stop shaping new answers, without
+   * deleting the evidence that produced them.
+   */
+  private isRetired(file: TFile): boolean {
+    try {
+      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter as
+        { status?: unknown; surface_in_retrieval?: unknown } | undefined;
+      if (!frontmatter) return false;
+      if (frontmatter.surface_in_retrieval === false) return true;
+      return isSuppressedLifecycle(typeof frontmatter.status === "string" ? frontmatter.status : undefined);
+    } catch {
+      return false;
+    }
   }
 
   private getQueryWords(query: string): string[] {

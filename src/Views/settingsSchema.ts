@@ -1,6 +1,7 @@
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import { DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 import { getProviderDefinitions } from "src/Services/Providers/ProviderRegistry";
+import { VAULT_REGISTRY_EXAMPLE } from "src/Models/Knowledge/KnowledgeSettings";
 import {
   DEFAULT_ANTHROPIC_CONFIG,
   DEFAULT_GEMINI_CONFIG,
@@ -494,6 +495,154 @@ const SETTINGS_SCHEMA: SettingDefinition[] = [
     description: "Enable detailed logging for debugging tool operations. Messages will appear in the console.",
     type: "toggle",
     group: "Tool Calling",
+  },
+
+  // Knowledge Importer (ChatGPT history -> multi-vault knowledge system)
+  {
+    id: "knowledgeEnabled",
+    name: "Enable ChatGPT History Importer",
+    description:
+      "Import your complete ChatGPT export into an immutable source archive and route the meaning inside it into your Obsidian vaults. " +
+      "Adds the importer commands after the plugin is reloaded. Off by default; nothing runs in the background until you turn it on.",
+    type: "toggle",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeVaultRegistry",
+    name: "Vault Registry",
+    description:
+      "JSON array describing your vaults. Merged over the vaults discovered from Obsidian itself. " +
+      "A good description is the strongest routing signal, so say what each vault is for. Example:" +
+      VAULT_REGISTRY_EXAMPLE,
+    type: "textarea",
+    placeholder: VAULT_REGISTRY_EXAMPLE,
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeArchiveVault",
+    name: "Source Archive Vault",
+    description: "Vault name (or id) that stores every original conversation. Empty uses the vault that is open now.",
+    type: "text",
+    placeholder: "Personal",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgePersonalVault",
+    name: "Personal Vault",
+    description:
+      "Vault that represents you rather than a project. Personal insights, patterns, dreams and relationships are never written into project vaults. Empty auto-detects.",
+    type: "text",
+    placeholder: "Personal",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeArchiveFolder",
+    name: "Source Archive Folder",
+    description: "Folder inside the archive vault that holds the preserved conversations.",
+    type: "text",
+    placeholder: "90 ChatGPT Sources",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeInboxFolder",
+    name: "ChatGPT Inbox Folder",
+    description:
+      "Folder watched for new ChatGPT exports or single conversations. Use a vault-relative path, or an absolute path on desktop.",
+    type: "text",
+    placeholder: "ChatGPT Inbox",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeWatchInbox",
+    name: "Watch Inbox Automatically",
+    description: "Poll the inbox folder while Obsidian is open and process anything new or changed.",
+    type: "toggle",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeWatchIntervalSeconds",
+    valueType: "number",
+    name: "Inbox Poll Interval (seconds)",
+    description: "How often the inbox folder is checked (30-3600).",
+    type: "text",
+    placeholder: "300",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeExtractionModel",
+    name: "Knowledge Extraction Model",
+    description:
+      "Model used for bulk extraction and routing, with provider prefix (for example openai@gpt-4.1-mini). Empty uses your default chat model.",
+    type: "text",
+    placeholder: "openai@gpt-4.1-mini",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeBatchSize",
+    valueType: "number",
+    name: "Conversations In Parallel",
+    description: "How many conversations are analyzed at once (1-16). Lower this if you hit rate limits.",
+    type: "text",
+    placeholder: "3",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeAutoRouteConfidence",
+    valueType: "number",
+    name: "Auto-Route Confidence",
+    description: "At or above this confidence a unit is filed automatically (0-1).",
+    type: "text",
+    placeholder: "0.75",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeReviewConfidence",
+    valueType: "number",
+    name: "Review Threshold",
+    description: "Below this confidence nothing is filed into a topical note; the unit goes to the review queue (0-1).",
+    type: "text",
+    placeholder: "0.45",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeMaxCharsPerChunk",
+    valueType: "number",
+    name: "Max Characters Per Chunk",
+    description: "Long conversations are split at this size. Messages are never truncated, only chunked.",
+    type: "text",
+    placeholder: "12000",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeMinConversationChars",
+    valueType: "number",
+    name: "Minimum Conversation Length",
+    description:
+      "Conversations with less of your own text than this are archived in full but not sent to the model. Saves cost on throwaway chats.",
+    type: "text",
+    placeholder: "200",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeEnableDreams",
+    name: "Extract Dreams",
+    description: "Create structured dream notes and recurring symbol notes.",
+    type: "toggle",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeEnablePeople",
+    name: "Extract People",
+    description: "Create person notes for people who matter in your life.",
+    type: "toggle",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeEnableMedia",
+    name: "Extract Books, Films and Music",
+    description: "Create canonical notes for cultural objects worth remembering.",
+    type: "toggle",
+    group: "Knowledge Importer",
   },
 ];
 

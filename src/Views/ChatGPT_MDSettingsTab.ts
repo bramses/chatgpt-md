@@ -34,6 +34,12 @@ const NUMERIC_RANGES: Partial<Record<keyof ChatGPT_MDSettings, { min: number; ma
   openrouterDefaultFrequencyPenalty: { min: -2, max: 2 },
   lmstudioDefaultPresencePenalty: { min: -2, max: 2 },
   lmstudioDefaultFrequencyPenalty: { min: -2, max: 2 },
+  knowledgeBatchSize: { min: 1, max: 16 },
+  knowledgeAutoRouteConfidence: { min: 0, max: 1 },
+  knowledgeReviewConfidence: { min: 0, max: 1 },
+  knowledgeMaxCharsPerChunk: { min: 1000, max: 200000 },
+  knowledgeMinConversationChars: { min: 0, max: 100000 },
+  knowledgeWatchIntervalSeconds: { min: 30, max: 3600 },
 };
 
 export function parseSettingValue(schema: SettingDefinition, value: string | boolean): string | number | boolean {

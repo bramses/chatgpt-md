@@ -14,6 +14,7 @@ import { ToolService } from "src/Services/ToolService";
 import { VaultSearchService } from "src/Services/VaultSearchService";
 import { WebSearchService } from "src/Services/WebSearchService";
 import { AgentService } from "src/Services/AgentService";
+import { KnowledgeImportService } from "src/Services/Knowledge/KnowledgeImportService";
 
 /**
  * Simple service container with readonly service instances.
@@ -56,6 +57,9 @@ export class ServiceContainer {
   readonly webSearchService: WebSearchService;
   readonly toolService: ToolService;
 
+  // ChatGPT history knowledge importer (opt-in; does no work until invoked)
+  readonly knowledgeImportService: KnowledgeImportService;
+
   private constructor(
     app: App,
     plugin: Plugin,
@@ -72,7 +76,8 @@ export class ServiceContainer {
     agentService: AgentService,
     vaultSearchService: VaultSearchService,
     webSearchService: WebSearchService,
-    toolService: ToolService
+    toolService: ToolService,
+    knowledgeImportService: KnowledgeImportService
   ) {
     this.app = app;
     this.plugin = plugin;
@@ -90,6 +95,7 @@ export class ServiceContainer {
     this.vaultSearchService = vaultSearchService;
     this.webSearchService = webSearchService;
     this.toolService = toolService;
+    this.knowledgeImportService = knowledgeImportService;
   }
 
   /**
@@ -121,6 +127,15 @@ export class ServiceContainer {
       infrastructure.apiAuthService
     );
 
+    const knowledgeImportService = new KnowledgeImportService(
+      app,
+      plugin,
+      () => settingsService.getSettings(),
+      aiProviderService,
+      infrastructure.apiAuthService,
+      infrastructure.notificationService
+    );
+
     return new ServiceContainer(
       app,
       plugin,
@@ -137,7 +152,8 @@ export class ServiceContainer {
       agentService,
       vaultSearchService,
       webSearchService,
-      toolService
+      toolService,
+      knowledgeImportService
     );
   }
 

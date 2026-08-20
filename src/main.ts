@@ -8,6 +8,29 @@ import { InferTitleHandler } from "./Commands/InferTitleHandler";
 import { ChooseChatTemplateHandler, ClearChatHandler, MoveToNewChatHandler } from "./Commands/RemainingHandlers";
 import { ChooseAgentHandler, CreateAgentHandler } from "./Commands/AgentHandlers";
 import { CommandRegistrar } from "./Commands/CommandRegistrar";
+import {
+  ConfigureVaultRouterHandler,
+  DryRunRoutingHandler,
+  ImportChatGPTHistoryHandler,
+  OpenReviewQueueHandler,
+  ProcessChatGPTInboxHandler,
+  RebuildKnowledgeIndexHandler,
+  ReprocessAllHandler,
+  ReprocessConversationHandler,
+  ResumeKnowledgeImportHandler,
+  RetryFailedConversationsHandler,
+  StopWatchingChatGPTInboxHandler,
+  ViewKnowledgeStatusHandler,
+  WatchChatGPTInboxHandler,
+} from "./Commands/Knowledge/KnowledgeHandlers";
+import {
+  ChallengeCurrentStoryHandler,
+  EnoughAnalysisHandler,
+  OpenHorizonHandler,
+  ReviewPersonalModelsHandler,
+  ShowSomethingForgottenHandler,
+  UnexpectedConnectionHandler,
+} from "./Commands/Knowledge/ObservatoryHandlers";
 import { Logger } from "./Utilities/Logger";
 
 export default class ChatGPT_MD extends Plugin {
@@ -38,6 +61,12 @@ export default class ChatGPT_MD extends Plugin {
 
     // Register all commands
     this.registerCommands();
+
+    // Start watching the ChatGPT inbox only when the user asked for it
+    const knowledgeSettings = settingsService.getSettings();
+    if (knowledgeSettings.knowledgeEnabled && knowledgeSettings.knowledgeWatchInbox) {
+      this.services.knowledgeImportService.startWatching();
+    }
 
     // Initialize available models after registry is created, but don't block startup
     // Run model initialization in the background
@@ -79,5 +108,45 @@ export default class ChatGPT_MD extends Plugin {
     // Agent commands
     registrar.registerCallbackCommand(new ChooseAgentHandler(this.services));
     registrar.registerCallbackCommand(new CreateAgentHandler(this.services, this.modelSelectHandler));
+
+    // Knowledge importer commands (only when the feature is enabled)
+    this.registerKnowledgeCommands(registrar);
+  }
+
+  /**
+   * The importer is opt-in: users who never enable it see no extra commands
+   * and the plugin does no additional work at startup.
+   */
+  private registerKnowledgeCommands(registrar: CommandRegistrar): void {
+    if (!this.services.settingsService.getSettings().knowledgeEnabled) return;
+
+    [
+      new ImportChatGPTHistoryHandler(this.services),
+      new ResumeKnowledgeImportHandler(this.services),
+      new ProcessChatGPTInboxHandler(this.services),
+      new WatchChatGPTInboxHandler(this.services),
+      new StopWatchingChatGPTInboxHandler(this.services),
+      new RetryFailedConversationsHandler(this.services),
+      new ReprocessConversationHandler(this.services),
+      new ReprocessAllHandler(this.services),
+      new RebuildKnowledgeIndexHandler(this.services),
+      new ViewKnowledgeStatusHandler(this.services),
+      new OpenReviewQueueHandler(this.services),
+      new DryRunRoutingHandler(this.services),
+      new ConfigureVaultRouterHandler(this.services),
+      // Commands that point away from the archive: challenge a story, open the
+      // horizon, resurface something old, retire a reading that stopped fitting.
+      new ChallengeCurrentStoryHandler(this.services),
+      new OpenHorizonHandler(this.services),
+      new ShowSomethingForgottenHandler(this.services),
+      new UnexpectedConnectionHandler(this.services),
+      new ReviewPersonalModelsHandler(this.services),
+    ].forEach((handler) => registrar.registerCallbackCommand(handler));
+
+    registrar.registerEditorCommand(new EnoughAnalysisHandler(this.services));
+  }
+
+  onunload(): void {
+    this.services?.knowledgeImportService?.stopWatching();
   }
 }

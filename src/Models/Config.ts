@@ -14,6 +14,7 @@ import {
   DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
 import { getDefaultToolWhitelist } from "./DefaultToolWhitelist";
+import { DEFAULT_KNOWLEDGE_SETTINGS, KnowledgeImporterSettings } from "./Knowledge/KnowledgeSettings";
 
 /**
  * Generate default chat front matter using service provider defaults
@@ -238,7 +239,8 @@ export interface ChatGPT_MDSettings
     OpenRouterFrontmatterSettings,
     OllamaFrontmatterSettings,
     LmStudioFrontmatterSettings,
-    ZaiFrontmatterSettings {}
+    ZaiFrontmatterSettings,
+    KnowledgeImporterSettings {}
 
 /**
  * Merged frontmatter configuration type
@@ -360,4 +362,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   zaiDefaultModel: DEFAULT_ZAI_CONFIG.model,
   zaiDefaultTemperature: DEFAULT_ZAI_CONFIG.temperature,
   zaiDefaultMaxTokens: DEFAULT_ZAI_CONFIG.max_tokens,
+
+  // Knowledge importer (disabled by default)
+  ...DEFAULT_KNOWLEDGE_SETTINGS,
 };

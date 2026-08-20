@@ -1,0 +1,141 @@
+/**
+ * Epistemic model for the personal vault.
+ *
+ * The vault is an observatory, not a model of the person. It sees traces that
+ * happened to be written down - never consciousness, never everything that was
+ * lived, never the future. These types exist so that the difference between
+ * "what was recorded", "what might connect", and "what has not happened yet"
+ * survives all the way into the notes on disk, instead of being flattened into
+ * one undifferentiated pile of "knowledge about Leander".
+ */
+
+/**
+ * TRACE  - what was actually recorded. Evidence. Never rewritten.
+ * GARDEN - what may grow between traces. Interpretation. Provisional, alive.
+ * HORIZON- what has not happened yet. Possibility. Deliberately unpredicted.
+ */
+export type KnowledgeLayer = "trace" | "garden" | "horizon";
+
+/**
+ * Interpretations must be able to die. Accumulation alone would turn the vault
+ * into ideology: a system that can never invalidate its own theories.
+ */
+export type ModelLifecycle = "emerging" | "active" | "quiet" | "dormant" | "historical" | "contradicted" | "retired";
+
+export const MODEL_LIFECYCLES: readonly ModelLifecycle[] = [
+  "emerging",
+  "active",
+  "quiet",
+  "dormant",
+  "historical",
+  "contradicted",
+  "retired",
+];
+
+/** Lifecycles that stay out of active retrieval and out of the indexes. */
+export const SUPPRESSED_LIFECYCLES: readonly ModelLifecycle[] = ["historical", "contradicted", "retired"];
+
+export function isSuppressedLifecycle(value: string | undefined): boolean {
+  return SUPPRESSED_LIFECYCLES.includes((value || "") as ModelLifecycle);
+}
+
+export function coerceLifecycle(value: string | undefined): ModelLifecycle | undefined {
+  const normalized = (value || "").trim().toLowerCase();
+  return MODEL_LIFECYCLES.find((lifecycle) => lifecycle === normalized);
+}
+
+/**
+ * What kind of thing a statement is. Self-description and action are not the
+ * same evidence: a narrative repeated forty times is still one narrative, and
+ * a single thing actually done can complicate it.
+ */
+export type EvidenceType =
+  | "direct-user-statement"
+  | "event"
+  | "reported-behavior"
+  | "direct-quote"
+  | "memory"
+  | "dream-report"
+  | "assistant-interpretation"
+  | "user-interpretation"
+  | "inference";
+
+export const EVIDENCE_TYPES: readonly EvidenceType[] = [
+  "direct-user-statement",
+  "event",
+  "reported-behavior",
+  "direct-quote",
+  "memory",
+  "dream-report",
+  "assistant-interpretation",
+  "user-interpretation",
+  "inference",
+];
+
+export function coerceEvidenceType(value: string | undefined): EvidenceType {
+  const normalized = (value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-");
+  return EVIDENCE_TYPES.find((type) => type === normalized) || "inference";
+}
+
+/** Evidence types that describe something done or happening, not something said about oneself. */
+const BEHAVIORAL_EVIDENCE: readonly EvidenceType[] = ["event", "reported-behavior"];
+
+export function isBehavioralEvidence(type: EvidenceType | undefined): boolean {
+  return BEHAVIORAL_EVIDENCE.includes(type as EvidenceType);
+}
+
+/**
+ * Where a statement came from.
+ *
+ * This is the central anti-feedback-loop safeguard. The source archive contains
+ * ChatGPT conversations, which means it contains assistant text. An old
+ * assistant interpretation is *not* evidence about the person, and must never
+ * become an independent confirming source for a new interpretation.
+ */
+export type ProvenanceOrigin = "user-originated" | "assistant-originated" | "external-source" | "system-generated";
+
+export const PROVENANCE_ORIGINS: readonly ProvenanceOrigin[] = [
+  "user-originated",
+  "assistant-originated",
+  "external-source",
+  "system-generated",
+];
+
+/** Only user-originated material counts as independent evidence about the person. */
+export function countsAsEvidence(origin: ProvenanceOrigin): boolean {
+  return origin === "user-originated" || origin === "external-source";
+}
+
+export function coerceOrigin(value: string | undefined): ProvenanceOrigin {
+  const normalized = (value || "").trim().toLowerCase();
+  return PROVENANCE_ORIGINS.find((origin) => origin === normalized) || "user-originated";
+}
+
+/**
+ * What the vault structurally cannot see. Rendered into generated syntheses so
+ * that no summary can read as a complete description of a life.
+ */
+export const ARCHIVE_BLIND_SPOTS: readonly string[] = [
+  "everything that was lived but never written down",
+  "embodied experience: body, movement, touch, sound, tiredness, weather, atmosphere",
+  "ordinary days that produced no conversation",
+  "everything deliberately kept private",
+  "what other people actually experienced",
+  "what has not happened yet",
+];
+
+export function renderBlindSpots(): string {
+  return ["**What this cannot see**", "", ...ARCHIVE_BLIND_SPOTS.map((item) => `- ${item}`)].join("\n");
+}
+
+/** Standard epistemic caveat for anything generated by interpretation. */
+export const GARDEN_CAVEAT =
+  "_Provisional reading of written traces, not a description of a person. It may be wrong, may age, and may be discarded._";
+
+export const TRACE_CAVEAT = "_Recorded evidence. Not rewritten to match later interpretations._";
+
+export const HORIZON_CAVEAT =
+  "_Possibilities, not predictions. Nothing here is derived from what the archive expects of you._";

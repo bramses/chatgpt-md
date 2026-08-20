@@ -6,6 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ChatGPT MD is an Obsidian plugin that integrates multiple AI providers (OpenAI, OpenRouter, Anthropic, Gemini, Ollama, LM Studio, Z.AI) into Obsidian for seamless chat interactions within markdown notes. Users can have AI conversations directly in their notes, with support for note linking, streaming responses, and per-note configuration via frontmatter.
 
+## v3.3.0 - ChatGPT History Knowledge Import (opt-in)
+
+- **Two layers**: every conversation from an official ChatGPT export is preserved unchanged in a source archive (Layer A); the meaning inside it is extracted into semantic units and routed into the right vault (Layer B)
+- **Multi-vault routing**: vaults are discovered from Obsidian plus a configurable registry; personal meaning never lands in a project vault and project work never lands in the personal vault
+- **Durable notes**: units merge into canonical concept/dream/person/media notes with dated evidence and provenance, instead of creating duplicate summaries
+- **Continuous ingestion**: an inbox folder (and a generic live-capture payload) run through the same pipeline as the historical import; a later export reconciles what was missed
+- **Resumable and idempotent**: conversation ids plus content hashes drive the work, so runs can be interrupted, resumed, retried and reprocessed safely
+- **Off by default**: `knowledgeEnabled` gates commands and background work
+- **Observatory constitution**: the personal vault is treated as an observatory over written traces, not a model of the person. Three epistemic layers (trace / garden / horizon), assistant text never counted as evidence, clinical and essentializing language held back for review, interpretations that can be retired, and commands that point away from the archive (challenge a story, open horizon, show me something I forgot, enough analysis)
+- See `docs/chatgpt-knowledge-import.md`, `docs/observatory-constitution.md` and `src/Services/Knowledge/CLAUDE.md`
+
 ## v3.1.0 - Agents System
 
 - **Agent files**: Markdown files in a configurable agent folder with frontmatter (model, temperature, stream) and a body that becomes the system prompt
@@ -64,7 +75,7 @@ Each directory has its own CLAUDE.md with detailed context:
 
 - `src/core/` - ServiceContainer (DI), plugin initialization
 - `src/Commands/` - Obsidian command handlers (ChatHandler, ModelSelectHandler, AgentHandlers, etc.)
-- `src/Services/` - Service implementations + `Adapters/` subdirectory
+- `src/Services/` - Service implementations + `Adapters/` and `Knowledge/` subdirectories
 - `src/Views/` - UI components and modals
 - `src/Models/` - TypeScript interfaces
 - `src/Types/` - AI service type definitions
@@ -74,6 +85,8 @@ Each directory has its own CLAUDE.md with detailed context:
 
 - **[docs/development.md](docs/development.md)** - Build process, tooling, esbuild setup
 - **[docs/message-flow.md](docs/message-flow.md)** - Complete flow from user input to AI response
+- **[docs/chatgpt-knowledge-import.md](docs/chatgpt-knowledge-import.md)** - Importing ChatGPT history into a multi-vault knowledge system
+- **[docs/observatory-constitution.md](docs/observatory-constitution.md)** - The epistemic rules of the personal vault and where each one is implemented
 
 ## Key Design Patterns
 
@@ -84,6 +97,10 @@ Each directory has its own CLAUDE.md with detailed context:
 5. **Link context injection** - Wiki links `[[Note Name]]` are resolved and content injected into prompts
 6. **Command Handler Interface** - Commands implement `CommandHandler` with metadata; registered via `CommandRegistrar`
 7. **Agent system** - Agent files (markdown with frontmatter + body) override model/temperature and provide system prompts; resolved at runtime via `agent` frontmatter field
+8. **Ingestion adapters** - The knowledge importer depends only on `NormalizedConversation`; export, inbox, live capture and source archive are interchangeable adapters (`src/Services/Knowledge/Sources/`)
+9. **Managed blocks** - Generated knowledge lives between `<!-- chatgpt-md:auto:start id=... -->` markers so human-authored content is never overwritten
+10. **Epistemic layers** - Every knowledge unit is a trace (recorded), garden (provisional interpretation) or horizon (possibility); the layer decides the note's caveat, frontmatter and review date
+11. **Deterministic guards** - `src/Utilities/EpistemicGuards.ts` enforces what the prompt asks for: provenance is computed from the transcript, and clinical or essentializing language is capped below the auto-file threshold
 
 ## Adding a New AI Provider
 

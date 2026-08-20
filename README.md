@@ -10,6 +10,8 @@ Chat with AI directly in your notes. Reference your other notes with `[[wiki lin
 
 ## ✨ What's New
 
+**ChatGPT History Import (v3.3, opt-in)** — Import your complete ChatGPT export, keep every conversation as an unchanged source note, and let the meaning inside it be routed into the right Obsidian vaults as durable, interlinked notes. Resumable, idempotent, and continuously fed by an inbox folder. The personal vault is built as an observatory over written traces rather than a model of you: interpretations stay provisional, can be retired, and several commands exist to reduce interpretation instead of increasing it. See [docs/chatgpt-knowledge-import.md](docs/chatgpt-knowledge-import.md) and [docs/observatory-constitution.md](docs/observatory-constitution.md).
+
 **Provider Reliability (v3.2)** — Updated provider integrations, safer tool calling, and more reliable model selection and streaming across cloud and local providers.
 
 **Agents (v3.1)** — Create AI personas like a writing coach, code reviewer, or brainstorming partner. Apply them to any note instantly.
@@ -155,6 +157,14 @@ OpenAI search-preview models such as `openai@gpt-4o-mini-search-preview` are sup
 | **Infer Title** | Auto-generate title from conversation |
 | **Clear Chat** | Start fresh, keep settings |
 | **Stop Streaming** | Cancel a long response |
+| **Import Complete ChatGPT History** | Archive an export and route its knowledge into your vaults (opt-in) |
+| **Process ChatGPT Inbox / Watch Inbox** | Keep the knowledge system fed with new conversations |
+| **Resume / Retry / Reprocess** | Continue, retry or re-analyze imported conversations |
+| **View ChatGPT Import Status** | Counts, last run and the vaults the router can see |
+| **Challenge a Story About Myself** | Looks for what complicates a belief, not what confirms it |
+| **Open Horizon / Show Me Something I Forgot** | Possibilities and old material, instead of more of the same |
+| **Review Personal Models** | Retire readings about yourself that stopped fitting |
+| **Enough Analysis, Back to Life** | Close a reflection instead of extending it |
 
 ---
 
@@ -230,6 +240,7 @@ A: A reusable AI persona. Like having different experts on call—writing coach 
 - Chat messages and automatically expanded `[[linked notes]]` are sent to the selected provider
 - AI tools require approval before execution, and vault/web search results must be selected before sharing
 - Custom web-search endpoints receive your query and any configured bearer credential
+- The ChatGPT history importer (opt-in) sends conversation text to the provider you configure, one conversation or chunk at a time. Your export, source archive, generated notes and import state all stay local
 - No tracking from this plugin
 
 See [`SECURITY.md`](SECURITY.md) for vulnerability reporting and the full data model.
