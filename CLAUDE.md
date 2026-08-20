@@ -15,7 +15,8 @@ ChatGPT MD is an Obsidian plugin that integrates multiple AI providers (OpenAI, 
 - **Resumable and idempotent**: conversation ids plus content hashes drive the work, so runs can be interrupted, resumed, retried and reprocessed safely
 - **Off by default**: `knowledgeEnabled` gates commands and background work
 - **Observatory constitution**: the personal vault is treated as an observatory over written traces, not a model of the person. Three epistemic layers (trace / garden / horizon), assistant text never counted as evidence, clinical and essentializing language held back for review, interpretations that can be retired, and commands that point away from the archive (challenge a story, open horizon, show me something I forgot, enough analysis)
-- See `docs/chatgpt-knowledge-import.md`, `docs/observatory-constitution.md` and `src/Services/Knowledge/CLAUDE.md`
+- **Plugin orchestration**: per-vault capability discovery (plugins are vault-local in Obsidian) so the destination vault decides which optional enhancements a note gets. Canonical Markdown is identical everywhere; Dataview/Tasks/Templater/QuickAdd/Canvas/Iconize/daily notes are additive only. Includes an in-process `knowledgeApi` for Local REST API / MCP callers
+- See `docs/chatgpt-knowledge-import.md`, `docs/observatory-constitution.md`, `docs/plugin-integrations.md` and `src/Services/Knowledge/CLAUDE.md`
 
 ## v3.1.0 - Agents System
 
@@ -87,6 +88,7 @@ Each directory has its own CLAUDE.md with detailed context:
 - **[docs/message-flow.md](docs/message-flow.md)** - Complete flow from user input to AI response
 - **[docs/chatgpt-knowledge-import.md](docs/chatgpt-knowledge-import.md)** - Importing ChatGPT history into a multi-vault knowledge system
 - **[docs/observatory-constitution.md](docs/observatory-constitution.md)** - The epistemic rules of the personal vault and where each one is implemented
+- **[docs/plugin-integrations.md](docs/plugin-integrations.md)** - Per-vault plugin capability detection, what each integration does, and what remains when a plugin disappears
 
 ## Key Design Patterns
 
@@ -101,6 +103,7 @@ Each directory has its own CLAUDE.md with detailed context:
 9. **Managed blocks** - Generated knowledge lives between `<!-- chatgpt-md:auto:start id=... -->` markers so human-authored content is never overwritten
 10. **Epistemic layers** - Every knowledge unit is a trace (recorded), garden (provisional interpretation) or horizon (possibility); the layer decides the note's caveat, frontmatter and review date
 11. **Deterministic guards** - `src/Utilities/EpistemicGuards.ts` enforces what the prompt asks for: provenance is computed from the transcript, and clinical or essentializing language is capped below the auto-file threshold
+12. **Per-vault capabilities** - Plugins are vault-local, so `PluginCapabilityRegistry` builds one cached profile per vault and `VaultEnhancementService` applies only what the *destination* vault can use. No optional plugin is ever load-bearing
 
 ## Adding a New AI Provider
 

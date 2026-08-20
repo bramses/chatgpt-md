@@ -38,6 +38,17 @@ export interface KnowledgeImporterSettings {
   knowledgeEnableDreams: boolean;
   knowledgeEnablePeople: boolean;
   knowledgeEnableMedia: boolean;
+  /**
+   * Add lightweight links to today's daily note when knowledge is captured.
+   * References only - conversations are never copied into daily notes.
+   */
+  knowledgeLinkDailyNotes: boolean;
+  /**
+   * Allow other plugins (Local REST API, MCP servers, companions) to create
+   * captures through the in-process knowledge API. Reads are always allowed to
+   * in-process callers; this gates writes. No port is opened either way.
+   */
+  knowledgeExposeWriteApi: boolean;
 }
 
 export const DEFAULT_KNOWLEDGE_SETTINGS: KnowledgeImporterSettings = {
@@ -58,6 +69,8 @@ export const DEFAULT_KNOWLEDGE_SETTINGS: KnowledgeImporterSettings = {
   knowledgeEnableDreams: true,
   knowledgeEnablePeople: true,
   knowledgeEnableMedia: true,
+  knowledgeLinkDailyNotes: true,
+  knowledgeExposeWriteApi: false,
 };
 
 /** Example registry shown in settings and docs. Vaults may live anywhere. */

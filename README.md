@@ -10,7 +10,7 @@ Chat with AI directly in your notes. Reference your other notes with `[[wiki lin
 
 ## ✨ What's New
 
-**ChatGPT History Import (v3.3, opt-in)** — Import your complete ChatGPT export, keep every conversation as an unchanged source note, and let the meaning inside it be routed into the right Obsidian vaults as durable, interlinked notes. Resumable, idempotent, and continuously fed by an inbox folder. The personal vault is built as an observatory over written traces rather than a model of you: interpretations stay provisional, can be retired, and several commands exist to reduce interpretation instead of increasing it. See [docs/chatgpt-knowledge-import.md](docs/chatgpt-knowledge-import.md) and [docs/observatory-constitution.md](docs/observatory-constitution.md).
+**ChatGPT History Import (v3.3, opt-in)** — Import your complete ChatGPT export, keep every conversation as an unchanged source note, and let the meaning inside it be routed into the right Obsidian vaults as durable, interlinked notes. Resumable, idempotent, and continuously fed by an inbox folder. The personal vault is built as an observatory over written traces rather than a model of you: interpretations stay provisional, can be retired, and several commands exist to reduce interpretation instead of increasing it. It also cooperates with the plugins each vault already has - Dataview, Tasks, Templater, QuickAdd, Canvas, daily notes and more - per vault, as optional enhancements that are never load-bearing. See [docs/chatgpt-knowledge-import.md](docs/chatgpt-knowledge-import.md), [docs/observatory-constitution.md](docs/observatory-constitution.md) and [docs/plugin-integrations.md](docs/plugin-integrations.md).
 
 **Provider Reliability (v3.2)** — Updated provider integrations, safer tool calling, and more reliable model selection and streaming across cloud and local providers.
 
@@ -165,6 +165,9 @@ OpenAI search-preview models such as `openai@gpt-4o-mini-search-preview` are sup
 | **Open Horizon / Show Me Something I Forgot** | Possibilities and old material, instead of more of the same |
 | **Review Personal Models** | Retire readings about yourself that stopped fitting |
 | **Enough Analysis, Back to Life** | Close a reflection instead of extending it |
+| **Plugin Integration Status** | Per-vault report of which plugin capabilities the knowledge system can use |
+| **Capture Idea / Dream / Person / ...** | Manual capture into the same structure the importer writes into |
+| **Open Knowledge Home** | Rebuild and open the vault's knowledge entry note |
 
 ---
 

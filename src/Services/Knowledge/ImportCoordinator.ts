@@ -12,6 +12,8 @@ import { KnowledgeWriterService, ConversationRef } from "./KnowledgeWriterServic
 import { SemanticExtractorService, KnowledgeAiCaller } from "./SemanticExtractorService";
 import { SemanticNoteResolver } from "./SemanticNoteResolver";
 import { VaultRegistryService } from "./VaultRegistryService";
+import { PluginIntegrationService } from "./PluginIntegrationService";
+import { CapabilityFlags } from "src/Models/Knowledge/PluginCapability";
 import { RoutingDecision, VaultRouterService } from "./VaultRouterService";
 import { ConversationBatch, ConversationIngestionAdapter } from "./Sources/ConversationSource";
 import { AbortedError, runWithConcurrency, withRetry } from "src/Utilities/Concurrency";
@@ -85,6 +87,8 @@ interface RunContext {
   index: KnowledgeIndexService;
   stores: Map<string, KnowledgeFileStore>;
   folders: Map<string, string[]>;
+  /** Destination-vault capabilities, resolved once per run and cached. */
+  vaultCapabilities: Map<string, CapabilityFlags>;
   profiles: VaultProfile[];
   archiveVaultId: string;
   archiveVaultName: string;
@@ -108,6 +112,8 @@ export interface CoordinatorDependencies {
   /** Builds the provider-backed caller. Injected so tests never touch the AI SDK. */
   createCaller: (settings: ChatGPT_MDSettings) => KnowledgeAiCaller;
   getSettings: () => ChatGPT_MDSettings;
+  /** Optional: when absent, every vault is treated as plain Markdown. */
+  integrations?: PluginIntegrationService;
   manifestPathForDryRun?: string;
 }
 
@@ -301,7 +307,10 @@ export class ImportCoordinator {
     const vaults = (await this.deps.registry.resolveVaults(settings.knowledgeVaultRegistry)).filter(
       (vault) => vault.enabled
     );
-    const { stores, folders, profiles, warnings } = await this.openVaults(vaults, Boolean(options.dryRun));
+    const { stores, folders, profiles, warnings, vaultCapabilities } = await this.openVaults(
+      vaults,
+      Boolean(options.dryRun)
+    );
 
     const archiveVault = pickVault(vaults, settings.knowledgeArchiveVault) || pickCurrent(vaults);
     const personalVault =
@@ -321,6 +330,7 @@ export class ImportCoordinator {
       index: new KnowledgeIndexService(manifest),
       stores,
       folders,
+      vaultCapabilities,
       profiles,
       archiveVaultId: archiveVault.id,
       archiveVaultName: archiveVault.name,
@@ -347,9 +357,11 @@ export class ImportCoordinator {
     folders: Map<string, string[]>;
     profiles: VaultProfile[];
     warnings: string[];
+    vaultCapabilities: Map<string, CapabilityFlags>;
   }> {
     const stores = new Map<string, KnowledgeFileStore>();
     const folders = new Map<string, string[]>();
+    const vaultCapabilities = new Map<string, CapabilityFlags>();
     const profiles: VaultProfile[] = [];
     const warnings: string[] = [];
 
@@ -364,9 +376,17 @@ export class ImportCoordinator {
       const profile = await this.deps.registry.buildProfile(vault, store);
       profiles.push(profile);
       folders.set(vault.id, profile.folders);
+
+      // Plugins are vault-local, so every destination gets its own capability
+      // profile. Cached, so writing a note never rescans .obsidian.
+      if (this.deps.integrations) {
+        const capabilityProfile = await this.deps.integrations.getProfile(vault, base);
+        vaultCapabilities.set(vault.id, capabilityProfile.capabilities);
+        capabilityProfile.warnings.forEach((warning) => warnings.push(warning));
+      }
     }
 
-    return { stores, folders, profiles, warnings };
+    return { stores, folders, profiles, warnings, vaultCapabilities };
   }
 
   /** Dry runs work on an isolated copy so nothing about real state changes. */
@@ -557,6 +577,7 @@ export class ImportCoordinator {
         conversation: reference,
         store: targetStore,
         existingFolders: context.folders.get(decision.vaultId!) || [],
+        capabilities: context.vaultCapabilities.get(decision.vaultId!),
       },
       writeContext(context)
     );

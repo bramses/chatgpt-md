@@ -252,6 +252,15 @@ export function obsidianUri(vaultName: string, filePath: string): string {
   return `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(file)}`;
 }
 
+/** Short, filesystem- and JSON-safe id derived from a path. */
+export function shortHashSafe(value: string): string {
+  let hash = 0;
+  for (let index = 0; index < value.length; index++) {
+    hash = (Math.imul(31, hash) + value.charCodeAt(index)) | 0;
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 export function toWikiLink(title: string): string {
   return `[[${(title || "").replace(/[[\]|]/g, "")}]]`;
 }

@@ -19,6 +19,8 @@ import {
   symbolScaffold,
 } from "./NoteTemplates";
 import { matchExistingFolder, PERSONAL_FOLDERS } from "./PersonalOntology";
+import { CapabilityFlags } from "src/Models/Knowledge/PluginCapability";
+import { capabilitiesOrDefault, VaultEnhancementService } from "./VaultEnhancementService";
 import {
   EvidenceEntry,
   evidenceDateRange,
@@ -75,6 +77,11 @@ export interface UnitWriteRequest {
   store: KnowledgeFileStore;
   /** Folders that already exist in the destination vault. */
   existingFolders: string[];
+  /**
+   * What the *destination* vault can use. Optional by design: with no
+   * capabilities the note is written exactly the same, minus the extras.
+   */
+  capabilities?: CapabilityFlags;
 }
 
 export interface UnitWriteResult {
@@ -88,7 +95,8 @@ export interface UnitWriteResult {
 export class KnowledgeWriterService {
   constructor(
     private readonly resolver: SemanticNoteResolver,
-    private readonly manifest: ImportManifestService
+    private readonly manifest: ImportManifestService,
+    private readonly enhancements: VaultEnhancementService = new VaultEnhancementService()
   ) {}
 
   /** Layer A. Returns true when the archive note was created or changed. */
@@ -149,6 +157,14 @@ export class KnowledgeWriterService {
     // they get no themes, no related concepts and no reading of any kind.
     if (!unit.preserveOnly) content = this.applyRelated(content, unit);
     content = upsertFrontmatterFields(content, this.frontmatterFor(content, unit, request, context, wasRetired));
+
+    // Canonical Markdown is complete at this point. Everything below is
+    // optional and decided by the destination vault, never by what happens to
+    // be installed in the vault the importer was started from.
+    content = this.enhancements.apply(content, unit, {
+      capabilities: capabilitiesOrDefault(request.capabilities),
+      noteType: this.frontmatterType(unit),
+    });
 
     await store.write(resolved.path, content);
     this.resolver.register(resolved, store.vaultId, unit.kind, unit.title, request.conversation.date, unit.layer);

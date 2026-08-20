@@ -69,6 +69,7 @@ Current lint may report complexity/length warnings. Do not treat existing warnin
   - ChatGPT history importer: source archive, semantic extraction, multi-vault routing, durable note merging.
   - Opt-in via `knowledgeEnabled`; no startup work and no commands when disabled.
   - Read `src/Services/Knowledge/CLAUDE.md` and `docs/observatory-constitution.md` before changing anything here. The invariants listed there (archive first, manifest is the source of truth, human content wins, evidence merges by unit id, projects stay projects) are behavioral contracts covered by tests.
+  - Plugin integrations are per vault (`PluginCapabilityRegistry`, `PluginIntegrationService`, `VaultEnhancementService`). Never ask "is Dataview installed?" globally - ask `has(vaultId, capability)`. Enhancements are applied after canonical Markdown and must never change what the note means. See `docs/plugin-integrations.md`.
   - The personal vault additionally follows an epistemic constitution: assistant text is never evidence about the user, clinical/essentializing language is held back for review, interpretations carry a lifecycle and can be retired, and several commands exist to reduce interpretation rather than increase it. `Observatory.test.ts` and `EpistemicGuards.test.ts` are the regression suite for it.
 
 - `src/Services/SettingsService.ts`

@@ -31,9 +31,29 @@ import {
   ShowSomethingForgottenHandler,
   UnexpectedConnectionHandler,
 } from "./Commands/Knowledge/ObservatoryHandlers";
+import {
+  CAPTURE_KINDS,
+  CaptureHandler,
+  EnsureProjectContextHandler,
+  GenerateCanvasesHandler,
+  InstallTemplatesHandler,
+  OpenKnowledgeHomeHandler,
+  PluginIntegrationStatusHandler,
+  RefreshPluginCapabilitiesHandler,
+  ValidateKnowledgeGraphHandler,
+  WriteSystemStatusHandler,
+} from "./Commands/Knowledge/OrchestrationHandlers";
 import { Logger } from "./Utilities/Logger";
 
 export default class ChatGPT_MD extends Plugin {
+  /**
+   * In-process knowledge API for other plugins and external agents
+   * (Local REST API, MCP servers, companions). Present only when the knowledge
+   * importer is enabled. This plugin never opens a port of its own, and write
+   * operations stay refused unless the user enabled them in settings.
+   */
+  knowledgeApi?: ReturnType<ServiceContainer["knowledgeImportService"]["knowledgeApi"]>;
+
   private services: ServiceContainer;
   private modelSelectHandler: ModelSelectHandler;
   private stopStreamingHandler: StopStreamingHandler;
@@ -62,10 +82,13 @@ export default class ChatGPT_MD extends Plugin {
     // Register all commands
     this.registerCommands();
 
-    // Start watching the ChatGPT inbox only when the user asked for it
+    // Expose the knowledge API and start the inbox watcher only when asked.
     const knowledgeSettings = settingsService.getSettings();
-    if (knowledgeSettings.knowledgeEnabled && knowledgeSettings.knowledgeWatchInbox) {
-      this.services.knowledgeImportService.startWatching();
+    if (knowledgeSettings.knowledgeEnabled) {
+      this.knowledgeApi = this.services.knowledgeImportService.knowledgeApi();
+      if (knowledgeSettings.knowledgeWatchInbox) {
+        this.services.knowledgeImportService.startWatching();
+      }
     }
 
     // Initialize available models after registry is created, but don't block startup
@@ -141,6 +164,17 @@ export default class ChatGPT_MD extends Plugin {
       new ShowSomethingForgottenHandler(this.services),
       new UnexpectedConnectionHandler(this.services),
       new ReviewPersonalModelsHandler(this.services),
+      // Orchestration: one knowledge system across the plugins each vault has.
+      new PluginIntegrationStatusHandler(this.services),
+      new RefreshPluginCapabilitiesHandler(this.services),
+      new OpenKnowledgeHomeHandler(this.services),
+      new WriteSystemStatusHandler(this.services),
+      new GenerateCanvasesHandler(this.services),
+      new InstallTemplatesHandler(this.services),
+      new EnsureProjectContextHandler(this.services),
+      new ValidateKnowledgeGraphHandler(this.services),
+      // Manual capture: the same structure the importer writes into.
+      ...CAPTURE_KINDS.map((kind) => new CaptureHandler(this.services, kind)),
     ].forEach((handler) => registrar.registerCallbackCommand(handler));
 
     registrar.registerEditorCommand(new EnoughAnalysisHandler(this.services));

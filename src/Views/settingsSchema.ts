@@ -624,6 +624,22 @@ const SETTINGS_SCHEMA: SettingDefinition[] = [
     group: "Knowledge Importer",
   },
   {
+    id: "knowledgeLinkDailyNotes",
+    name: "Link Knowledge In Daily Notes",
+    description:
+      "When you capture something, add a link to it in today's daily note. References only; conversations are never copied into daily notes. Requires the Daily Notes core plugin in that vault.",
+    type: "toggle",
+    group: "Knowledge Importer",
+  },
+  {
+    id: "knowledgeExposeWriteApi",
+    name: "Allow External Captures (Knowledge API)",
+    description:
+      "Let other plugins (Local REST API, MCP servers, companion apps) create captures through the in-process knowledge API. Reading status and notes is always available to in-process callers; this switch gates writing. This plugin never opens a network port itself.",
+    type: "toggle",
+    group: "Knowledge Importer",
+  },
+  {
     id: "knowledgeEnableDreams",
     name: "Extract Dreams",
     description: "Create structured dream notes and recurring symbol notes.",

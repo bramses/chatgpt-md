@@ -12,7 +12,7 @@ import { ImportManifestService } from "./ImportManifestService";
 import { KnowledgeAiCaller, SemanticExtractorService } from "./SemanticExtractorService";
 import { VaultRegistryService } from "./VaultRegistryService";
 import { VaultRouterService } from "./VaultRouterService";
-import { ObsidianVaultStore } from "./KnowledgeFileStore";
+import { KnowledgeFileStore, ObsidianVaultStore } from "./KnowledgeFileStore";
 import { CompositeSourceReader, NodeSourceReader, SourceFileReader, VaultSourceReader } from "./SourceFileReader";
 import { ArchiveSourceAdapter } from "./Sources/ArchiveSourceAdapter";
 import { LiveCaptureAdapter } from "./Sources/LiveCaptureAdapter";
@@ -24,6 +24,22 @@ import { ModelReviewService, ModelReviewResult } from "./ModelReviewService";
 import { ReflectionService, ChallengeResult } from "./ReflectionService";
 import { ForgottenPick, SerendipityService } from "./SerendipityService";
 import { VaultDefinition } from "src/Models/Knowledge/VaultDefinition";
+import { CapabilityFlags } from "src/Models/Knowledge/PluginCapability";
+import { PluginIntegrationService, VaultIntegrationStatus } from "./PluginIntegrationService";
+import { CaptureKind, CaptureResult, CaptureService } from "./CaptureService";
+import { KnowledgeHomeService } from "./KnowledgeHomeService";
+import { CanvasProjectionService } from "./CanvasProjectionService";
+import { KnowledgeTemplateService } from "./KnowledgeTemplateService";
+import {
+  assertReadablePath,
+  excerptOf,
+  KnowledgeApi,
+  KnowledgeApiNote,
+  KnowledgeApiRoutingPreview,
+  KnowledgeApiVault,
+  KnowledgeApiError,
+  KNOWLEDGE_API_VERSION,
+} from "./KnowledgeApiService";
 import { getApiUrlsFromFrontmatter, getDefaultModelForService } from "src/Utilities/FrontmatterHelpers";
 import { aiProviderFromKeys, aiProviderFromUrl } from "src/Utilities/ProviderHelpers";
 import { Logger } from "src/Utilities/Logger";
@@ -67,8 +83,14 @@ export class KnowledgeImportService {
     private readonly aiProviderFactory: () => AiProviderService,
     private readonly apiAuthService: ApiAuthService,
     private readonly notificationService: NotificationService,
-    private readonly registry: VaultRegistryService = new VaultRegistryService(app)
+    private readonly registry: VaultRegistryService = new VaultRegistryService(app),
+    private readonly integrations: PluginIntegrationService = new PluginIntegrationService(registry)
   ) {}
+
+  /** Per-vault plugin capabilities. Never a single global answer. */
+  pluginIntegrations(): PluginIntegrationService {
+    return this.integrations;
+  }
 
   isRunning(): boolean {
     return this.running;
@@ -95,6 +117,7 @@ export class KnowledgeImportService {
         normalizer: new ConversationNormalizer(),
         createCaller: (settings) => this.createCaller(settings),
         getSettings: this.getSettings,
+        integrations: this.integrations,
       });
     }
     return { manifest: this.manifest, coordinator: this.coordinator };
@@ -336,6 +359,214 @@ export class KnowledgeImportService {
     const synced = await new ModelReviewService(manifest).syncLifecycleFromNotes(store);
     await manifest.save();
     return synced;
+  }
+
+  /** Capabilities of the destination vault, loading the profile if needed. */
+  private async capabilitiesFor(vault: VaultDefinition, store: KnowledgeFileStore): Promise<CapabilityFlags> {
+    return (await this.integrations.getProfile(vault, store)).capabilities;
+  }
+
+  /** Scan every vault's plugin ecosystem. Explicit action only. */
+  async pluginStatus(options: { forceRefresh?: boolean } = {}): Promise<VaultIntegrationStatus[]> {
+    return this.integrations.scanAll(this.getSettings().knowledgeVaultRegistry, options);
+  }
+
+  /**
+   * Manual capture into the same structure the importer writes into.
+   * Works with or without QuickAdd; QuickAdd can bind to the commands.
+   */
+  async capture(kind: CaptureKind, title: string, body?: string, source?: string): Promise<CaptureResult> {
+    const { vault, store } = await this.personalVault();
+    const settings = this.getSettings();
+    const capabilities = await this.capabilitiesFor(vault, store);
+
+    return new CaptureService().capture(store, {
+      kind,
+      title,
+      body,
+      source,
+      capabilities: settings.knowledgeLinkDailyNotes ? capabilities : { ...capabilities, "daily-notes": false },
+    });
+  }
+
+  /** Rebuild the entry note, adapted to what the personal vault can render. */
+  async writeHome(): Promise<string> {
+    const { manifest } = await this.ensureReady();
+    const { vault, store } = await this.personalVault();
+    const path = await new KnowledgeHomeService(manifest).writeHome(store, await this.capabilitiesFor(vault, store));
+    await manifest.save();
+    return path;
+  }
+
+  /** Per-vault status note: what exists where, and what is only plain Markdown. */
+  async writeStatusNote(): Promise<string> {
+    const { manifest } = await this.ensureReady();
+    const { store } = await this.personalVault();
+    const statuses = await this.pluginStatus({ forceRefresh: true });
+    const status = manifest.status(KNOWLEDGE_PROCESSING_VERSION);
+
+    return new KnowledgeHomeService(manifest).writeStatus(store, statuses, [
+      `conversations known: ${status.totalKnown}`,
+      `archived: ${status.archived}`,
+      `processed: ${status.processed}`,
+      `awaiting review: ${status.awaitingReview}`,
+      `readings retired or historical: ${status.retiredModels}`,
+      `inbox watcher: ${this.isWatching() ? "on" : "off"}`,
+    ]);
+  }
+
+  /** Curated canvas views. Skipped entirely when Canvas is off in that vault. */
+  async generateCanvases(): Promise<string[]> {
+    const { manifest } = await this.ensureReady();
+    const { vault, store } = await this.personalVault();
+    return new CanvasProjectionService(manifest).generate(store, await this.capabilitiesFor(vault, store));
+  }
+
+  /** Install note templates matching the generated schemas. Never overwrites. */
+  async installTemplates(): Promise<string[]> {
+    const { vault, store } = await this.personalVault();
+    return new KnowledgeTemplateService().install(store, await this.capabilitiesFor(vault, store));
+  }
+
+  /** Entry notes for project vaults, so an AI client has somewhere to start. */
+  async ensureProjectContext(): Promise<string[]> {
+    const { manifest } = await this.ensureReady();
+    const settings = this.getSettings();
+    const vaults = await this.registry.resolveVaults(settings.knowledgeVaultRegistry);
+    const written: string[] = [];
+
+    for (const vault of vaults.filter((candidate) => candidate.kind === "project")) {
+      const store = this.registry.storeFor(vault);
+      if (!store) continue;
+      const paths = await new KnowledgeHomeService(manifest).ensureProjectContext(store, vault.name);
+      written.push(...paths.map((path) => `${vault.name}/${path}`));
+    }
+
+    return written;
+  }
+
+  /**
+   * In-process API for other plugins and external agents.
+   * Opens no port, exposes no settings, and refuses writes unless enabled.
+   */
+  knowledgeApi(): KnowledgeApi {
+    return {
+      version: KNOWLEDGE_API_VERSION,
+      canWrite: () => this.getSettings().knowledgeExposeWriteApi === true,
+      status: () => this.status(),
+      vaults: () => this.apiVaults(),
+      search: (query, options) => this.apiSearch(query, options),
+      read: (path, options) => this.apiRead(path, options),
+      capture: async (kind, title, body) => {
+        if (!this.getSettings().knowledgeExposeWriteApi) {
+          throw new KnowledgeApiError("External captures are disabled. Enable them in ChatGPT MD settings.");
+        }
+        const result = await this.capture(kind, title, body);
+        return { path: result.path };
+      },
+      previewRouting: (text) => this.apiPreviewRouting(text),
+    };
+  }
+
+  private async apiVaults(): Promise<KnowledgeApiVault[]> {
+    const statuses = await this.pluginStatus();
+    return statuses.map((status) => ({
+      id: status.vault.id,
+      name: status.vault.name,
+      kind: status.vault.kind,
+      reachable: status.reachable,
+      capabilities: Object.entries(status.profile.capabilities)
+        .filter(([, available]) => available)
+        .map(([capability]) => capability),
+    }));
+  }
+
+  private async apiSearch(
+    query: string,
+    options: { limit?: number; vaultId?: string } = {}
+  ): Promise<KnowledgeApiNote[]> {
+    const { manifest } = await this.ensureReady();
+    const needle = query.trim().toLowerCase();
+    if (!needle) return [];
+
+    const { vault, store } = await this.personalVault();
+    if (options.vaultId && options.vaultId !== vault.id) return [];
+
+    const matches = manifest
+      .listConcepts()
+      .filter((concept) => concept.vaultId === store.vaultId)
+      .filter(
+        (concept) =>
+          concept.title.toLowerCase().includes(needle) ||
+          concept.aliases.some((alias) => alias.toLowerCase().includes(needle))
+      )
+      .slice(0, options.limit ?? 20);
+
+    const results: KnowledgeApiNote[] = [];
+    for (const concept of matches) {
+      const content = (await store.read(concept.path)) ?? "";
+      results.push({
+        path: concept.path,
+        title: concept.title,
+        vaultId: concept.vaultId,
+        excerpt: excerptOf(content, query),
+      });
+    }
+    return results;
+  }
+
+  private async apiRead(path: string, options: { vaultId?: string } = {}): Promise<string | null> {
+    assertReadablePath(path);
+    const settings = this.getSettings();
+    const vaults = await this.registry.resolveVaults(settings.knowledgeVaultRegistry);
+    const vault = options.vaultId ? vaults.find((candidate) => candidate.id === options.vaultId) : undefined;
+    const target = vault ?? (await this.personalVault()).vault;
+    const store = this.registry.storeFor(target);
+    return store ? store.read(path) : null;
+  }
+
+  private async apiPreviewRouting(text: string): Promise<KnowledgeApiRoutingPreview[]> {
+    const summary = await this.dryRun([]);
+    if (!summary) return [];
+    const needle = text.trim().toLowerCase();
+    return summary.routingPreview
+      .filter((preview) => !needle || preview.unit.toLowerCase().includes(needle))
+      .slice(0, 25)
+      .map((preview) => ({
+        vault: preview.vault,
+        folder: preview.folder,
+        confidence: preview.confidence,
+        status: preview.status,
+        reason: preview.kind,
+      }));
+  }
+
+  /**
+   * Structural health check: no AI, no network, no writes. Verifies that the
+   * concept registry still matches what is on disk, which is where a knowledge
+   * graph quietly rots when notes are moved or deleted by hand.
+   */
+  async validateKnowledgeGraph(): Promise<string[]> {
+    const { manifest } = await this.ensureReady();
+    const { store } = await this.personalVault();
+    const concepts = manifest.listConcepts().filter((concept) => concept.vaultId === store.vaultId);
+
+    let missing = 0;
+    let retired = 0;
+    for (const concept of concepts) {
+      if (!(await store.exists(concept.path))) missing++;
+      if (concept.surfaceInRetrieval === false) retired++;
+    }
+
+    const status = manifest.status(KNOWLEDGE_PROCESSING_VERSION);
+    return [
+      `concepts registered: ${concepts.length}`,
+      `notes missing on disk: ${missing}${missing > 0 ? " (moved or deleted by hand; they will be recreated on the next write)" : ""}`,
+      `readings kept out of retrieval: ${retired}`,
+      `conversations pending: ${status.pending}`,
+      `failed conversations: ${status.failed}`,
+      `units awaiting review: ${status.awaitingReview}`,
+    ];
   }
 
   async status(): Promise<KnowledgeStatus> {

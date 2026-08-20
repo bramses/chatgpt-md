@@ -70,6 +70,23 @@ identity-freezing, however well they would work.
 - **Interpretation is labeled.** Inferred statements are written tentatively and
   marked; no diagnoses, no "frequency proves significance".
 
+## Plugin orchestration (per vault)
+
+Obsidian plugins are vault-local. A global capability list would be wrong in
+every direction, so:
+
+- `PluginCapabilityRegistry` builds one cached profile per vault from
+  `community-plugins.json`, `core-plugins.json` and `plugins/*/manifest.json`.
+  Plugin *settings* are never read (they contain tokens).
+- `PluginIntegrationService` answers `has(vaultId, capability)`. There is no
+  `getDataview()`; the destination vault decides.
+- `VaultEnhancementService` applies optional extras *after* the canonical note is
+  complete. `Orchestration.test.ts` asserts the note body is byte-identical with
+  and without capabilities - keep it that way.
+- Nothing installs, enables, disables or copies plugin configuration. Missing
+  capabilities are reported, never fixed.
+- Discovery is cached (10 min TTL, explicit refresh) and never runs at startup.
+
 ## Files
 
 | File | Role |
