@@ -25,7 +25,7 @@ Chat with AI directly in your notes. Reference your other notes with `[[wiki lin
 > **Requirements:** Obsidian **1.11.4 or newer** (needed for secure key storage) and an API key from any supported provider — or a free, private local setup via Ollama/LM Studio.
 
 1. **Install** — Settings → Community Plugins → Browse → Search "ChatGPT MD"
-2. **Add API key** — Settings → ChatGPT MD → Paste your key (OpenAI, Anthropic, or OpenRouter)
+2. **Add API key** — Settings → ChatGPT MD → Paste your key (OpenAI, Atlas Cloud, Anthropic, or OpenRouter)
 3. **Chat** — Press `Cmd+P` → Type "ChatGPT MD: Chat"
 
 **That's it.** You're now chatting with AI in your notes.
@@ -130,6 +130,7 @@ You: Select what to share ✓
 | Provider | Why Use It | Cost |
 |----------|-----------|------|
 | **OpenAI** | Reliable, GPT-4 | Pay per use |
+| **Atlas Cloud** | OpenAI-compatible access to multiple text models | Pay per use |
 | **Anthropic** | Claude, great for long docs | Pay per use |
 | **Gemini** | Google's models | Pay per use |
 | **OpenRouter** | Access to ALL models | Pay per use |
@@ -139,12 +140,15 @@ You: Select what to share ✓
 
 **Model prefix examples:**
 - OpenAI: `openai@gpt-4.1-mini` (unprefixed OpenAI model IDs also work)
+- Atlas Cloud: `atlascloud@deepseek-ai/deepseek-v4-pro`
 - Anthropic: `anthropic@claude-sonnet-4-20250514`
 - Gemini: `gemini@gemini-2.5-flash-lite`
 - OpenRouter: `openrouter@openai/gpt-4.1-mini`
 - Local: `ollama@llama3.2` or `lmstudio@model-name`
 
 OpenAI search-preview models such as `openai@gpt-4o-mini-search-preview` are supported through OpenAI's chat-completions endpoint.
+
+For Atlas Cloud, create an API key in the [Atlas Cloud console](https://www.atlascloud.ai/), add it under Settings → ChatGPT MD → API Keys, and select any text model returned by the provider's model list. Atlas Cloud remains optional; existing provider defaults are unchanged.
 
 ---
 
@@ -204,7 +208,7 @@ A: `llama3.2` is great for general use. `deepseek-r1:7b` for reasoning. Try a fe
 
 **Q: Is my data private?**
 
-A: With OpenAI/Anthropic, your messages go to their servers. With Ollama/LM Studio, everything stays on your computer. Your choice.
+A: With cloud providers such as OpenAI, Atlas Cloud, or Anthropic, your messages go to that provider. With Ollama/LM Studio, everything stays on your computer. Your choice.
 
 **Q: What's an "agent"?**
 

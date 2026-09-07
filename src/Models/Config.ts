@@ -5,6 +5,7 @@ import {
   PLUGIN_SYSTEM_MESSAGE,
 } from "../Constants";
 import {
+  DEFAULT_ATLASCLOUD_CONFIG,
   DEFAULT_ANTHROPIC_CONFIG,
   DEFAULT_GEMINI_CONFIG,
   DEFAULT_LMSTUDIO_CONFIG,
@@ -37,6 +38,7 @@ temperature: ${DEFAULT_OPENAI_CONFIG.temperature}
  * See src/Services/ApiAuthService.ts::getApiKey() for usage.
  *
  * - apiKey: Used for OpenAI API authentication (Bearer token)
+ * - atlascloudApiKey: Used for Atlas Cloud API authentication
  * - openrouterApiKey: Used for OpenRouter API authentication
  * - anthropicApiKey: Used for Anthropic API authentication (x-api-key header)
  * - geminiApiKey: Used for Gemini API authentication (x-goog-api-key header)
@@ -45,6 +47,9 @@ export interface ApiKeySettings {
   /** API Key for OpenAI - used for OpenAI API calls */
   apiKey: string;
   apiKeySecretId: string;
+  /** API Key for Atlas Cloud's OpenAI-compatible LLM API */
+  atlascloudApiKey: string;
+  atlascloudApiKeySecretId: string;
   /** API Key for OpenRouter - used for OpenRouter proxy API calls */
   openrouterApiKey: string;
   openrouterApiKeySecretId: string;
@@ -113,6 +118,15 @@ export interface OpenAIFrontmatterSettings {
   openaiDefaultMaxTokens: number;
   openaiDefaultPresencePenalty: number;
   openaiDefaultFrequencyPenalty: number;
+}
+
+export interface AtlasCloudFrontmatterSettings {
+  atlascloudDefaultModel: string;
+  atlascloudDefaultTemperature: number;
+  atlascloudDefaultTopP: number;
+  atlascloudDefaultMaxTokens: number;
+  atlascloudDefaultPresencePenalty: number;
+  atlascloudDefaultFrequencyPenalty: number;
 }
 
 /**
@@ -190,6 +204,8 @@ export interface TemplateSettings {
 export interface ServiceUrlSettings {
   /** URL for OpenAI API */
   openaiUrl: string;
+  /** URL for Atlas Cloud's OpenAI-compatible LLM API */
+  atlascloudUrl: string;
   /** URL for OpenRouter API */
   openrouterUrl: string;
   /** URL for Ollama API */
@@ -233,6 +249,7 @@ export interface ChatGPT_MDSettings
     ServiceUrlSettings,
     WebSearchSettings,
     OpenAIFrontmatterSettings,
+    AtlasCloudFrontmatterSettings,
     AnthropicFrontmatterSettings,
     GeminiFrontmatterSettings,
     OpenRouterFrontmatterSettings,
@@ -272,6 +289,8 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   // API Keys
   apiKey: "",
   apiKeySecretId: "",
+  atlascloudApiKey: "",
+  atlascloudApiKeySecretId: "",
   openrouterApiKey: "",
   openrouterApiKeySecretId: "",
   anthropicApiKey: "",
@@ -283,6 +302,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
 
   // Service URLs
   openaiUrl: DEFAULT_OPENAI_CONFIG.url,
+  atlascloudUrl: DEFAULT_ATLASCLOUD_CONFIG.url,
   openrouterUrl: DEFAULT_OPENROUTER_CONFIG.url,
   ollamaUrl: DEFAULT_OLLAMA_CONFIG.url,
   lmstudioUrl: DEFAULT_LMSTUDIO_CONFIG.url,
@@ -326,6 +346,14 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   openaiDefaultMaxTokens: DEFAULT_OPENAI_CONFIG.max_tokens,
   openaiDefaultPresencePenalty: DEFAULT_OPENAI_CONFIG.presence_penalty,
   openaiDefaultFrequencyPenalty: DEFAULT_OPENAI_CONFIG.frequency_penalty,
+
+  // Atlas Cloud Defaults
+  atlascloudDefaultModel: DEFAULT_ATLASCLOUD_CONFIG.model,
+  atlascloudDefaultTemperature: DEFAULT_ATLASCLOUD_CONFIG.temperature,
+  atlascloudDefaultTopP: DEFAULT_ATLASCLOUD_CONFIG.top_p,
+  atlascloudDefaultMaxTokens: DEFAULT_ATLASCLOUD_CONFIG.max_tokens,
+  atlascloudDefaultPresencePenalty: DEFAULT_ATLASCLOUD_CONFIG.presence_penalty,
+  atlascloudDefaultFrequencyPenalty: DEFAULT_ATLASCLOUD_CONFIG.frequency_penalty,
 
   // Anthropic Defaults
   anthropicDefaultModel: DEFAULT_ANTHROPIC_CONFIG.model,

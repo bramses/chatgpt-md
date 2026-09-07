@@ -1,5 +1,6 @@
 import { isValidApiKey } from "src/Services/ApiAuthService";
 import {
+  AI_SERVICE_ATLASCLOUD,
   AI_SERVICE_ANTHROPIC,
   AI_SERVICE_GEMINI,
   AI_SERVICE_LMSTUDIO,
@@ -21,6 +22,7 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
   // Canonical: Check explicit provider prefixes
   const prefixMap: [string, string][] = [
     ["openai@", AI_SERVICE_OPENAI],
+    ["atlascloud@", AI_SERVICE_ATLASCLOUD],
     ["anthropic@", AI_SERVICE_ANTHROPIC],
     ["gemini@", AI_SERVICE_GEMINI],
     ["ollama@", AI_SERVICE_OLLAMA],
@@ -45,6 +47,10 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
     // OpenRouter detection
     if (baseUrl.includes("openrouter.ai")) {
       return AI_SERVICE_OPENROUTER;
+    }
+
+    if (baseUrl.includes("api.atlascloud.ai")) {
+      return AI_SERVICE_ATLASCLOUD;
     }
 
     // LM Studio detection
@@ -78,19 +84,22 @@ export const aiProviderFromUrl = (url?: string, model?: string): string | undefi
 
 /**
  * Determine the AI provider from available API keys
- * Uses a priority order: OpenAI > Anthropic > Gemini > OpenRouter > Z.AI
+ * Uses a priority order: OpenAI > Atlas Cloud > Anthropic > Gemini > OpenRouter > Z.AI
  */
 export const aiProviderFromKeys = (config: Record<string, unknown>): string | null => {
   const key = (name: string): string | undefined => (typeof config[name] === "string" ? config[name] : undefined);
   const hasOpenRouterKey = isValidApiKey(key("openrouterApiKey"));
   const hasOpenAIKey = isValidApiKey(key("apiKey"));
+  const hasAtlasCloudKey = isValidApiKey(key("atlascloudApiKey"));
   const hasAnthropicKey = isValidApiKey(key("anthropicApiKey"));
   const hasGeminiKey = isValidApiKey(key("geminiApiKey"));
   const hasZaiKey = isValidApiKey(key("zaiApiKey"));
 
-  // Priority order: OpenAI > Anthropic > Gemini > OpenRouter > Z.AI
+  // Preserve OpenAI as the legacy first choice, then prefer dedicated cloud providers.
   if (hasOpenAIKey) {
     return AI_SERVICE_OPENAI;
+  } else if (hasAtlasCloudKey) {
+    return AI_SERVICE_ATLASCLOUD;
   } else if (hasAnthropicKey) {
     return AI_SERVICE_ANTHROPIC;
   } else if (hasGeminiKey) {

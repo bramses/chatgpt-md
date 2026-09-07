@@ -1,5 +1,9 @@
 # ChatGPT MD Changelog
 
+## Unreleased
+
+- Adds Atlas Cloud as an optional OpenAI-compatible provider with secure credential storage, model discovery, configurable defaults, and explicit `atlascloud@model-id` routing.
+
 ## v3.3.1 - Dependency Upgrades and Agent Instruction Migration
 
 - Upgrades the Vercel AI SDK family (ai 7.0.85), zod 4.5.4, and dev tooling (TypeScript 6.0.3, ESLint 10.9, Jest 30.5).

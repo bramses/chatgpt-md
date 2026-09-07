@@ -5,6 +5,7 @@ export const PLUGIN_PREFIX = `[${PLUGIN_NAME}]`;
 // AI service identifiers
 export const AI_SERVICE_OLLAMA = "ollama" as const;
 export const AI_SERVICE_OPENAI = "openai" as const;
+export const AI_SERVICE_ATLASCLOUD = "atlascloud" as const;
 export const AI_SERVICE_OPENROUTER = "openrouter" as const;
 export const AI_SERVICE_LMSTUDIO = "lmstudio" as const;
 export const AI_SERVICE_ANTHROPIC = "anthropic" as const;
@@ -15,6 +16,7 @@ export const AI_SERVICE_ZAI = "zai" as const;
 export const AI_SERVICES = [
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
+  AI_SERVICE_ATLASCLOUD,
   AI_SERVICE_OPENROUTER,
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_ANTHROPIC,

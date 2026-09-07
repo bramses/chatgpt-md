@@ -1,4 +1,5 @@
 import { AnthropicAdapter } from "./AnthropicAdapter";
+import { AtlasCloudAdapter } from "./AtlasCloudAdapter";
 import { GeminiAdapter } from "./GeminiAdapter";
 import { OpenAIAdapter } from "./OpenAIAdapter";
 import { OpenRouterAdapter } from "./OpenRouterAdapter";
@@ -8,6 +9,8 @@ describe("provider API path suffixes", () => {
   it.each([
     [new OpenAIAdapter(), "https://api.openai.com", "/v1"],
     [new OpenAIAdapter(), "https://example.com/v1", ""],
+    [new AtlasCloudAdapter(), "https://api.atlascloud.ai", "/v1"],
+    [new AtlasCloudAdapter(), "https://api.atlascloud.ai/v1", ""],
     [new AnthropicAdapter(), "https://api.anthropic.com", "/v1"],
     [new AnthropicAdapter(), "https://example.com/v1", ""],
     [new GeminiAdapter(), "https://generativelanguage.googleapis.com", "/v1beta"],

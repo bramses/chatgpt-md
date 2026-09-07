@@ -1,4 +1,5 @@
 import {
+  AI_SERVICE_ATLASCLOUD,
   AI_SERVICE_ANTHROPIC,
   AI_SERVICE_GEMINI,
   AI_SERVICE_LMSTUDIO,
@@ -7,6 +8,21 @@ import {
   AI_SERVICE_OPENROUTER,
   AI_SERVICE_ZAI,
 } from "src/Constants";
+
+export const DEFAULT_ATLASCLOUD_CONFIG = {
+  aiService: AI_SERVICE_ATLASCLOUD,
+  frequency_penalty: 0,
+  max_tokens: 400,
+  model: "atlascloud@deepseek-ai/deepseek-v4-pro",
+  presence_penalty: 0,
+  stream: true,
+  system_commands: null,
+  tags: [],
+  temperature: 0.7,
+  title: "Untitled",
+  top_p: 1,
+  url: "https://api.atlascloud.ai",
+};
 
 /**
  * Default configuration for OpenAI
