@@ -1,5 +1,6 @@
 import { ChatGPT_MDSettings } from "src/Models/Config";
 import {
+  AI_SERVICE_ATLASCLOUD,
   AI_SERVICE_ANTHROPIC,
   AI_SERVICE_GEMINI,
   AI_SERVICE_LMSTUDIO,
@@ -10,6 +11,7 @@ import {
   AiServiceType,
 } from "src/Constants";
 import {
+  DEFAULT_ATLASCLOUD_CONFIG,
   DEFAULT_ANTHROPIC_CONFIG,
   DEFAULT_GEMINI_CONFIG,
   DEFAULT_LMSTUDIO_CONFIG,
@@ -21,6 +23,7 @@ import {
 import { ProviderAdapter } from "src/Services/Adapters/ProviderAdapter";
 import { ProviderFactory } from "src/Types/ProviderTypes";
 import { OpenAIAdapter } from "src/Services/Adapters/OpenAIAdapter";
+import { AtlasCloudAdapter } from "src/Services/Adapters/AtlasCloudAdapter";
 import { AnthropicAdapter } from "src/Services/Adapters/AnthropicAdapter";
 import { GeminiAdapter } from "src/Services/Adapters/GeminiAdapter";
 import { LmStudioAdapter } from "src/Services/Adapters/LmStudioAdapter";
@@ -33,9 +36,11 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 
-export type ApiKeySettingKey = "apiKey" | "openrouterApiKey" | "anthropicApiKey" | "geminiApiKey" | "zaiApiKey";
+export type ApiKeySettingKey =
+  "apiKey" | "atlascloudApiKey" | "openrouterApiKey" | "anthropicApiKey" | "geminiApiKey" | "zaiApiKey";
 export type SecretIdSettingKey =
   | "apiKeySecretId"
+  | "atlascloudApiKeySecretId"
   | "openrouterApiKeySecretId"
   | "anthropicApiKeySecretId"
   | "geminiApiKeySecretId"
@@ -43,7 +48,7 @@ export type SecretIdSettingKey =
   | "webSearchApiKeySecretId";
 
 export interface CredentialDefinition {
-  category: "openai" | "openrouter" | "anthropic" | "gemini" | "zai" | "web-search";
+  category: "openai" | "atlascloud" | "openrouter" | "anthropic" | "gemini" | "zai" | "web-search";
   legacySetting: ApiKeySettingKey | "webSearchApiKey";
   secretIdSetting: SecretIdSettingKey;
   ownedSecretId: string;
@@ -51,7 +56,14 @@ export interface CredentialDefinition {
 }
 
 export type UrlSettingKey =
-  "openaiUrl" | "openrouterUrl" | "ollamaUrl" | "lmstudioUrl" | "anthropicUrl" | "geminiUrl" | "zaiUrl";
+  | "openaiUrl"
+  | "atlascloudUrl"
+  | "openrouterUrl"
+  | "ollamaUrl"
+  | "lmstudioUrl"
+  | "anthropicUrl"
+  | "geminiUrl"
+  | "zaiUrl";
 
 export interface ProviderDefinition {
   id: AiServiceType;
@@ -110,6 +122,33 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
       max_tokens: settings.openaiDefaultMaxTokens,
       presence_penalty: settings.openaiDefaultPresencePenalty,
       frequency_penalty: settings.openaiDefaultFrequencyPenalty,
+    }),
+  },
+  {
+    id: AI_SERVICE_ATLASCLOUD,
+    label: "Atlas Cloud",
+    requiresApiKey: true,
+    local: false,
+    apiKeySetting: "atlascloudApiKey",
+    credential: {
+      category: "atlascloud",
+      legacySetting: "atlascloudApiKey",
+      secretIdSetting: "atlascloudApiKeySecretId",
+      ownedSecretId: "chatgpt-md-atlascloud-api-key",
+      label: "Atlas Cloud",
+    },
+    urlSetting: "atlascloudUrl",
+    defaultUrl: DEFAULT_ATLASCLOUD_CONFIG.url,
+    defaultConfig: DEFAULT_ATLASCLOUD_CONFIG,
+    createAdapter: () => new AtlasCloudAdapter(),
+    createProviderFactory: () => createOpenAICompatible,
+    getFrontmatterFields: (settings) => ({
+      model: settings.atlascloudDefaultModel,
+      temperature: settings.atlascloudDefaultTemperature,
+      top_p: settings.atlascloudDefaultTopP,
+      max_tokens: settings.atlascloudDefaultMaxTokens,
+      presence_penalty: settings.atlascloudDefaultPresencePenalty,
+      frequency_penalty: settings.atlascloudDefaultFrequencyPenalty,
     }),
   },
   {

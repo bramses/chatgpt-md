@@ -5,6 +5,7 @@ import {
   isTitleTimestampFormat,
 } from "./FrontmatterHelpers";
 import {
+  AI_SERVICE_ATLASCLOUD,
   AI_SERVICE_ANTHROPIC,
   AI_SERVICE_GEMINI,
   AI_SERVICE_LMSTUDIO,
@@ -18,6 +19,12 @@ describe("getDefaultConfigForService", () => {
     const config = getDefaultConfigForService(AI_SERVICE_OPENAI);
     expect(config.aiService).toBe("openai");
     expect(config.url).toContain("openai.com");
+  });
+
+  it("returns Atlas Cloud config for atlascloud", () => {
+    const config = getDefaultConfigForService(AI_SERVICE_ATLASCLOUD);
+    expect(config.aiService).toBe("atlascloud");
+    expect(config.url).toContain("atlascloud.ai");
   });
 
   it("returns Anthropic config for anthropic", () => {
@@ -172,6 +179,7 @@ describe("getApiUrlsFromFrontmatter", () => {
   it("returns URLs for all services", () => {
     const urls = getApiUrlsFromFrontmatter({});
     expect(urls).toHaveProperty(AI_SERVICE_OPENAI);
+    expect(urls).toHaveProperty(AI_SERVICE_ATLASCLOUD);
     expect(urls).toHaveProperty(AI_SERVICE_ANTHROPIC);
     expect(urls).toHaveProperty(AI_SERVICE_GEMINI);
     expect(urls).toHaveProperty(AI_SERVICE_OLLAMA);

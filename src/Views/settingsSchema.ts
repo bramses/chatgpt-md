@@ -2,6 +2,7 @@ import { ChatGPT_MDSettings } from "src/Models/Config";
 import { DEFAULT_DATE_FORMAT, ROLE_IDENTIFIER, ROLE_USER } from "src/Constants";
 import { getProviderDefinitions } from "src/Services/Providers/ProviderRegistry";
 import {
+  DEFAULT_ATLASCLOUD_CONFIG,
   DEFAULT_ANTHROPIC_CONFIG,
   DEFAULT_GEMINI_CONFIG,
   DEFAULT_LMSTUDIO_CONFIG,
@@ -51,6 +52,15 @@ const SETTINGS_SCHEMA: SettingDefinition[] = [
     type: "credential",
     secretIdSetting: "apiKeySecretId",
     placeholder: "your openAI API Key",
+    group: "API Keys",
+  },
+  {
+    id: "atlascloudApiKey",
+    name: "Atlas Cloud API Key",
+    description: "API key for Atlas Cloud's OpenAI-compatible LLM API",
+    type: "credential",
+    secretIdSetting: "atlascloudApiKeySecretId",
+    placeholder: "your Atlas Cloud API key",
     group: "API Keys",
   },
   {
@@ -188,6 +198,47 @@ const SETTINGS_SCHEMA: SettingDefinition[] = [
     ["openaiDefaultTopP", "Top P", "1"],
     ["openaiDefaultPresencePenalty", "Presence Penalty", "0"],
     ["openaiDefaultFrequencyPenalty", "Frequency Penalty", "0"],
+  ]),
+
+  // Atlas Cloud Defaults
+  {
+    id: "atlascloudUrl",
+    name: "API URL",
+    description: `URL for Atlas Cloud's OpenAI-compatible LLM API\nDefault URL: ${DEFAULT_ATLASCLOUD_CONFIG.url}`,
+    type: "text",
+    placeholder: DEFAULT_ATLASCLOUD_CONFIG.url,
+    group: "Atlas Cloud",
+  },
+  {
+    id: "atlascloudDefaultModel",
+    name: "Default Model",
+    description: "Default model for Atlas Cloud chats",
+    type: "text",
+    placeholder: DEFAULT_ATLASCLOUD_CONFIG.model,
+    group: "Atlas Cloud",
+  },
+  {
+    id: "atlascloudDefaultTemperature",
+    valueType: "number",
+    name: "Default Temperature",
+    description: "Default temperature for Atlas Cloud chats (0.0 to 2.0)",
+    type: "text",
+    placeholder: "0.7",
+    group: "Atlas Cloud",
+  },
+  {
+    id: "atlascloudDefaultMaxTokens",
+    valueType: "number",
+    name: "Default Max Tokens",
+    description: "Default max tokens for Atlas Cloud chats",
+    type: "text",
+    placeholder: "400",
+    group: "Atlas Cloud",
+  },
+  ...numericProviderSettings("Atlas Cloud", [
+    ["atlascloudDefaultTopP", "Top P", "1"],
+    ["atlascloudDefaultPresencePenalty", "Presence Penalty", "0"],
+    ["atlascloudDefaultFrequencyPenalty", "Frequency Penalty", "0"],
   ]),
 
   // Anthropic Defaults

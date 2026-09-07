@@ -32,15 +32,23 @@ describe("ProviderRegistry", () => {
   it("defines complete, unique, stable metadata for every credential category", () => {
     const credentials = getCredentialDefinitions();
 
-    expect(credentials).toHaveLength(6);
-    expect(new Set(credentials.map((item) => item.legacySetting)).size).toBe(6);
-    expect(new Set(credentials.map((item) => item.secretIdSetting)).size).toBe(6);
-    expect(new Set(credentials.map((item) => item.ownedSecretId)).size).toBe(6);
+    expect(credentials).toHaveLength(7);
+    expect(new Set(credentials.map((item) => item.legacySetting)).size).toBe(7);
+    expect(new Set(credentials.map((item) => item.secretIdSetting)).size).toBe(7);
+    expect(new Set(credentials.map((item) => item.ownedSecretId)).size).toBe(7);
     for (const credential of credentials) {
       expect(credential.ownedSecretId).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
       expect(DEFAULT_SETTINGS[credential.legacySetting]).toBe("");
       expect(DEFAULT_SETTINGS[credential.secretIdSetting]).toBe("");
     }
+  });
+
+  it("routes Atlas Cloud through its OpenAI-compatible factory and URL", () => {
+    const provider = getProviderDefinition("atlascloud");
+
+    expect(provider.createAdapter().type).toBe("atlascloud");
+    expect(getProviderUrl(DEFAULT_SETTINGS, provider)).toBe("https://api.atlascloud.ai");
+    expect(getProviderFactory("atlascloud")).toBeDefined();
   });
 
   it("creates an adapter for every provider", () => {
