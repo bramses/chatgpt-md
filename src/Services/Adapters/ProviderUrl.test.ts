@@ -2,6 +2,7 @@ import { AnthropicAdapter } from "./AnthropicAdapter";
 import { GeminiAdapter } from "./GeminiAdapter";
 import { OpenAIAdapter } from "./OpenAIAdapter";
 import { OpenRouterAdapter } from "./OpenRouterAdapter";
+import { RequestyAdapter } from "./RequestyAdapter";
 import { ZaiAdapter } from "./ZaiAdapter";
 
 describe("provider API path suffixes", () => {
@@ -14,6 +15,8 @@ describe("provider API path suffixes", () => {
     [new GeminiAdapter(), "https://example.com/v1beta", ""],
     [new OpenRouterAdapter(), "https://openrouter.ai", "/api/v1"],
     [new OpenRouterAdapter(), "https://openrouter.ai/api/v1", ""],
+    [new RequestyAdapter(), "https://router.requesty.ai", "/v1"],
+    [new RequestyAdapter(), "https://router.requesty.ai/v1", ""],
   ])("normalizes %s with %s", (adapter, url, suffix) => {
     expect(adapter.getApiPathSuffix(url)).toBe(suffix);
   });

@@ -6,6 +6,7 @@ export const PLUGIN_PREFIX = `[${PLUGIN_NAME}]`;
 export const AI_SERVICE_OLLAMA = "ollama" as const;
 export const AI_SERVICE_OPENAI = "openai" as const;
 export const AI_SERVICE_OPENROUTER = "openrouter" as const;
+export const AI_SERVICE_REQUESTY = "requesty" as const;
 export const AI_SERVICE_LMSTUDIO = "lmstudio" as const;
 export const AI_SERVICE_ANTHROPIC = "anthropic" as const;
 export const AI_SERVICE_GEMINI = "gemini" as const;
@@ -16,6 +17,7 @@ export const AI_SERVICES = [
   AI_SERVICE_OLLAMA,
   AI_SERVICE_OPENAI,
   AI_SERVICE_OPENROUTER,
+  AI_SERVICE_REQUESTY,
   AI_SERVICE_LMSTUDIO,
   AI_SERVICE_ANTHROPIC,
   AI_SERVICE_GEMINI,

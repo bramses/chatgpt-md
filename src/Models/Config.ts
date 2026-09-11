@@ -11,6 +11,7 @@ import {
   DEFAULT_OLLAMA_CONFIG,
   DEFAULT_OPENAI_CONFIG,
   DEFAULT_OPENROUTER_CONFIG,
+  DEFAULT_REQUESTY_CONFIG,
   DEFAULT_ZAI_CONFIG,
 } from "src/Services/DefaultConfigs";
 import { getDefaultToolWhitelist } from "./DefaultToolWhitelist";
@@ -38,6 +39,7 @@ temperature: ${DEFAULT_OPENAI_CONFIG.temperature}
  *
  * - apiKey: Used for OpenAI API authentication (Bearer token)
  * - openrouterApiKey: Used for OpenRouter API authentication
+ * - requestyApiKey: Used for Requesty API authentication
  * - anthropicApiKey: Used for Anthropic API authentication (x-api-key header)
  * - geminiApiKey: Used for Gemini API authentication (x-goog-api-key header)
  */
@@ -48,6 +50,9 @@ export interface ApiKeySettings {
   /** API Key for OpenRouter - used for OpenRouter proxy API calls */
   openrouterApiKey: string;
   openrouterApiKeySecretId: string;
+  /** API Key for Requesty - used for Requesty gateway API calls */
+  requestyApiKey: string;
+  requestyApiKeySecretId: string;
   /** API Key for Anthropic - used for Claude models via Anthropic API */
   anthropicApiKey: string;
   anthropicApiKeySecretId: string;
@@ -147,6 +152,18 @@ export interface OpenRouterFrontmatterSettings {
 }
 
 /**
+ * Provider-specific frontmatter settings for Requesty
+ */
+export interface RequestyFrontmatterSettings {
+  requestyDefaultModel: string;
+  requestyDefaultTemperature: number;
+  requestyDefaultTopP: number;
+  requestyDefaultMaxTokens: number;
+  requestyDefaultPresencePenalty: number;
+  requestyDefaultFrequencyPenalty: number;
+}
+
+/**
  * Provider-specific frontmatter settings for Ollama
  */
 export interface OllamaFrontmatterSettings {
@@ -192,6 +209,8 @@ export interface ServiceUrlSettings {
   openaiUrl: string;
   /** URL for OpenRouter API */
   openrouterUrl: string;
+  /** URL for Requesty API */
+  requestyUrl: string;
   /** URL for Ollama API */
   ollamaUrl: string;
   /** URL for LM Studio API */
@@ -236,6 +255,7 @@ export interface ChatGPT_MDSettings
     AnthropicFrontmatterSettings,
     GeminiFrontmatterSettings,
     OpenRouterFrontmatterSettings,
+    RequestyFrontmatterSettings,
     OllamaFrontmatterSettings,
     LmStudioFrontmatterSettings,
     ZaiFrontmatterSettings {}
@@ -274,6 +294,8 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   apiKeySecretId: "",
   openrouterApiKey: "",
   openrouterApiKeySecretId: "",
+  requestyApiKey: "",
+  requestyApiKeySecretId: "",
   anthropicApiKey: "",
   anthropicApiKeySecretId: "",
   geminiApiKey: "",
@@ -284,6 +306,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   // Service URLs
   openaiUrl: DEFAULT_OPENAI_CONFIG.url,
   openrouterUrl: DEFAULT_OPENROUTER_CONFIG.url,
+  requestyUrl: DEFAULT_REQUESTY_CONFIG.url,
   ollamaUrl: DEFAULT_OLLAMA_CONFIG.url,
   lmstudioUrl: DEFAULT_LMSTUDIO_CONFIG.url,
   anthropicUrl: DEFAULT_ANTHROPIC_CONFIG.url,
@@ -345,6 +368,14 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   openrouterDefaultMaxTokens: DEFAULT_OPENROUTER_CONFIG.max_tokens,
   openrouterDefaultPresencePenalty: DEFAULT_OPENROUTER_CONFIG.presence_penalty,
   openrouterDefaultFrequencyPenalty: DEFAULT_OPENROUTER_CONFIG.frequency_penalty,
+
+  // Requesty Defaults
+  requestyDefaultModel: DEFAULT_REQUESTY_CONFIG.model,
+  requestyDefaultTemperature: DEFAULT_REQUESTY_CONFIG.temperature,
+  requestyDefaultTopP: DEFAULT_REQUESTY_CONFIG.top_p,
+  requestyDefaultMaxTokens: DEFAULT_REQUESTY_CONFIG.max_tokens,
+  requestyDefaultPresencePenalty: DEFAULT_REQUESTY_CONFIG.presence_penalty,
+  requestyDefaultFrequencyPenalty: DEFAULT_REQUESTY_CONFIG.frequency_penalty,
 
   // Ollama Defaults (no default model - user must configure)
   ollamaDefaultTemperature: 0.7,

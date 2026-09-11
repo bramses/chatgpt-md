@@ -133,6 +133,7 @@ You: Select what to share ✓
 | **Anthropic** | Claude, great for long docs | Pay per use |
 | **Gemini** | Google's models | Pay per use |
 | **OpenRouter** | Access to ALL models | Pay per use |
+| **Requesty** | OpenAI-compatible gateway to many providers | Pay per use |
 | **Z.AI** | GLM models | Pay per use |
 | **Ollama** | Local, private | **Free** |
 | **LM Studio** | Local, private | **Free** |
@@ -142,6 +143,7 @@ You: Select what to share ✓
 - Anthropic: `anthropic@claude-sonnet-4-20250514`
 - Gemini: `gemini@gemini-2.5-flash-lite`
 - OpenRouter: `openrouter@openai/gpt-4.1-mini`
+- Requesty: `requesty@openai/gpt-4.1-mini` (model library: https://app.requesty.ai/model-library)
 - Local: `ollama@llama3.2` or `lmstudio@model-name`
 
 OpenAI search-preview models such as `openai@gpt-4o-mini-search-preview` are supported through OpenAI's chat-completions endpoint.
