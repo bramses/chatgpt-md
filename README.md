@@ -123,6 +123,22 @@ You: Select what to share ✓
 
 **You're always in control.** AI only sees what you approve.
 
+### Search public web sources with Parallel
+
+In Settings → ChatGPT MD → Tool Calling, enable tools and choose **Parallel (keyless)**
+under **Alternative search provider**. No search API key is required; rate limits apply.
+Brave remains the default. Parallel uses the Unified MCP server at `https://mcp.parallel.ai/mcp`;
+see [Parallel MCP setup](https://docs.parallel.ai/integrations/mcp/quickstart).
+
+Ask in a chat note: “Search the public Obsidian documentation for community plugin
+installation instructions and cite the sources.” Use a chat provider that supports tools.
+Review or edit the public search query before approving execution. Parallel receives only
+that approved query and a fixed search objective. Existing Brave/custom credentials are not
+sent to Parallel. Select the returned sources to share their titles, original URLs, and
+excerpts with your chat provider; ask it to cite those URLs in its answer. Declining execution
+sends no search request, and unselected results stay out of the continuation context.
+An unavailable search shows a warning and supplies no results.
+
 ---
 
 ## 🔌 AI Providers
@@ -234,6 +250,7 @@ A: A reusable AI persona. Like having different experts on call—writing coach 
 - Chat messages and automatically expanded `[[linked notes]]` are sent to the selected provider
 - AI tools require approval before execution, and vault/web search results must be selected before sharing
 - Custom web-search endpoints receive your query and any configured bearer credential
+- Selecting Parallel sends the approved public search query to Parallel; selected source URLs and excerpts go to your chat provider
 - No tracking from this plugin
 
 See [`SECURITY.md`](SECURITY.md) for vulnerability reporting and the full data model.

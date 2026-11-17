@@ -2,6 +2,7 @@ import { requestUrl } from "obsidian";
 import { NotificationService } from "./NotificationService";
 import { WebSearchResult } from "src/Models/Tool";
 
+import { searchParallel } from "./ParallelSearch";
 import { Logger } from "src/Utilities/Logger";
 /**
  * Maximum number of web search results to return
@@ -14,6 +15,7 @@ const MAX_WEB_RESULTS = 10;
  * Handles external web search integration for AI tools:
  * - Brave Search API (free tier: 1,000 queries/month)
  * - Custom search endpoints
+ * - Parallel Unified MCP (keyless)
  *
  * Features:
  * - Provider-specific implementations
@@ -128,9 +130,10 @@ export class WebSearchService {
   /**
    * Main search method that routes to the appropriate provider
    *
-   * Supports two providers:
+   * Supported providers:
    * - "brave": Official Brave Search API
    * - "custom": User-defined endpoint
+   * - "parallel": Keyless Unified MCP
    *
    * @param args - Search parameters (query, limit)
    * @param provider - Search provider to use
@@ -140,7 +143,7 @@ export class WebSearchService {
    */
   async searchWeb(
     args: { query: string; limit?: number },
-    provider: "brave" | "custom",
+    provider: "brave" | "custom" | "parallel",
     apiKey?: string,
     customUrl?: string
   ): Promise<WebSearchResult[]> {
@@ -150,6 +153,16 @@ export class WebSearchService {
     Logger.debug(`[ChatGPT MD] Web search: "${query}" using ${provider}`);
 
     switch (provider) {
+      case "parallel":
+        try {
+          return await searchParallel(query, maxLimit);
+        } catch {
+          this.notificationService.showWarning(
+            "Parallel web search failed. Try again later or choose another provider."
+          );
+          return [];
+        }
+
       case "brave":
         if (!apiKey) {
           this.notificationService.showWarning("Brave Search requires an API key. Please configure in settings.");

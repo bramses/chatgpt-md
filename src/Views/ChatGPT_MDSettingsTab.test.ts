@@ -32,3 +32,13 @@ describe("parseSettingValue", () => {
     expect(() => parseSettingValue(numericSetting("maxWebSearchResults"), "0")).toThrow("between 1 and 10");
   });
 });
+
+describe("search provider setting", () => {
+  it("offers Parallel in the existing provider dropdown while keeping Brave as default", () => {
+    const setting = createSettingsSchema(DEFAULT_SETTINGS).find((item) => item.id === "webSearchProvider");
+    expect(setting?.options).toHaveProperty("parallel", "Parallel (keyless)");
+    expect(setting?.options).toHaveProperty("brave");
+    expect(setting?.options).toHaveProperty("custom");
+    expect(DEFAULT_SETTINGS.webSearchProvider).toBe("brave");
+  });
+});

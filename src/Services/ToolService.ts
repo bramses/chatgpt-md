@@ -98,6 +98,7 @@ export class ToolService {
    * @returns true if web search is properly configured, false otherwise
    */
   private isWebSearchAvailable(settings: ChatGPT_MDSettings): boolean {
+    if (settings.webSearchProvider === "parallel") return true;
     if (settings.webSearchProvider === "brave") {
       return this.apiAuthService.resolveWebSearchCredential(settings).length > 0;
     }

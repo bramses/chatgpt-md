@@ -29,4 +29,5 @@ The maintainers will acknowledge and triage reports as availability permits and 
 - Ollama and LM Studio remain local only when their configured URLs point to local services.
 - AI tools require approval before execution. Vault and web-search results require selection before their content is sent back to the model.
 - Custom web-search endpoints receive the search query and, when configured, a bearer credential.
+- The opt-in Parallel search provider sends only the approved public query and a fixed objective to its Unified MCP server, without search credentials, note bodies, or chat history. Only selected source titles, URLs, and excerpts enter the continuation context.
 - Debug logs are designed not to include credentials, prompts, note bodies, or tool-result contents. Review and sanitize logs before sharing them.

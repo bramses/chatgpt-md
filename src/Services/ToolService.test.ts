@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ToolApprovalGateway } from "./Tools/ToolApprovalCoordinator";
 import { ToolService } from "./ToolService";
 import { ApiAuthService } from "./ApiAuthService";
+import { requestUrl } from "obsidian";
 import { DEFAULT_SETTINGS } from "src/Models/Config";
 
 class FakeSecretComponent {
@@ -149,6 +150,73 @@ describe("ToolService", () => {
 
     expect(searchWeb).not.toHaveBeenCalled();
     expect(storage.getSecret).not.toHaveBeenCalled();
+  });
+
+  it("exposes keyless Parallel only with tools enabled and preserves both approval boundaries", async () => {
+    const settings = { ...DEFAULT_SETTINGS, enableToolCalling: true, webSearchProvider: "parallel" as const };
+    const approval = createApprovalGateway({ approved: false, approvalId: "approval" });
+    const auth = new ApiAuthService();
+    const resolveCredential = jest.spyOn(auth, "resolveWebSearchCredential");
+    const service = new ToolService(
+      {} as never,
+      {} as never,
+      { showWarning: jest.fn() } as never,
+      settings,
+      undefined,
+      undefined,
+      approval,
+      auth
+    );
+    const request = jest.mocked(requestUrl);
+    request.mockReset();
+    expect(DEFAULT_SETTINGS.enableToolCalling).toBe(false);
+    expect(DEFAULT_SETTINGS.webSearchProvider).toBe("brave");
+    expect(service.getToolsForRequest({ ...settings, enableToolCalling: false })).toBeUndefined();
+    expect(service.getToolsForRequest(settings)?.web_search).toBeDefined();
+    expect(service.getToolsForRequest(settings)?.web_search).not.toHaveProperty("execute");
+    expect(request).not.toHaveBeenCalled();
+    const calls = [{ toolCallId: "web", toolName: "web_search", input: { query: "original query" } }];
+    await service.handleToolCalls(calls);
+    expect(request).not.toHaveBeenCalled();
+    approval.approveTool.mockResolvedValue({
+      approved: true,
+      approvalId: "approval",
+      modifiedArgs: { query: "approved public query" },
+    });
+    const sources = [
+      { title: "Selected", url: "https://obsidian.md/help/community-plugins", excerpts: ["Selected excerpt"] },
+      { title: "Unselected", url: "https://example.com/unselected", excerpts: ["Unselected excerpt"] },
+    ];
+    const response = (value: unknown) => ({
+      status: 200,
+      headers: {},
+      arrayBuffer: new ArrayBuffer(0),
+      json: value,
+      text: JSON.stringify(value),
+    });
+    const queue = () => {
+      request.mockResolvedValueOnce(response({ jsonrpc: "2.0", id: 1, result: { protocolVersion: "2025-03-26" } }));
+      request.mockResolvedValueOnce(response({}));
+      request.mockResolvedValueOnce(
+        response({ jsonrpc: "2.0", id: 2, result: { structuredContent: { results: sources } } })
+      );
+    };
+    queue();
+    const results = await service.handleToolCalls(calls);
+    expect(resolveCredential).not.toHaveBeenCalled();
+    expect(JSON.stringify(request.mock.calls)).toContain("approved public query");
+    expect(JSON.stringify(request.mock.calls)).not.toContain("original query");
+    approval.approveWebResults.mockImplementation(async (_query, results) => ({
+      approved: true,
+      approvedResults: results.slice(0, 1),
+    }));
+    const processed = await service.processToolResults(calls, results);
+    expect(processed.contextMessages[0].content).toContain(sources[0].url);
+    expect(JSON.stringify(processed)).not.toContain("Unselected");
+    approval.approveWebResults.mockResolvedValue({ approved: false, approvedResults: [] });
+    const rejected = await service.processToolResults(calls, results);
+    expect(JSON.stringify(rejected)).not.toContain("Selected excerpt");
+    expect(rejected.contextMessages[0].content).toContain("no results selected");
   });
 
   it("requests approvals sequentially", async () => {
