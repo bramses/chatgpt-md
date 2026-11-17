@@ -93,7 +93,7 @@ function createWebSearchTool({
       return await webSearchService.searchWeb(
         { query, limit },
         settings.webSearchProvider,
-        resolveWebSearchCredential(),
+        settings.webSearchProvider === "parallel" ? undefined : resolveWebSearchCredential(),
         settings.webSearchApiUrl
       );
     },

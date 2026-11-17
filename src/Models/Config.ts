@@ -208,8 +208,8 @@ export interface ServiceUrlSettings {
  * Web search settings
  */
 export interface WebSearchSettings {
-  /** Search provider ('brave' | 'custom') */
-  webSearchProvider: "brave" | "custom";
+  /** Search provider ('brave' | 'custom' | 'parallel') */
+  webSearchProvider: "brave" | "custom" | "parallel";
   /** API key for providers that require it */
   webSearchApiKey?: string;
   /** Opaque Obsidian SecretStorage reference for web search. */

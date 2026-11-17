@@ -463,11 +463,12 @@ const SETTINGS_SCHEMA: SettingDefinition[] = [
   {
     id: "webSearchProvider",
     name: "Alternative Search Provider",
-    description: "Use a custom search API endpoint instead of Brave Search",
+    description: "Choose Brave, a custom endpoint, or Parallel (no search API key required; rate limits apply).",
     type: "dropdown",
     options: {
       brave: "Brave Search (Default)",
       custom: "Custom API Endpoint",
+      parallel: "Parallel (keyless)",
     },
     group: "Tool Calling",
   },
